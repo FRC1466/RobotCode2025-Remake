@@ -38,6 +38,7 @@ import frc.robot.subsystems.vision.Vision;
 import frc.robot.subsystems.vision.VisionIO;
 import frc.robot.subsystems.vision.VisionIOPhotonVision;
 import frc.robot.subsystems.vision.VisionIOPhotonVisionSim;
+import frc.robot.util.FlipField;
 import java.util.Optional;
 import java.util.function.DoubleSupplier;
 import org.littletonrobotics.junction.Logger;
@@ -163,8 +164,6 @@ public class RobotContainer {
   // Moved leftCoral to be a field so it can be modified in lambdas
   private int leftCoral = 0;
 
-  private int povCoral = 0;
-
   private void configureButtonBindings() {
     DoubleSupplier driverX = () -> -controller.getLeftY();
     DoubleSupplier driverY = () -> -controller.getLeftX();
@@ -187,7 +186,6 @@ public class RobotContainer {
         .onTrue(
             runOnce(
                 () -> {
-                  povCoral = 0;
                   leftCoral = 0;
                 }));
     controller
@@ -195,23 +193,22 @@ public class RobotContainer {
         .onTrue(
             runOnce(
                 () -> {
-                  povCoral = 1;
                   leftCoral = 1;
                 }));
 
     controller
-        .y()
+        .rightTrigger()
         .whileTrue(
-            Commands.sequence(
-                runOnce(() -> leftCoral = povCoral),
-                new DriveToPose(
-                    drive,
-                    () -> PathfindConstants.blueTargetPoseReef[getClosestTag()][leftCoral],
-                    drive::getPose,
-                    () ->
-                        DriveCommands.getLinearVelocityFromJoysticks(
-                            -controller.getLeftY(), -controller.getLeftX()),
-                    () -> DriveCommands.getOmegaFromJoysticks(-controller.getRightX()))));
+            new DriveToPose(
+                drive,
+                () ->
+                    FlipField.apply(
+                        PathfindConstants.blueTargetPoseReef[getClosestTag()][leftCoral]),
+                drive::getPose,
+                () ->
+                    DriveCommands.getLinearVelocityFromJoysticks(
+                        -controller.getLeftY(), -controller.getLeftX()),
+                () -> DriveCommands.getOmegaFromJoysticks(-controller.getRightX())));
 
     // when left trigger is pressed auto path to the station
     controller
