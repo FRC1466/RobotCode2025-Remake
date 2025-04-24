@@ -23,7 +23,6 @@ import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
-import edu.wpi.first.wpilibj2.command.button.Trigger;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.commands.DriveCommands;
 import frc.robot.commands.DriveToPose;
@@ -186,11 +185,6 @@ public class RobotContainer {
                 () -> -controller.getLeftY(),
                 () -> -controller.getLeftX(),
                 () -> new Rotation2d()));
-
-    new Trigger(() -> controller.y().getAsBoolean() && controller.getLeftX() > 0.2)
-        .onTrue(runOnce(() -> leftCoral = 1));
-    new Trigger(() -> controller.y().getAsBoolean() && controller.getLeftX() < -0.2)
-        .onTrue(runOnce(() -> leftCoral = 0));
 
     controller
         .povLeft()
