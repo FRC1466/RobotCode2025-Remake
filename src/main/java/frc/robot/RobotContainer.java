@@ -40,7 +40,6 @@ import frc.robot.subsystems.vision.VisionIOPhotonVision;
 import frc.robot.subsystems.vision.VisionIOPhotonVisionSim;
 import java.util.Optional;
 import java.util.function.DoubleSupplier;
-import java.util.function.Supplier;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
@@ -171,10 +170,7 @@ public class RobotContainer {
     DoubleSupplier driverY = () -> -controller.getLeftX();
     DoubleSupplier driverOmega = () -> -controller.getRightX();
 
-    // Joystick drive command (driver and operator)
-    Supplier<Command> joystickDriveCommandFactory =
-        () -> DriveCommands.joystickDrive(drive, driverX, driverY, driverOmega);
-    drive.setDefaultCommand(joystickDriveCommandFactory.get());
+    drive.setDefaultCommand(DriveCommands.joystickDrive(drive, driverX, driverY, driverOmega));
 
     // Lock to 0° when A button is held
     controller
