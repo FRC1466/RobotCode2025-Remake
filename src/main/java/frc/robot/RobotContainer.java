@@ -38,7 +38,6 @@ import frc.robot.subsystems.vision.Vision;
 import frc.robot.subsystems.vision.VisionIO;
 import frc.robot.subsystems.vision.VisionIOPhotonVision;
 import frc.robot.subsystems.vision.VisionIOPhotonVisionSim;
-import frc.robot.util.FlipField;
 import java.util.Optional;
 import java.util.function.DoubleSupplier;
 import org.littletonrobotics.junction.Logger;
@@ -202,12 +201,14 @@ public class RobotContainer {
             new DriveToPose(
                 drive,
                 () ->
-                    FlipField.apply(
-                        PathfindConstants.blueTargetPoseReef[getClosestTag()][leftCoral]),
+                    // inline if statement for alliance
+                    DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red
+                        ? PathfindConstants.redTargetPoseReef[getClosestTag()][leftCoral]
+                        : PathfindConstants.blueTargetPoseReef[getClosestTag()][leftCoral],
                 drive::getPose,
                 () ->
                     DriveCommands.getLinearVelocityFromJoysticks(
-                        -controller.getLeftY(), -controller.getLeftX()),
+                        controller.getLeftY(), controller.getLeftX()),
                 () -> DriveCommands.getOmegaFromJoysticks(-controller.getRightX())));
 
     // when left trigger is pressed auto path to the station
