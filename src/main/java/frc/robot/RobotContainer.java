@@ -11,13 +11,8 @@ import static edu.wpi.first.wpilibj2.command.Commands.*;
 import static frc.robot.subsystems.vision.VisionConstants.*;
 
 import com.pathplanner.lib.auto.AutoBuilder;
-import edu.wpi.first.apriltag.AprilTagFieldLayout;
-import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -25,7 +20,7 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.commands.DriveCommands;
-import frc.robot.commands.DriveToPose;
+import frc.robot.commands.DriveToScore;
 import frc.robot.commands.DriveToStation;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.drive.Drive;
@@ -38,9 +33,8 @@ import frc.robot.subsystems.vision.Vision;
 import frc.robot.subsystems.vision.VisionIO;
 import frc.robot.subsystems.vision.VisionIOPhotonVision;
 import frc.robot.subsystems.vision.VisionIOPhotonVisionSim;
-import java.util.Optional;
 import java.util.function.DoubleSupplier;
-import org.littletonrobotics.junction.Logger;
+import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
 /**
@@ -50,9 +44,6 @@ import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
  * subsystems, commands, and button mappings) should be declared here.
  */
 public class RobotContainer {
-  private final AprilTagFieldLayout layout =
-      AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField);
-
   // Subsystems
   private Drive drive;
   private Vision vision;
@@ -161,7 +152,7 @@ public class RobotContainer {
    * edu.wpi.first.wpilibj2.command.button.JoystickButton}.
    */
   // Moved leftCoral to be a field so it can be modified in lambdas
-  private int leftCoral = 0;
+  @AutoLogOutput private int leftCoral = 0;
 
   private void configureButtonBindings() {
     DoubleSupplier driverX = () -> -controller.getLeftY();
@@ -198,18 +189,8 @@ public class RobotContainer {
     controller
         .rightTrigger()
         .whileTrue(
-            new DriveToPose(
-                drive,
-                () ->
-                    // inline if statement for alliance
-                    DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red
-                        ? PathfindConstants.redTargetPoseReef[getClosestTag()][leftCoral]
-                        : PathfindConstants.blueTargetPoseReef[getClosestTag()][leftCoral],
-                drive::getPose,
-                () ->
-                    DriveCommands.getLinearVelocityFromJoysticks(
-                        controller.getLeftY(), controller.getLeftX()),
-                () -> DriveCommands.getOmegaFromJoysticks(-controller.getRightX())));
+            new DriveToScore(drive, driverX, driverY, driverOmega, false, () -> leftCoral)
+                .withName("Coral Score"));
 
     // when left trigger is pressed auto path to the station
     controller
@@ -240,50 +221,5 @@ public class RobotContainer {
    */
   public Command getAutonomousCommand() {
     return autoChooser.get();
-  }
-
-  public int getClosestTag() {
-    int closestTag = -1;
-    double prevDistance = Double.MAX_VALUE;
-    double holderDistance = 0;
-    int offset = 0;
-    Optional<Alliance> alliance = DriverStation.getAlliance();
-    if (alliance.isPresent()) {
-      if (alliance.get() == Alliance.Red) {
-        offset = 6;
-      } else if (alliance.get() == Alliance.Blue) {
-        offset = 17;
-      }
-    } else {
-      // Default behavior if alliance is unknown
-      offset = 0; // or whatever default makes sense
-    }
-    try {
-      for (int i = offset; i < (offset + 6); i++) {
-        Optional<Pose3d> tagPoseOptional = layout.getTagPose(i);
-        if (tagPoseOptional.isEmpty()) {
-          continue;
-        }
-        // Check if the Optional contains a value before calling get()
-        if (tagPoseOptional.isPresent()) {
-          var tagPose = tagPoseOptional.get();
-          holderDistance =
-              (Math.pow(drive.getPose().getX() - tagPose.getX(), 2)
-                  + Math.pow(drive.getPose().getY() - tagPose.getY(), 2));
-          if (holderDistance < prevDistance) {
-            closestTag = i;
-            prevDistance = holderDistance;
-          }
-        }
-      }
-    } catch (Exception e) {
-      // Retrieve the actual exception thrown by the invoked method
-      Throwable cause = e.getCause();
-      System.err.println("The underlying exception was: " + cause);
-      e.printStackTrace();
-    }
-    Logger.recordOutput("Logger/closestTagID", closestTag);
-    // If no valid tag was found, return a default value (e.g., 0)
-    return closestTag == -1 ? 0 : closestTag - offset;
   }
 }

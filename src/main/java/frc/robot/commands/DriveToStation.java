@@ -35,7 +35,7 @@ public class DriveToStation extends DriveToPose {
   private static final LoggedTunableNumber horizontalMaxOffset =
       new LoggedTunableNumber(
           "DriveToStation/HorizontalMaxOffset",
-          FieldConstants.CoralStation.stationLength / 2 - Units.inchesToMeters(25));
+          FieldConstants.CoralStation.stationLength / 2 - Units.inchesToMeters(22));
   private static final LoggedTunableNumber autoOffset =
       new LoggedTunableNumber(
           "DriveToStation/AutoOffset",

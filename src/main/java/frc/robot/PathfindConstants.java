@@ -11,126 +11,85 @@ import static frc.robot.util.FlipField.flipPoseArray;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
+import frc.robot.util.LoggedTunableNumber;
 import java.util.Map;
 
 public class PathfindConstants {
-  public static final Pose2d[][] blueTargetPoseReef = createReefPoses();
-  public static final Pose2d[][] blueTargetPoseReefApproach = createReefApproachPoses();
+  private static final LoggedTunableNumber reefFaceDistance =
+      new LoggedTunableNumber("Pathfind/ReefFaceDistance", 0.575);
+  private static final LoggedTunableNumber reefApproachDistance =
+      new LoggedTunableNumber("Pathfind/ReefApproachDistance", 1.2);
 
-  public static final Pose2d[][] redTargetPoseReef = flipPoseArray(blueTargetPoseReef);
-  public static final Pose2d[][] redTargetPoseReefApproach =
-      flipPoseArray(blueTargetPoseReefApproach);
+  public static Pose2d[][] getTargetPoseReef() {
+    return DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Blue
+        ? getBlueTargetPoseReef()
+        : getRedTargetPoseReef();
+  }
 
-  private static Pose2d[][] createReefPoses() {
-    Pose2d[][] reefPoses = new Pose2d[6][2]; // 6 tags, left and right branches for each
+  public static Pose2d[][] getTargetPoseReefApproach() {
+    return DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Blue
+        ? getBlueTargetPoseReefApproach()
+        : getRedTargetPoseReefApproach();
+  }
 
+  public static Pose2d[][] getBlueTargetPoseReef() {
+    return computeReefPoses(reefFaceDistance.get());
+  }
+
+  public static Pose2d[][] getBlueTargetPoseReefApproach() {
+    return computeReefPoses(reefApproachDistance.get());
+  }
+
+  public static Pose2d[][] getRedTargetPoseReef() {
+    return flipPoseArray(getBlueTargetPoseReef());
+  }
+
+  public static Pose2d[][] getRedTargetPoseReefApproach() {
+    return flipPoseArray(getBlueTargetPoseReefApproach());
+  }
+
+  private static Pose2d[][] computeReefPoses(double approachDistance) {
+    Pose2d[][] reefPoses = new Pose2d[6][2];
     for (int i = 0; i < 6; i++) {
-      // Calculate correct branch indices - adjust by subtracting 1 to fix the "one branch to the
-      // right" issue
-      // Wrap around using modulo to handle the case where i=0 becomes -1
-      int tagOffset = 1; // This offset fixes the "one to the right" issue
-      int adjustedFaceIndex =
-          (i - tagOffset + 6) % 6; // Add 6 before modulo to avoid negative indices
+      int adjustedFaceIndex = (i - 1 + 6) % 6;
+      int rightBranchIndex = (adjustedFaceIndex * 2) % 12;
+      int leftBranchIndex = (adjustedFaceIndex * 2 + 1) % 12;
 
-      int rightBranchIndex = (adjustedFaceIndex * 2) % 12; // Even indices (0,2,4,6,8,10)
-      int leftBranchIndex = (adjustedFaceIndex * 2 + 1) % 12; // Odd indices (1,3,5,7,9,11)
-
-      // Get the left branch
-      Map<FieldConstants.ReefLevel, Pose2d> leftBranchMap =
+      Map<FieldConstants.ReefLevel, Pose2d> leftMap =
           FieldConstants.Reef.branchPositions2d.get(leftBranchIndex);
-
-      // Get the right branch
-      Map<FieldConstants.ReefLevel, Pose2d> rightBranchMap =
+      Map<FieldConstants.ReefLevel, Pose2d> rightMap =
           FieldConstants.Reef.branchPositions2d.get(rightBranchIndex);
 
-      // Calculate left branch pose
-      Pose2d leftCenterFace = leftBranchMap.get(FieldConstants.ReefLevel.L2);
-      double approachDistance = 0.575; // Distance from the reef face
+      Pose2d leftCenter = leftMap.get(FieldConstants.ReefLevel.L2);
+      Pose2d rightCenter = rightMap.get(FieldConstants.ReefLevel.L2);
 
-      // Create approach pose by moving AWAY from the branch and rotating 180 degrees
+      // move away from the face and rotate 180°
       reefPoses[i][0] =
           new Pose2d(
-              leftCenterFace.getX()
-                  + (approachDistance * Math.cos(leftCenterFace.getRotation().getRadians())),
-              leftCenterFace.getY()
-                  + (approachDistance * Math.sin(leftCenterFace.getRotation().getRadians())),
-              leftCenterFace.getRotation().rotateBy(Rotation2d.fromDegrees(180)));
+              leftCenter.getX()
+                  + approachDistance * Math.cos(leftCenter.getRotation().getRadians()),
+              leftCenter.getY()
+                  + approachDistance * Math.sin(leftCenter.getRotation().getRadians()),
+              leftCenter.getRotation().rotateBy(Rotation2d.fromDegrees(180)));
 
-      // Calculate right branch pose
-      Pose2d rightCenterFace = rightBranchMap.get(FieldConstants.ReefLevel.L2);
-
-      // Create approach pose by moving AWAY from the branch and rotating 180 degrees
       reefPoses[i][1] =
           new Pose2d(
-              rightCenterFace.getX()
-                  + (approachDistance * Math.cos(rightCenterFace.getRotation().getRadians())),
-              rightCenterFace.getY()
-                  + (approachDistance * Math.sin(rightCenterFace.getRotation().getRadians())),
-              rightCenterFace.getRotation().rotateBy(Rotation2d.fromDegrees(180)));
+              rightCenter.getX()
+                  + approachDistance * Math.cos(rightCenter.getRotation().getRadians()),
+              rightCenter.getY()
+                  + approachDistance * Math.sin(rightCenter.getRotation().getRadians()),
+              rightCenter.getRotation().rotateBy(Rotation2d.fromDegrees(180)));
     }
-
     return reefPoses;
   }
 
-  private static Pose2d[][] createReefApproachPoses() {
-    Pose2d[][] reefPoses = new Pose2d[6][2]; // 6 tags, left and right branches for each
-
-    for (int i = 0; i < 6; i++) {
-      // Calculate correct branch indices - adjust by subtracting 1 to fix the "one branch to the
-      // right" issue
-      // Wrap around using modulo to handle the case where i=0 becomes -1
-      int tagOffset = 1; // This offset fixes the "one to the right" issue
-      int adjustedFaceIndex =
-          (i - tagOffset + 6) % 6; // Add 6 before modulo to avoid negative indices
-
-      int rightBranchIndex = (adjustedFaceIndex * 2) % 12; // Even indices (0,2,4,6,8,10)
-      int leftBranchIndex = (adjustedFaceIndex * 2 + 1) % 12; // Odd indices (1,3,5,7,9,11)
-
-      // Get the left branch
-      Map<FieldConstants.ReefLevel, Pose2d> leftBranchMap =
-          FieldConstants.Reef.branchPositions2d.get(leftBranchIndex);
-
-      // Get the right branch
-      Map<FieldConstants.ReefLevel, Pose2d> rightBranchMap =
-          FieldConstants.Reef.branchPositions2d.get(rightBranchIndex);
-
-      // Calculate left branch pose
-      Pose2d leftCenterFace = leftBranchMap.get(FieldConstants.ReefLevel.L2);
-      double approachDistance = 1.475; // Distance from the reef face
-
-      // Create approach pose by moving AWAY from the branch and rotating 180 degrees
-      reefPoses[i][0] =
-          new Pose2d(
-              leftCenterFace.getX()
-                  + (approachDistance * Math.cos(leftCenterFace.getRotation().getRadians())),
-              leftCenterFace.getY()
-                  + (approachDistance * Math.sin(leftCenterFace.getRotation().getRadians())),
-              leftCenterFace.getRotation().rotateBy(Rotation2d.fromDegrees(180)));
-
-      // Calculate right branch pose
-      Pose2d rightCenterFace = rightBranchMap.get(FieldConstants.ReefLevel.L2);
-
-      // Create approach pose by moving AWAY from the branch and rotating 180 degrees
-      reefPoses[i][1] =
-          new Pose2d(
-              rightCenterFace.getX()
-                  + (approachDistance * Math.cos(rightCenterFace.getRotation().getRadians())),
-              rightCenterFace.getY()
-                  + (approachDistance * Math.sin(rightCenterFace.getRotation().getRadians())),
-              rightCenterFace.getRotation().rotateBy(Rotation2d.fromDegrees(180)));
-    }
-
-    return reefPoses;
-  }
-
-  // Red Target Poses for Station
   public static final Pose2d[] redTargetPoseStation = {
-    new Pose2d(16.195, 7.19, Rotation2d.fromDegrees(-125.000)),
-    new Pose2d(16.288, 0.937, Rotation2d.fromDegrees(125.000)),
+    new Pose2d(16.195, 7.19, Rotation2d.fromDegrees(-125.0)),
+    new Pose2d(16.288, 0.937, Rotation2d.fromDegrees(125.0)),
   };
-
   public static final Pose2d redTargetPoseProcessor =
-      new Pose2d(11.496, 7.495, Rotation2d.fromDegrees(90.000));
-
-  public static final double blueTargetPoseXBarge = 8;
+      new Pose2d(11.496, 7.495, Rotation2d.fromDegrees(90.0));
+  public static final double blueTargetPoseXBarge = 8.0;
 }
