@@ -66,7 +66,6 @@ public class DriveToPose extends Command {
       new LoggedTunableNumber("DriveToPose/ThetaMaxAccelerationAuto");
   private static final LoggedTunableNumber thetaMaxAccelerationAutoTop =
       new LoggedTunableNumber("DriveToPose/ThetaMaxAccelerationAutoTop");
-  // elevatorMinExtension removed
   private static final LoggedTunableNumber driveTolerance =
       new LoggedTunableNumber("DriveToPose/DriveTolerance");
   private static final LoggedTunableNumber thetaTolerance =
@@ -204,7 +203,6 @@ public class DriveToPose extends Command {
       thetaController.setTolerance(thetaTolerance.get());
     }
 
-    // Update constraints (no elevator height)
     driveProfile =
         new TrapezoidProfile(
             DriverStation.isAutonomous()
