@@ -137,7 +137,7 @@ public class AllianceFlipUtil {
    * @param pose The original pose (typically from red alliance)
    * @return A new Pose2d flipped to the other side of the field (typically for blue alliance)
    */
-  public static Pose2d FieldFlip(Pose2d pose) {
+  public static Pose2d FlipX(Pose2d pose) {
     return flipPose(pose);
   }
 

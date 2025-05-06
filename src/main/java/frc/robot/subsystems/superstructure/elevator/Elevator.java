@@ -20,7 +20,6 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.Constants;
 import frc.robot.Robot;
-import frc.robot.RobotState;
 import frc.robot.subsystems.superstructure.SuperstructureConstants;
 import frc.robot.util.EqualsUtil;
 import frc.robot.util.LoggedTracer;
@@ -80,6 +79,8 @@ public class Elevator {
       new LoggedTunableNumber("Elevator/StowStopCheckHeight", .08);
   private static final LoggedTunableNumber tolerance =
       new LoggedTunableNumber("Elevator/Tolerance", 0.5);
+
+  @Setter @Getter private static double elevatorExtensionPercent = 0.0;
 
   static {
     switch (Constants.getRobot()) {
@@ -247,9 +248,7 @@ public class Elevator {
     }
 
     // Set extension in robot state
-    RobotState.getInstance()
-        .setElevatorExtensionPercent(
-            getPositionMeters() / SuperstructureConstants.elevatorMaxTravel);
+    setElevatorExtensionPercent(getPositionMeters() / SuperstructureConstants.elevatorMaxTravel);
 
     // Log state
     Logger.recordOutput("Elevator/CoastOverride", coastOverride.getAsBoolean());

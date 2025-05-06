@@ -9,20 +9,16 @@ package frc.robot.commands;
 
 import static frc.robot.commands.DriveCommands.DEADBAND;
 import static frc.robot.commands.DriveToStation.withinDistanceToReef;
-import static frc.robot.subsystems.vision.VisionConstants.aprilTagLayout;
+import static frc.robot.subsystems.drive.Drive.getClosestTag;
 import static frc.robot.util.EqualsUtil.*;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import frc.robot.PathfindConstants;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.util.AllianceFlipUtil;
 import frc.robot.util.LoggedTunableNumber;
-import java.util.Optional;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 import org.littletonrobotics.junction.Logger;
@@ -35,10 +31,16 @@ public class DriveToScore extends DriveToPose {
   private static LoggedTunableNumber approachDistance =
       new LoggedTunableNumber("DriveToScore/ApproachDistance", .7);
 
+  /** Constructor for teleop/manual control. Uses default zeroed suppliers for driver input. */
   public DriveToScore(Drive drive, boolean isAuto, Supplier<Integer> coralPovSupplier) {
     this(drive, () -> 0.0, () -> 0.0, () -> 0.0, isAuto, coralPovSupplier);
   }
 
+  /**
+   * Main constructor for DriveToScore. Accepts suppliers for driver X/Y translation, omega
+   * (rotation), auto mode, and branch side supplier. Applies alliance flip to joystick input if
+   * needed so consistent on all alliances.
+   */
   public DriveToScore(
       Drive drive,
       DoubleSupplier driverX,
@@ -80,7 +82,7 @@ public class DriveToScore extends DriveToPose {
           // choose approach and real goal
           Pose2d approach = PathfindConstants.getTargetPoseReefApproach()[tag][pov];
           Pose2d target = PathfindConstants.getTargetPoseReef()[tag][pov];
-          Pose2d robot = drive.getPose();
+          Pose2d robot = Drive.getPose();
           double distance = robot.getTranslation().getDistance(approach.getTranslation());
           double angularDistance =
               Math.abs(
@@ -92,6 +94,7 @@ public class DriveToScore extends DriveToPose {
           Logger.recordOutput(
               "DriveToScore/withinReefApproachDistance",
               withinDistanceToReef(robot, currentApproachDistance));
+          Logger.recordOutput("DriveToScore/ClosestTag", tag);
 
           if (withinDistanceToReef(robot, currentApproachDistance)
               || (epsilonEquals(distance, 0, currentApproachEpsilon)
@@ -100,53 +103,8 @@ public class DriveToScore extends DriveToPose {
           }
           return approach;
         },
-        drive::getPose,
+        Drive::getPose,
         linearFF,
         theta);
-  }
-
-  public static int getClosestTag(Drive drive) {
-    int closestTag = -1;
-    double prevDistance = Double.MAX_VALUE;
-    double holderDistance = 0;
-    int offset = 0;
-    Optional<Alliance> alliance = DriverStation.getAlliance();
-    if (alliance.isPresent()) {
-      if (alliance.get() == Alliance.Red) {
-        offset = 6;
-      } else if (alliance.get() == Alliance.Blue) {
-        offset = 17;
-      }
-    } else {
-      // Default behavior if alliance is unknown
-      offset = 0; // or whatever default makes sense
-    }
-    try {
-      for (int i = offset; i < (offset + 6); i++) {
-        Optional<Pose3d> tagPoseOptional = aprilTagLayout.getTagPose(i);
-        if (tagPoseOptional.isEmpty()) {
-          continue;
-        }
-        // Check if the Optional contains a value before calling get()
-        if (tagPoseOptional.isPresent()) {
-          var tagPose = tagPoseOptional.get();
-          holderDistance =
-              (Math.pow(drive.getPose().getX() - tagPose.getX(), 2)
-                  + Math.pow(drive.getPose().getY() - tagPose.getY(), 2));
-          if (holderDistance < prevDistance) {
-            closestTag = i;
-            prevDistance = holderDistance;
-          }
-        }
-      }
-    } catch (Exception e) {
-      // Retrieve the actual exception thrown by the invoked method
-      Throwable cause = e.getCause();
-      System.err.println("The underlying exception was: " + cause);
-      e.printStackTrace();
-    }
-    Logger.recordOutput("Logger/closestTagID", closestTag);
-    // If no valid tag was found, return a default value (e.g., 0)
-    return closestTag == -1 ? 0 : closestTag - offset;
   }
 }

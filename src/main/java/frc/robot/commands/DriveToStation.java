@@ -69,7 +69,7 @@ public class DriveToStation extends DriveToPose {
     super(
         drive,
         () -> {
-          Pose2d robot = AllianceFlipUtil.apply(drive.getPose());
+          Pose2d robot = AllianceFlipUtil.apply(Drive.getPose());
           List<Pose2d> finalPoses = new ArrayList<>();
           for (Pose2d stationCenter :
               new Pose2d[] {
@@ -116,7 +116,7 @@ public class DriveToStation extends DriveToPose {
               "DriveToStation/RightClosestPose", AllianceFlipUtil.apply(finalPoses.get(1)));
           return goal;
         },
-        drive::getPose,
+        Drive::getPose,
         linearFF,
         theta);
   }
@@ -126,7 +126,7 @@ public class DriveToStation extends DriveToPose {
   public static boolean withinDistanceToReef(Pose2d robot, double distance) {
     final double distanceToReefCenter =
         AllianceFlipUtil.apply(robot).getTranslation().getDistance(Reef.center);
-    Logger.recordOutput("AutoScore/DistanceToReefCenter", distanceToReefCenter);
+    Logger.recordOutput("DriveToScore/DistanceToReefCenter", distanceToReefCenter);
     return distanceToReefCenter <= reefRadius + Drive.DRIVE_BASE_LENGTH / 2.0 + distance;
   }
 }

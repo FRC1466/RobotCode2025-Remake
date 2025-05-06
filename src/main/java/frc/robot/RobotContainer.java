@@ -35,6 +35,7 @@ import frc.robot.subsystems.drive.GyroIOPigeon2;
 import frc.robot.subsystems.drive.ModuleIO;
 import frc.robot.subsystems.drive.ModuleIOSim;
 import frc.robot.subsystems.drive.ModuleIOTalonFX;
+import frc.robot.subsystems.superstructure.Superstructure;
 import frc.robot.subsystems.superstructure.elevator.Elevator;
 import frc.robot.subsystems.superstructure.elevator.ElevatorIO;
 import frc.robot.subsystems.superstructure.elevator.ElevatorIOSim;
@@ -62,7 +63,7 @@ public class RobotContainer {
   // Subsystems
   private Drive drive;
   private Vision vision;
-  private Elevator elevator;
+  private final Superstructure superstructure;
 
   // Controllers
   private final CommandXboxController controller = new CommandXboxController(0);
@@ -74,13 +75,13 @@ public class RobotContainer {
   private final LoggedNetworkNumber endgameAlert2 =
       new LoggedNetworkNumber("/SmartDashboard/Endgame Alert #2", 15.0);
 
-  private boolean coastOverride = false;
-
   // Dashboard inputs
   private final LoggedDashboardChooser<Command> autoChooser;
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
+    Elevator elevator = null;
+
     if (Constants.getMode() != Constants.Mode.REPLAY) {
       switch (Constants.getRobot()) {
         case COMPBOT -> {
@@ -121,8 +122,8 @@ public class RobotContainer {
           vision =
               new Vision(
                   drive::addVisionMeasurement,
-                  new VisionIOPhotonVisionSim(camera0Name, robotToCamera0, drive::getPose),
-                  new VisionIOPhotonVisionSim(camera1Name, robotToCamera1, drive::getPose));
+                  new VisionIOPhotonVisionSim(camera0Name, robotToCamera0, Drive::getPose),
+                  new VisionIOPhotonVisionSim(camera1Name, robotToCamera1, Drive::getPose));
           elevator = new Elevator(new ElevatorIOSim());
         }
       }
@@ -149,6 +150,7 @@ public class RobotContainer {
     if (elevator == null) {
       elevator = new Elevator(new ElevatorIO() {});
     }
+    superstructure = new Superstructure(elevator);
 
     // Set up auto routines
     autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
@@ -219,7 +221,6 @@ public class RobotContainer {
         .whileTrue(
             new DriveToStation(drive, driverX, driverY, driverOmega, false)
                 .withName("Coral Station Intake"));
-    controller.start().onTrue(Commands.runOnce(() -> elevator.setGoal(() -> 20)));
 
     // Reset gyro
     var driverStartAndBack = controller.start().and(controller.back());
@@ -228,7 +229,7 @@ public class RobotContainer {
                 () ->
                     drive.setPose(
                         new Pose2d(
-                            drive.getPose().getTranslation(),
+                            Drive.getPose().getTranslation(),
                             AllianceFlipUtil.apply(Rotation2d.kZero))))
             .withName("Reset Gyro")
             .ignoringDisable(true));
