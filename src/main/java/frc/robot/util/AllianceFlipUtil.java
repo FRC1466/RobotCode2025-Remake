@@ -21,7 +21,7 @@ import frc.robot.FieldConstants;
  * Utility class for transforming field coordinates between red and blue alliances. Supports both 2D
  * and 3D poses for maximum flexibility. Used for the 2025 Reefscape field.
  */
-public class FlipField {
+public class AllianceFlipUtil {
   // Field dimensions for 2025 Reefscape
   public static final double FIELD_LENGTH_METERS = FieldConstants.fieldLength; // Use FieldConstants
   public static final double FIELD_WIDTH_METERS = FieldConstants.fieldWidth; // Use FieldConstants

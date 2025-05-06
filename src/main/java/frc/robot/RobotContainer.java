@@ -13,11 +13,17 @@ import static frc.robot.subsystems.vision.VisionConstants.*;
 import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.wpilibj.Alert;
+import edu.wpi.first.wpilibj.Alert.AlertType;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.GenericHID;
+import edu.wpi.first.wpilibj.GenericHID.RumbleType;
 import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.commands.DriveCommands;
 import frc.robot.commands.DriveToScore;
@@ -29,13 +35,21 @@ import frc.robot.subsystems.drive.GyroIOPigeon2;
 import frc.robot.subsystems.drive.ModuleIO;
 import frc.robot.subsystems.drive.ModuleIOSim;
 import frc.robot.subsystems.drive.ModuleIOTalonFX;
+import frc.robot.subsystems.superstructure.elevator.Elevator;
+import frc.robot.subsystems.superstructure.elevator.ElevatorIO;
+import frc.robot.subsystems.superstructure.elevator.ElevatorIOSim;
 import frc.robot.subsystems.vision.Vision;
 import frc.robot.subsystems.vision.VisionIO;
 import frc.robot.subsystems.vision.VisionIOPhotonVision;
 import frc.robot.subsystems.vision.VisionIOPhotonVisionSim;
+import frc.robot.util.AllianceFlipUtil;
+import frc.robot.util.DoublePressTracker;
+import frc.robot.util.TriggerUtil;
 import java.util.function.DoubleSupplier;
+import lombok.experimental.ExtensionMethod;
 import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
+import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
 
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
@@ -43,20 +57,30 @@ import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
  * periodic methods (other than the scheduler calls). Instead, the structure of the robot (including
  * subsystems, commands, and button mappings) should be declared here.
  */
+@ExtensionMethod({DoublePressTracker.class, TriggerUtil.class})
 public class RobotContainer {
   // Subsystems
   private Drive drive;
   private Vision vision;
+  private Elevator elevator;
 
-  // Controller
+  // Controllers
   private final CommandXboxController controller = new CommandXboxController(0);
+
+  private final Alert driverDisconnected =
+      new Alert("Driver controller disconnected (port 0).", AlertType.kWarning);
+  private final LoggedNetworkNumber endgameAlert1 =
+      new LoggedNetworkNumber("/SmartDashboard/Endgame Alert #1", 30.0);
+  private final LoggedNetworkNumber endgameAlert2 =
+      new LoggedNetworkNumber("/SmartDashboard/Endgame Alert #2", 15.0);
+
+  private boolean coastOverride = false;
 
   // Dashboard inputs
   private final LoggedDashboardChooser<Command> autoChooser;
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
-    // Updated switch structure to resemble the provided code, but only for drive and vision
     if (Constants.getMode() != Constants.Mode.REPLAY) {
       switch (Constants.getRobot()) {
         case COMPBOT -> {
@@ -99,6 +123,7 @@ public class RobotContainer {
                   drive::addVisionMeasurement,
                   new VisionIOPhotonVisionSim(camera0Name, robotToCamera0, drive::getPose),
                   new VisionIOPhotonVisionSim(camera1Name, robotToCamera1, drive::getPose));
+          elevator = new Elevator(new ElevatorIOSim());
         }
       }
     }
@@ -120,6 +145,9 @@ public class RobotContainer {
         case DEVBOT -> vision = new Vision(drive::addVisionMeasurement, new VisionIO() {});
         default -> vision = new Vision(drive::addVisionMeasurement);
       }
+    }
+    if (elevator == null) {
+      elevator = new Elevator(new ElevatorIO() {});
     }
 
     // Set up auto routines
@@ -161,57 +189,85 @@ public class RobotContainer {
 
     drive.setDefaultCommand(DriveCommands.joystickDrive(drive, driverX, driverY, driverOmega));
 
-    // Lock to 0° when A button is held
-    controller
-        .a()
-        .whileTrue(
-            DriveCommands.joystickDriveAtAngle(
-                drive,
-                () -> -controller.getLeftY(),
-                () -> -controller.getLeftX(),
-                () -> new Rotation2d()));
-
     controller
         .povLeft()
         .onTrue(
             runOnce(
-                () -> {
-                  leftCoral = 0;
-                }));
+                    () -> {
+                      leftCoral = 0;
+                    })
+                .withName("Coral POV Left"));
     controller
         .povRight()
         .onTrue(
             runOnce(
-                () -> {
-                  leftCoral = 1;
-                }));
+                    () -> {
+                      leftCoral = 1;
+                    })
+                .withName("Coral POV Right"));
 
+    // Reef Coral Score
     controller
         .rightTrigger()
         .whileTrue(
             new DriveToScore(drive, driverX, driverY, driverOmega, false, () -> leftCoral)
                 .withName("Coral Score"));
 
-    // when left trigger is pressed auto path to the station
+    // Station Coral Intake
     controller
         .leftTrigger()
         .whileTrue(
             new DriveToStation(drive, driverX, driverY, driverOmega, false)
                 .withName("Coral Station Intake"));
+    controller.start().onTrue(Commands.runOnce(() -> elevator.setGoal(() -> 20)));
 
-    // Switch to X pattern when X button is pressed
-    controller.x().onTrue(Commands.runOnce(drive::stopWithX, drive));
+    // Reset gyro
+    var driverStartAndBack = controller.start().and(controller.back());
+    driverStartAndBack.onTrue(
+        Commands.runOnce(
+                () ->
+                    drive.setPose(
+                        new Pose2d(
+                            drive.getPose().getTranslation(),
+                            AllianceFlipUtil.apply(Rotation2d.kZero))))
+            .withName("Reset Gyro")
+            .ignoringDisable(true));
 
-    // Reset gyro to 0° when B button is pressed
-    controller
-        .b()
+    // Endgame alerts
+    new Trigger(
+            () ->
+                DriverStation.isTeleopEnabled()
+                    && DriverStation.getMatchTime() > 0
+                    && DriverStation.getMatchTime() <= Math.round(endgameAlert1.get()))
+        .onTrue(controllerRumbleCommand().withName("Controller Endgame Alert 1"));
+    new Trigger(
+            () ->
+                DriverStation.isTeleopEnabled()
+                    && DriverStation.getMatchTime() > 0
+                    && DriverStation.getMatchTime() <= Math.round(endgameAlert2.get()))
         .onTrue(
-            Commands.runOnce(
-                    () ->
-                        drive.setPose(
-                            new Pose2d(drive.getPose().getTranslation(), new Rotation2d())),
-                    drive)
-                .ignoringDisable(true));
+            controllerRumbleCommand().withName("Controller Endgame Alert 2")); // Rumble three times
+  }
+
+  // Creates controller rumble command
+  private Command controllerRumbleCommand() {
+    return Commands.startEnd(
+        () -> {
+          controller.getHID().setRumble(RumbleType.kBothRumble, 1.0);
+        },
+        () -> {
+          controller.getHID().setRumble(RumbleType.kBothRumble, 0.0);
+        });
+  }
+
+  // Update dashboard data
+  public void updateDashboardOutputs() {
+    SmartDashboard.putNumber("Match Time", DriverStation.getMatchTime());
+  }
+
+  public void updateAlerts() {
+    // Controller disconnected alerts
+    driverDisconnected.set(!DriverStation.isJoystickConnected(controller.getHID().getPort()));
   }
 
   /**

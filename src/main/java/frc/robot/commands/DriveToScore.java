@@ -20,7 +20,7 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import frc.robot.PathfindConstants;
 import frc.robot.subsystems.drive.Drive;
-import frc.robot.util.FlipField;
+import frc.robot.util.AllianceFlipUtil;
 import frc.robot.util.LoggedTunableNumber;
 import java.util.Optional;
 import java.util.function.DoubleSupplier;
@@ -51,7 +51,7 @@ public class DriveToScore extends DriveToPose {
         () ->
             DriveCommands.getLinearVelocityFromJoysticks(
                     driverX.getAsDouble(), driverY.getAsDouble())
-                .times(FlipField.shouldFlip() ? -1.0 : 1.0),
+                .times(AllianceFlipUtil.shouldFlip() ? -1.0 : 1.0),
         () ->
             Math.copySign(
                 Math.pow(MathUtil.applyDeadband(driverOmega.getAsDouble(), DEADBAND), 2.0),
@@ -59,7 +59,7 @@ public class DriveToScore extends DriveToPose {
         isAuto,
         () -> {
           int pov = coralPovSupplier.get();
-          if (FlipField.shouldFlip()) {
+          if (AllianceFlipUtil.shouldFlip()) {
             pov = 1 - pov;
           }
           return pov;
