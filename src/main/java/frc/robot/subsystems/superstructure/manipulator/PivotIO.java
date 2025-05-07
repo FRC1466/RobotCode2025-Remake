@@ -13,16 +13,13 @@ import org.littletonrobotics.junction.AutoLog;
 public interface PivotIO {
   @AutoLog
   class PivotIOInputs {
-    public PivotIOData data =
-        new PivotIOData(false, false, Rotation2d.kZero, Rotation2d.kZero, 0, 0, 0, 0, 0, 0);
+    public PivotIOData data = new PivotIOData(false, false, Rotation2d.kZero, 0, 0, 0, 0, 0);
   }
 
   record PivotIOData(
       boolean motorConnected,
       boolean encoderConnected,
-      Rotation2d internalPosition,
       Rotation2d encoderAbsolutePosition,
-      double encoderRelativePosition,
       double velocityRadPerSec,
       double appliedVolts,
       double supplyCurrentAmps,

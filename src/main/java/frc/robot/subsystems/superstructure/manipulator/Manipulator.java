@@ -44,8 +44,8 @@ import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
 public class Manipulator {
-  public static final Rotation2d minAngle = Rotation2d.fromDegrees(-87.0);
-  public static final Rotation2d maxAngle = Rotation2d.fromDegrees(13.7);
+  public static final Rotation2d minAngle = Rotation2d.fromRadians(0);
+  public static final Rotation2d maxAngle = Rotation2d.fromRadians(Math.PI);
 
   // Tunable numbers
   private static final LoggedTunableNumber kP = new LoggedTunableNumber("Manipulator/kP");
@@ -71,43 +71,13 @@ public class Manipulator {
   private static final LoggedTunableNumber staticCharacterizationRampRate =
       new LoggedTunableNumber("Manipulator/StaticCharacterizationRampRate", 0.2);
 
-  public static final LoggedTunableNumber mailboxHoldVolts =
-      new LoggedTunableNumber("Manipulator/MailboxHoldVolts", 0.8);
-  public static final LoggedTunableNumber mailboxIntakeVolts =
-      new LoggedTunableNumber("Manipulator/MailboxIntakeVolts", 9.0);
-  public static final LoggedTunableNumber mailboxEjectVolts =
-      new LoggedTunableNumber("Manipulator/MailboxEjectVolts", 12.0);
-  public static final LoggedTunableNumber mailboxCurrentLimit =
-      new LoggedTunableNumber("Manipulator/MailboxCurrentLimit", 50.0);
-
-  public static final LoggedTunableNumber[] mailboxDispenseVolts = {
-    new LoggedTunableNumber("Manipulator/MailboxDispenseVolts/L1", 1.5),
-    new LoggedTunableNumber("Manipulator/MailboxDispenseVolts/L2", 2.6),
-    new LoggedTunableNumber("Manipulator/MailboxDispenseVolts/L3", 2.6),
-    new LoggedTunableNumber("Manipulator/MailboxDispenseVolts/L4", 5.0)
-  };
-  public static final LoggedTunableNumber[] mailboxDispenseVoltsAlgae = {
-    new LoggedTunableNumber("Manipulator/MailboxDispenseVoltsAlgae/L2", 3.0),
-    new LoggedTunableNumber("Manipulator/MailboxDispenseVoltsAlgae/L3", 3.0),
-    new LoggedTunableNumber("Manipulator/MailboxDispenseVoltsAlgae/L4", 5.0)
-  };
-
   private static final LoggedTunableNumber algaeCurrentThresh =
       new LoggedTunableNumber("Dispenser/AlgaeCurrentThreshold", 10.0);
   private static final LoggedTunableNumber coralProxThreshold =
       new LoggedTunableNumber("Dispenser/CoralProxThresh", 0.06);
 
-  public static final LoggedTunableNumber funnelRollerVolts =
-      new LoggedTunableNumber("Manipulator/FunnelRollerVolts", 1.5);
-
   public static final LoggedTunableNumber tolerance =
       new LoggedTunableNumber("Manipulator/Tolerance", 0.4);
-  public static final LoggedTunableNumber forceEjectReverseVolts =
-      new LoggedTunableNumber("Manipulator/ForceEjectReverseVolts", -3.0);
-  public static final LoggedTunableNumber intakeReverseVolts =
-      new LoggedTunableNumber("Manipulator/IntakeReverseVolts", -1.0);
-  public static final LoggedTunableNumber intakeReverseTime =
-      new LoggedTunableNumber("Manipulator/IntakeReverseTime", 0.15);
   public static final LoggedTunableNumber homingTimeSecs =
       new LoggedTunableNumber("Manipulator/HomingTimeSecs", 0.2);
   public static final LoggedTunableNumber homingVolts =
@@ -154,6 +124,23 @@ public class Manipulator {
     new LoggedTunableNumber("Manipulator/Funnel/CORALBACKUP", 0),
   };
 
+  private static final LoggedTunableNumber PIVOTREST =
+      new LoggedTunableNumber("Manipulator/PivotAngles/Rest");
+  private static final LoggedTunableNumber PIVOTL2 =
+      new LoggedTunableNumber("Manipulator/PivotAngles/L2");
+  private static final LoggedTunableNumber PIVOTL3 =
+      new LoggedTunableNumber("Manipulator/PivotAngles/L3");
+  private static final LoggedTunableNumber PIVOTL4 =
+      new LoggedTunableNumber("Manipulator/PivotAngles/L4");
+  private static final LoggedTunableNumber PIVOTALGAEL2 =
+      new LoggedTunableNumber("Manipulator/PivotAngles/AlgaeL2");
+  private static final LoggedTunableNumber PIVOTALGAEL3 =
+      new LoggedTunableNumber("Manipulator/PivotAngles/AlgaeL3");
+  private static final LoggedTunableNumber PIVOTALGAEPROCESSOR =
+      new LoggedTunableNumber("Manipulator/PivotAngles/AlgaeProcessor");
+  private static final LoggedTunableNumber PIVOTALGAENET =
+      new LoggedTunableNumber("Manipulator/PivotAngles/AlgaeNet");
+
   static {
     switch (Constants.getRobot()) {
       case SIMBOT -> {
@@ -163,8 +150,8 @@ public class Manipulator {
         kG.initDefault(0.0);
       }
       default -> {
-        kP.initDefault(6500);
-        kD.initDefault(100);
+        kP.initDefault(.18);
+        kD.initDefault(.02);
         kS.initDefault(0);
         kG.initDefault(0);
       }
@@ -179,7 +166,8 @@ public class Manipulator {
     CORALINTAKE,
     CORALL4GRIP,
     CORALOUTTAKE,
-    CORALBACKUP
+    CORALBACKUP,
+    CORALEJECT
   }
 
   // Hardware
@@ -345,11 +333,6 @@ public class Manipulator {
             && DriverStation.isEnabled();
     Logger.recordOutput("Manipulator/RunningProfile", shouldRunProfile);
 
-    // Check if out of tolerance
-    boolean outOfTolerance =
-        Math.abs(pivotInputs.data.internalPosition().getRadians() - setpoint.position)
-            > tolerance.get();
-    shouldEStop = toleranceDebouncer.calculate(outOfTolerance && shouldRunProfile);
     if (shouldRunProfile) {
       // Clamp goal
       var goalState =
@@ -364,7 +347,8 @@ public class Manipulator {
       pivotIO.runPosition(
           Rotation2d.fromRadians(setpoint.position),
           kS.get() * Math.signum(setpoint.velocity) // Magnitude irrelevant
-              + kG.get() * pivotInputs.data.internalPosition().getCos());
+              + kG.get());
+
       // Check at goal
       atGoal =
           EqualsUtil.epsilonEquals(setpoint.position, goalState.position)
@@ -376,7 +360,7 @@ public class Manipulator {
       Logger.recordOutput("Manipulator/Profile/GoalAngleRad", goalState.position);
     } else {
       // Reset setpoint
-      setpoint = new State(pivotInputs.data.internalPosition().getRadians(), 0.0);
+      setpoint = new State(pivotInputs.data.encoderAbsolutePosition().getRadians(), 0.0);
 
       // Clear logs
       Logger.recordOutput("Manipulator/Profile/SetpointAngleRad", 0.0);
@@ -388,10 +372,7 @@ public class Manipulator {
     }
 
     // Run tunnel and gripper
-    if (forceEjectForward) {
-      mailboxIO.runVolts(CORALEJECT[0].get());
-      funnelRollerIO.runVolts(CORALEJECT[1].get());
-    } else if (!isEStopped) {
+    if (!isEStopped) {
       switch (mailboxGoal) {
         case IDLE -> {
           mailboxIO.stop();
@@ -425,6 +406,10 @@ public class Manipulator {
           mailboxIO.runVolts(CORALBACKUP[0].get());
           funnelRollerIO.runVolts(CORALBACKUP[1].get());
         }
+        case CORALEJECT -> {
+          mailboxIO.runVolts(CORALEJECT[0].get());
+          funnelRollerIO.runVolts(CORALEJECT[1].get());
+        }
       }
     } else {
       mailboxIO.stop();
@@ -443,11 +428,9 @@ public class Manipulator {
       }
       if (tunnelVolts > 0.0 && !(isIntaking && hasCoral)) {
         hasCoral =
-            (Constants.getRobot() != RobotType.DEVBOT)
-                ? coralDebouncer.calculate(
-                    coralSensorInputs.data.valid()
-                        && coralSensorInputs.data.distanceMeters() < coralProxThreshold.get())
-                : coralDebouncer.calculate(pivotInputs.data.velocityRadPerSec() < 1.0);
+            coralDebouncer.calculate(
+                coralSensorInputs.data.valid()
+                    && coralSensorInputs.data.distanceMeters() < coralProxThreshold.get());
       } else {
         coralDebouncer.calculate(hasCoral);
       }
@@ -513,7 +496,7 @@ public class Manipulator {
 
   @AutoLogOutput(key = "Manipulator/MeasuredAngle")
   public Rotation2d getPivotAngle() {
-    return pivotInputs.data.internalPosition();
+    return pivotInputs.data.encoderAbsolutePosition();
   }
 
   public void resetHasCoral(boolean value) {

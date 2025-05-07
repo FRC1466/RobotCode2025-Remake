@@ -15,6 +15,7 @@ import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.PositionTorqueCurrentFOC;
+import com.ctre.phoenix6.controls.PositionVoltage;
 import com.ctre.phoenix6.controls.TorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.ParentDevice;
@@ -29,8 +30,6 @@ import frc.robot.Constants.RobotType;
 import frc.robot.util.PhoenixUtil;
 
 public class ElevatorIOTalonFX implements ElevatorIO {
-  public static final double reduction = 4.0 * (1.72 / 1.8); // Precision adjustment
-
   // Hardware
   private final TalonFX talon;
   private final TalonFX followerTalon;
@@ -58,6 +57,8 @@ public class ElevatorIOTalonFX implements ElevatorIO {
   private final PositionTorqueCurrentFOC positionTorqueCurrentRequest =
       new PositionTorqueCurrentFOC(0.0).withUpdateFreqHz(0.0);
   private final VoltageOut voltageRequest = new VoltageOut(0.0).withUpdateFreqHz(0.0);
+  private final PositionVoltage positionVoltageRequest =
+      new PositionVoltage(0.0).withUpdateFreqHz(0.0);
 
   public ElevatorIOTalonFX() {
     talon = new TalonFX(Constants.getRobot() == RobotType.DEVBOT ? 13 : 17, "*");
@@ -67,7 +68,6 @@ public class ElevatorIOTalonFX implements ElevatorIO {
     // Configure motor
     config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
     config.Slot0 = new Slot0Configs().withKP(0).withKI(0).withKD(0);
-    config.Feedback.SensorToMechanismRatio = reduction;
     config.CurrentLimits.SupplyCurrentLimit = 80.0;
     config.CurrentLimits.SupplyCurrentLimitEnable = true;
     config.CurrentLimits.SupplyCurrentLowerLimit = 40.0;
@@ -158,7 +158,7 @@ public class ElevatorIOTalonFX implements ElevatorIO {
   @Override
   public void runPosition(double positionRad, double feedforward) {
     talon.setControl(
-        positionTorqueCurrentRequest
+        positionVoltageRequest
             .withPosition(Units.radiansToRotations(positionRad))
             .withFeedForward(feedforward));
   }

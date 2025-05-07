@@ -66,10 +66,8 @@ public class PivotIOSim implements PivotIO {
         new PivotIOData(
             true,
             true,
-            Rotation2d.fromRadians(simState.get(0) - Manipulator.maxAngle.getRadians()),
             Rotation2d.fromRadians(simState.get(0)),
             simState.get(0),
-            simState.get(1),
             pivotAppliedVolts,
             (pivotAppliedVolts / 12.0) * inputTorqueCurrent,
             inputTorqueCurrent,

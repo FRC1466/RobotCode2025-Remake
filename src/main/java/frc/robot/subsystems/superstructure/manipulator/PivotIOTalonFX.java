@@ -15,6 +15,7 @@ import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.PositionTorqueCurrentFOC;
+import com.ctre.phoenix6.controls.PositionVoltage;
 import com.ctre.phoenix6.controls.TorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.TalonFX;
@@ -39,7 +40,6 @@ public class PivotIOTalonFX implements PivotIO {
   // Status Signals
   private final StatusSignal<Angle> internalPosition;
   private final double encoderAbsolutePosition;
-  private final double encoderRelativePosition;
   private final StatusSignal<AngularVelocity> internalVelocity;
   private final StatusSignal<Voltage> appliedVolts;
   private final StatusSignal<Current> supplyCurrentAmps;
@@ -50,11 +50,11 @@ public class PivotIOTalonFX implements PivotIO {
   private final TorqueCurrentFOC torqueCurrentFOC = new TorqueCurrentFOC(0.0).withUpdateFreqHz(0.0);
   private final PositionTorqueCurrentFOC positionTorqueCurrentFOC =
       new PositionTorqueCurrentFOC(0.0).withUpdateFreqHz(0.0);
+  private final PositionVoltage positionVoltage = new PositionVoltage(0).withUpdateFreqHz(0);
   private final VoltageOut voltageRequest = new VoltageOut(0.0).withUpdateFreqHz(0.0);
 
   // Connected debouncers
   private final Debouncer motorConnectedDebouncer = new Debouncer(0.5);
-  private final Debouncer encoderConnectedDebouncer = new Debouncer(0.5);
 
   public PivotIOTalonFX() {
     talon = new TalonFX(14);
@@ -74,7 +74,6 @@ public class PivotIOTalonFX implements PivotIO {
     internalPosition = talon.getPosition();
     internalVelocity = talon.getVelocity();
     encoderAbsolutePosition = encoder.get();
-    encoderRelativePosition = encoder.get() + absolutePositionOffset;
     appliedVolts = talon.getMotorVoltage();
     supplyCurrentAmps = talon.getSupplyCurrent();
     torqueCurrentAmps = talon.getTorqueCurrent();
@@ -109,11 +108,9 @@ public class PivotIOTalonFX implements PivotIO {
                     torqueCurrentAmps,
                     temp)),
             true,
-            Rotation2d.fromRotations(internalPosition.getValueAsDouble()),
             Rotation2d.fromRotations(encoderAbsolutePosition)
                 .minus(Rotation2d.fromRotations(absolutePositionOffset))
                 .unaryMinus(),
-            0,
             internalVelocity.getValue().in(RadiansPerSecond),
             appliedVolts.getValue().in(Volts),
             supplyCurrentAmps.getValue().in(Amps),
@@ -139,9 +136,7 @@ public class PivotIOTalonFX implements PivotIO {
   @Override
   public void runPosition(Rotation2d position, double feedforward) {
     talon.setControl(
-        positionTorqueCurrentFOC
-            .withPosition(position.getRotations())
-            .withFeedForward(feedforward));
+        positionVoltage.withPosition(position.getRotations()).withFeedForward(feedforward));
   }
 
   @Override
