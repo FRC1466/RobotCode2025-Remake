@@ -13,6 +13,7 @@ import static frc.robot.subsystems.vision.VisionConstants.*;
 import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -35,10 +36,16 @@ import frc.robot.subsystems.drive.GyroIOPigeon2;
 import frc.robot.subsystems.drive.ModuleIO;
 import frc.robot.subsystems.drive.ModuleIOSim;
 import frc.robot.subsystems.drive.ModuleIOTalonFX;
+import frc.robot.subsystems.rollers.RollerSystemIO;
+import frc.robot.subsystems.rollers.RollerSystemIOSim;
+import frc.robot.subsystems.sensors.CoralSensorIO;
 import frc.robot.subsystems.superstructure.Superstructure;
 import frc.robot.subsystems.superstructure.elevator.Elevator;
 import frc.robot.subsystems.superstructure.elevator.ElevatorIO;
 import frc.robot.subsystems.superstructure.elevator.ElevatorIOSim;
+import frc.robot.subsystems.superstructure.manipulator.Manipulator;
+import frc.robot.subsystems.superstructure.manipulator.PivotIO;
+import frc.robot.subsystems.superstructure.manipulator.PivotIOSim;
 import frc.robot.subsystems.vision.Vision;
 import frc.robot.subsystems.vision.VisionIO;
 import frc.robot.subsystems.vision.VisionIOPhotonVision;
@@ -81,6 +88,7 @@ public class RobotContainer {
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
     Elevator elevator = null;
+    Manipulator manipulator = null;
 
     if (Constants.getMode() != Constants.Mode.REPLAY) {
       switch (Constants.getRobot()) {
@@ -125,6 +133,12 @@ public class RobotContainer {
                   new VisionIOPhotonVisionSim(camera0Name, robotToCamera0, Drive::getPose),
                   new VisionIOPhotonVisionSim(camera1Name, robotToCamera1, Drive::getPose));
           elevator = new Elevator(new ElevatorIOSim());
+          manipulator =
+              new Manipulator(
+                  new PivotIOSim(),
+                  new RollerSystemIOSim(DCMotor.getKrakenX60Foc(1), 1, 1),
+                  new RollerSystemIOSim(DCMotor.getKrakenX60Foc(1), 1, 1),
+                  new CoralSensorIO() {});
         }
       }
     }
@@ -150,7 +164,15 @@ public class RobotContainer {
     if (elevator == null) {
       elevator = new Elevator(new ElevatorIO() {});
     }
-    superstructure = new Superstructure(elevator);
+    if (manipulator == null) {
+      manipulator =
+          new Manipulator(
+              new PivotIO() {},
+              new RollerSystemIO() {},
+              new RollerSystemIO() {},
+              new CoralSensorIO() {});
+    }
+    superstructure = new Superstructure(elevator, manipulator);
 
     // Set up auto routines
     autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());

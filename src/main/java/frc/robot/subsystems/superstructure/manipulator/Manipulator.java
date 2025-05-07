@@ -1,14 +1,13 @@
-// Copyright (c) 2025 FRC 6328
-// http://github.com/Mechanical-Advantage
+// Copyright (c) 2025 FRC 1466
+// http://github.com/FRC1466
 //
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file at
 // the root directory of this project.
 
-package org.littletonrobotics.frc2025.subsystems.superstructure.dispenser;
+package frc.robot.subsystems.superstructure.manipulator;
 
 import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -17,7 +16,6 @@ import edu.wpi.first.math.trajectory.TrapezoidProfile.State;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.RobotState;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -26,6 +24,7 @@ import frc.robot.Constants;
 import frc.robot.Constants.RobotType;
 import frc.robot.FieldConstants;
 import frc.robot.Robot;
+import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.rollers.RollerSystemIO;
 import frc.robot.subsystems.rollers.RollerSystemIOInputsAutoLogged;
 import frc.robot.subsystems.sensors.CoralSensorIO;
@@ -34,7 +33,6 @@ import frc.robot.util.AllianceFlipUtil;
 import frc.robot.util.EqualsUtil;
 import frc.robot.util.LoggedTracer;
 import frc.robot.util.LoggedTunableNumber;
-
 import java.util.List;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
@@ -45,74 +43,116 @@ import lombok.experimental.Accessors;
 import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
-public class Dispenser {
+public class Manipulator {
   public static final Rotation2d minAngle = Rotation2d.fromDegrees(-87.0);
   public static final Rotation2d maxAngle = Rotation2d.fromDegrees(13.7);
 
-    // Tunable numbers
-    private static final LoggedTunableNumber kP = new LoggedTunableNumber("Dispenser/kP");
-    private static final LoggedTunableNumber kD = new LoggedTunableNumber("Dispenser/kD");
-    private static final LoggedTunableNumber kS = new LoggedTunableNumber("Dispenser/kS");
-    private static final LoggedTunableNumber kG = new LoggedTunableNumber("Dispenser/kG");
-  
-    private static final LoggedTunableNumber maxVelocityDegPerSec =
-        new LoggedTunableNumber("Dispenser/MaxVelocityDegPerSec", 1500.0);
-    private static final LoggedTunableNumber maxAccelerationDegPerSec2 =
-        new LoggedTunableNumber("Dispenser/MaxAccelerationDegPerSec2", 2500.0);
-    private static final LoggedTunableNumber algaeMaxVelocityDegPerSec =
-        new LoggedTunableNumber("Dispenser/AlgaeMaxVelocityDegPerSec", 800.0);
-    private static final LoggedTunableNumber algaeMaxAccelerationDegPerSec2 =
-        new LoggedTunableNumber("Dispenser/AlgaeMaxAccelerationDegPerSec2", 1500.0);
-    private static final LoggedTunableNumber slowMaxVelocityDegPerSec =
-        new LoggedTunableNumber("Dispenser/SlowMaxVelocityDegPerSec", 800.0);
-    private static final LoggedTunableNumber slowMaxAccelerationDegPerSec2 =
-        new LoggedTunableNumber("Dispenser/SlowMaxAccelerationDegPerSec2", 1500.0);
-  
-    private static final LoggedTunableNumber staticCharacterizationVelocityThresh =
-        new LoggedTunableNumber("Dispenser/StaticCharacterizationVelocityThresh", 0.1);
-    private static final LoggedTunableNumber staticCharacterizationRampRate =
-        new LoggedTunableNumber("Dispenser/StaticCharacterizationRampRate", 0.2);
-  
-    public static final LoggedTunableNumber mailboxHoldVolts =
-        new LoggedTunableNumber("Dispenser/MailboxHoldVolts", 0.8);
-    public static final LoggedTunableNumber mailboxIntakeVolts =
-        new LoggedTunableNumber("Dispenser/MailboxIntakeVolts", 9.0);
-    public static final LoggedTunableNumber mailboxEjectVolts =
-        new LoggedTunableNumber("Dispenser/MailboxEjectVolts", -12.0);
-    public static final LoggedTunableNumber mailboxCurrentLimit =
-        new LoggedTunableNumber("Dispenser/MailboxCurrentLimit", 50.0);
-  
-    public static final LoggedTunableNumber[] mailboxDispenseVolts = {
-      new LoggedTunableNumber("Dispenser/MailboxDispenseVolts/L1", 1.5),
-      new LoggedTunableNumber("Dispenser/MailboxDispenseVolts/L2", 2.6),
-      new LoggedTunableNumber("Dispenser/MailboxDispenseVolts/L3", 2.6),
-      new LoggedTunableNumber("Dispenser/MailboxDispenseVolts/L4", 5.0)
-    };
-    public static final LoggedTunableNumber[] mailboxDispenseVoltsAlgae = {
-      new LoggedTunableNumber("Dispenser/MailboxDispenseVoltsAlgae/L2", 3.0),
-      new LoggedTunableNumber("Dispenser/MailboxDispenseVoltsAlgae/L3", 3.0),
-      new LoggedTunableNumber("Dispenser/MailboxDispenseVoltsAlgae/L4", 5.0)
-    };
-  
-    public static final LoggedTunableNumber funnelRollerVolts =
-        new LoggedTunableNumber("Dispenser/FunnelRollerVolts", 1.5);
+  // Tunable numbers
+  private static final LoggedTunableNumber kP = new LoggedTunableNumber("Manipulator/kP");
+  private static final LoggedTunableNumber kD = new LoggedTunableNumber("Manipulator/kD");
+  private static final LoggedTunableNumber kS = new LoggedTunableNumber("Manipulator/kS");
+  private static final LoggedTunableNumber kG = new LoggedTunableNumber("Manipulator/kG");
+
+  private static final LoggedTunableNumber maxVelocityDegPerSec =
+      new LoggedTunableNumber("Manipulator/MaxVelocityDegPerSec", 1500.0);
+  private static final LoggedTunableNumber maxAccelerationDegPerSec2 =
+      new LoggedTunableNumber("Manipulator/MaxAccelerationDegPerSec2", 2500.0);
+  private static final LoggedTunableNumber algaeMaxVelocityDegPerSec =
+      new LoggedTunableNumber("Manipulator/AlgaeMaxVelocityDegPerSec", 800.0);
+  private static final LoggedTunableNumber algaeMaxAccelerationDegPerSec2 =
+      new LoggedTunableNumber("Manipulator/AlgaeMaxAccelerationDegPerSec2", 1500.0);
+  private static final LoggedTunableNumber slowMaxVelocityDegPerSec =
+      new LoggedTunableNumber("Manipulator/SlowMaxVelocityDegPerSec", 800.0);
+  private static final LoggedTunableNumber slowMaxAccelerationDegPerSec2 =
+      new LoggedTunableNumber("Manipulator/SlowMaxAccelerationDegPerSec2", 1500.0);
+
+  private static final LoggedTunableNumber staticCharacterizationVelocityThresh =
+      new LoggedTunableNumber("Manipulator/StaticCharacterizationVelocityThresh", 0.1);
+  private static final LoggedTunableNumber staticCharacterizationRampRate =
+      new LoggedTunableNumber("Manipulator/StaticCharacterizationRampRate", 0.2);
+
+  public static final LoggedTunableNumber mailboxHoldVolts =
+      new LoggedTunableNumber("Manipulator/MailboxHoldVolts", 0.8);
+  public static final LoggedTunableNumber mailboxIntakeVolts =
+      new LoggedTunableNumber("Manipulator/MailboxIntakeVolts", 9.0);
+  public static final LoggedTunableNumber mailboxEjectVolts =
+      new LoggedTunableNumber("Manipulator/MailboxEjectVolts", 12.0);
+  public static final LoggedTunableNumber mailboxCurrentLimit =
+      new LoggedTunableNumber("Manipulator/MailboxCurrentLimit", 50.0);
+
+  public static final LoggedTunableNumber[] mailboxDispenseVolts = {
+    new LoggedTunableNumber("Manipulator/MailboxDispenseVolts/L1", 1.5),
+    new LoggedTunableNumber("Manipulator/MailboxDispenseVolts/L2", 2.6),
+    new LoggedTunableNumber("Manipulator/MailboxDispenseVolts/L3", 2.6),
+    new LoggedTunableNumber("Manipulator/MailboxDispenseVolts/L4", 5.0)
+  };
+  public static final LoggedTunableNumber[] mailboxDispenseVoltsAlgae = {
+    new LoggedTunableNumber("Manipulator/MailboxDispenseVoltsAlgae/L2", 3.0),
+    new LoggedTunableNumber("Manipulator/MailboxDispenseVoltsAlgae/L3", 3.0),
+    new LoggedTunableNumber("Manipulator/MailboxDispenseVoltsAlgae/L4", 5.0)
+  };
+
+  private static final LoggedTunableNumber algaeCurrentThresh =
+      new LoggedTunableNumber("Dispenser/AlgaeCurrentThreshold", 10.0);
+  private static final LoggedTunableNumber coralProxThreshold =
+      new LoggedTunableNumber("Dispenser/CoralProxThresh", 0.06);
+
+  public static final LoggedTunableNumber funnelRollerVolts =
+      new LoggedTunableNumber("Manipulator/FunnelRollerVolts", 1.5);
 
   public static final LoggedTunableNumber tolerance =
-      new LoggedTunableNumber("Dispenser/Tolerance", 0.4);
+      new LoggedTunableNumber("Manipulator/Tolerance", 0.4);
   public static final LoggedTunableNumber forceEjectReverseVolts =
-      new LoggedTunableNumber("Dispenser/ForceEjectReverseVolts", -3.0);
+      new LoggedTunableNumber("Manipulator/ForceEjectReverseVolts", -3.0);
   public static final LoggedTunableNumber intakeReverseVolts =
-      new LoggedTunableNumber("Dispenser/IntakeReverseVolts", -1.0);
+      new LoggedTunableNumber("Manipulator/IntakeReverseVolts", -1.0);
   public static final LoggedTunableNumber intakeReverseTime =
-      new LoggedTunableNumber("Dispenser/IntakeReverseTime", 0.15);
+      new LoggedTunableNumber("Manipulator/IntakeReverseTime", 0.15);
   public static final LoggedTunableNumber homingTimeSecs =
-      new LoggedTunableNumber("Dispenser/HomingTimeSecs", 0.2);
+      new LoggedTunableNumber("Manipulator/HomingTimeSecs", 0.2);
   public static final LoggedTunableNumber homingVolts =
-      new LoggedTunableNumber("Dispenser/HomingVolts", 3.0);
+      new LoggedTunableNumber("Manipulator/HomingVolts", 3.0);
   public static final LoggedTunableNumber homingVelocityThresh =
-      new LoggedTunableNumber("Dispenser/HomingVelocityThreshold", 0.1);
+      new LoggedTunableNumber("Manipulator/HomingVelocityThreshold", 0.1);
   public static final LoggedTunableNumber simIntakingTime =
-      new LoggedTunableNumber("Dispenser/SimIntakingTime", 0.5);
+      new LoggedTunableNumber("Manipulator/SimIntakingTime", 0.5);
+
+  public static final LoggedTunableNumber[] IDLE = {
+    new LoggedTunableNumber("Manipulator/Mailbox/IDLE", 0),
+    new LoggedTunableNumber("Manipulator/Funnel/IDLE", 0),
+  };
+  public static final LoggedTunableNumber[] ALGAEGRAB = {
+    new LoggedTunableNumber("Manipulator/Mailbox/ALGAEGRAB", 3.0),
+    new LoggedTunableNumber("Manipulator/Funnel/ALGAEGRAB", 0),
+  };
+  public static final LoggedTunableNumber[] ALGAEHOLD = {
+    new LoggedTunableNumber("Manipulator/Mailbox/ALGAEHOLD", .4),
+    new LoggedTunableNumber("Manipulator/Funnel/ALGAEHOLD", 0),
+  };
+  public static final LoggedTunableNumber[] ALGAENET = {
+    new LoggedTunableNumber("Manipulator/Mailbox/ALGAENET", -2.5),
+    new LoggedTunableNumber("Manipulator/Funnel/ALGAENET", 0),
+  };
+  public static final LoggedTunableNumber[] CORALINTAKE = {
+    new LoggedTunableNumber("Manipulator/Mailbox/CORALINTAKE", -1.75),
+    new LoggedTunableNumber("Manipulator/Funnel/CORALINTAKE", -4),
+  };
+  public static final LoggedTunableNumber[] CORALL4GRIP = {
+    new LoggedTunableNumber("Manipulator/Mailbox/CORALL4GRIP", .2),
+    new LoggedTunableNumber("Manipulator/Funnel/CORALL4GRIP", 0),
+  };
+  public static final LoggedTunableNumber[] CORALOUTTAKE = {
+    new LoggedTunableNumber("Manipulator/Mailbox/CORALOUTTAKE", -10),
+    new LoggedTunableNumber("Manipulator/Funnel/CORALOUTTAKE", 0),
+  };
+  public static final LoggedTunableNumber[] CORALEJECT = {
+    new LoggedTunableNumber("Manipulator/Mailbox/CORALEJECT", -12),
+    new LoggedTunableNumber("Manipulator/Funnel/CORALEJECT", -12),
+  };
+  public static final LoggedTunableNumber[] CORALBACKUP = {
+    new LoggedTunableNumber("Manipulator/Mailbox/CORALBACKUP", .5),
+    new LoggedTunableNumber("Manipulator/Funnel/CORALBACKUP", 0),
+  };
 
   static {
     switch (Constants.getRobot()) {
@@ -131,11 +171,15 @@ public class Dispenser {
     }
   }
 
-  public enum GripperGoal {
+  public enum MailboxGoal {
     IDLE,
-    GRIP,
-    EJECT,
-    L1_EJECT
+    ALGAEGRAB,
+    ALGAEHOLD,
+    ALGAENET,
+    CORALINTAKE,
+    CORALL4GRIP,
+    CORALOUTTAKE,
+    CORALBACKUP
   }
 
   // Hardware
@@ -154,7 +198,7 @@ public class Dispenser {
   private BooleanSupplier coastOverride = () -> false;
   private BooleanSupplier disabledOverride = () -> false;
 
-  @AutoLogOutput(key = "Dispenser/PivotBrakeModeEnabled")
+  @AutoLogOutput(key = "Manipulator/PivotBrakeModeEnabled")
   private boolean brakeModeEnabled = true;
 
   private TrapezoidProfile profile;
@@ -168,7 +212,6 @@ public class Dispenser {
   @Setter private boolean isIntaking = false;
   @Setter private boolean forceFastConstraints = false;
   @Setter private boolean forceEjectForward = false;
-  @Setter private boolean forceEjectReverse = false;
 
   @Accessors(fluent = true)
   @Setter
@@ -177,11 +220,11 @@ public class Dispenser {
   private final Timer intakingReverseTimer = new Timer();
 
   @Getter
-  @AutoLogOutput(key = "Dispenser/Profile/AtGoal")
+  @AutoLogOutput(key = "Manipulator/Profile/AtGoal")
   private boolean atGoal = false;
 
   @Setter private double tunnelVolts = 0.0;
-  @AutoLogOutput @Setter private GripperGoal gripperGoal = GripperGoal.IDLE;
+  @AutoLogOutput @Setter private MailboxGoal mailboxGoal = MailboxGoal.IDLE;
 
   @AutoLogOutput
   @Accessors(fluent = true)
@@ -207,19 +250,19 @@ public class Dispenser {
 
   // Disconnected alerts
   private final Alert pivotMotorDisconnectedAlert =
-      new Alert("Dispenser pivot motor disconnected!", Alert.AlertType.kWarning);
+      new Alert("Manipulator pivot motor disconnected!", Alert.AlertType.kWarning);
   private final Alert pivotEncoderDisconnectedAlert =
-      new Alert("Dispenser pivot encoder disconnected!", Alert.AlertType.kWarning);
+      new Alert("Manipulator pivot encoder disconnected!", Alert.AlertType.kWarning);
   private final Alert mailboxDisconnectedAlert =
-      new Alert("Dispenser mailbox disconnected!", Alert.AlertType.kWarning);
+      new Alert("Manipulator mailbox disconnected!", Alert.AlertType.kWarning);
   private final Alert funnelRollerDisconnectedAlert =
-      new Alert("Dispenser funnel disconnected!", Alert.AlertType.kWarning);
+      new Alert("Manipulator funnel disconnected!", Alert.AlertType.kWarning);
 
   private final Timer simIntakingTimer = new Timer();
   private boolean lastAlgaeButtonPressed = false;
   private boolean lastCoralButtonPressed = false;
 
-  public Dispenser(
+  public Manipulator(
       PivotIO pivotIO,
       RollerSystemIO mailboxIO,
       RollerSystemIO funnelRollerIO,
@@ -228,8 +271,6 @@ public class Dispenser {
     this.mailboxIO = mailboxIO;
     this.funnelRollerIO = funnelRollerIO;
     this.coralSensorIO = coralSensorIO;
-
-    tunnelPositionController = new PIDController(tunnelkP.get(), 0.0, tunnelkD.get());
 
     profile =
         new TrapezoidProfile(
@@ -241,13 +282,13 @@ public class Dispenser {
 
   public void periodic() {
     pivotIO.updateInputs(pivotInputs);
-    Logger.processInputs("Dispenser/Pivot", pivotInputs);
+    Logger.processInputs("Manipulator/Pivot", pivotInputs);
     mailboxIO.updateInputs(mailboxInputs);
-    Logger.processInputs("Dispenser/Mailbox", mailboxInputs);
+    Logger.processInputs("Manipulator/Mailbox", mailboxInputs);
     funnelRollerIO.updateInputs(funnelRollerInputs);
-    Logger.processInputs("Dispenser/Funnel Roller", funnelRollerInputs);
+    Logger.processInputs("Manipulator/Funnel Roller", funnelRollerInputs);
     coralSensorIO.updateInputs(coralSensorInputs);
-    Logger.processInputs("Dispenser/CoralSensor", coralSensorInputs);
+    Logger.processInputs("Manipulator/CoralSensor", coralSensorInputs);
 
     pivotMotorDisconnectedAlert.set(
         !pivotInputs.data.motorConnected()
@@ -257,18 +298,15 @@ public class Dispenser {
         !pivotInputs.data.encoderConnected()
             && Constants.getRobot() == RobotType.COMPBOT
             && !Robot.isJITing());
-    tunnelDisconnectedAlert.set(!tunnelInputs.data.connected() && !Robot.isJITing());
-    gripperDisconnectedAlert.set(
-        !gripperInputs.data.connected()
+    mailboxDisconnectedAlert.set(!mailboxInputs.data.connected() && !Robot.isJITing());
+    funnelRollerDisconnectedAlert.set(
+        !funnelRollerInputs.data.connected()
             && Constants.getRobot() == RobotType.COMPBOT
             && !Robot.isJITing());
 
     // Update tunable numbers
     if (kP.hasChanged(hashCode()) || kD.hasChanged(hashCode())) {
       pivotIO.setPID(kP.get(), 0.0, kD.get());
-    }
-    if (tunnelkP.hasChanged(hashCode()) || tunnelkD.hasChanged(hashCode())) {
-      tunnelPositionController.setPID(tunnelkP.get(), 0.0, tunnelkD.get());
     }
     if (maxVelocityDegPerSec.hasChanged(hashCode())
         || maxAccelerationDegPerSec2.hasChanged(hashCode())) {
@@ -294,9 +332,6 @@ public class Dispenser {
                   Units.degreesToRadians(slowMaxVelocityDegPerSec.get()),
                   Units.degreesToRadians(slowMaxAccelerationDegPerSec2.get())));
     }
-    if (gripperCurrentLimit.hasChanged(hashCode())) {
-      gripperIO.setCurrentLimit(gripperCurrentLimit.get());
-    }
 
     // Set coast mode
     setBrakeMode(!coastOverride.getAsBoolean());
@@ -308,7 +343,7 @@ public class Dispenser {
             && !disabledOverride.getAsBoolean()
             && !isEStopped
             && DriverStation.isEnabled();
-    Logger.recordOutput("Dispenser/RunningProfile", shouldRunProfile);
+    Logger.recordOutput("Manipulator/RunningProfile", shouldRunProfile);
 
     // Check if out of tolerance
     boolean outOfTolerance =
@@ -336,17 +371,17 @@ public class Dispenser {
               && EqualsUtil.epsilonEquals(setpoint.velocity, 0.0);
 
       // Log state
-      Logger.recordOutput("Dispenser/Profile/SetpointAngleRad", setpoint.position);
-      Logger.recordOutput("Dispenser/Profile/SetpointAngleRadPerSec", setpoint.velocity);
-      Logger.recordOutput("Dispenser/Profile/GoalAngleRad", goalState.position);
+      Logger.recordOutput("Manipulator/Profile/SetpointAngleRad", setpoint.position);
+      Logger.recordOutput("Manipulator/Profile/SetpointAngleRadPerSec", setpoint.velocity);
+      Logger.recordOutput("Manipulator/Profile/GoalAngleRad", goalState.position);
     } else {
       // Reset setpoint
       setpoint = new State(pivotInputs.data.internalPosition().getRadians(), 0.0);
 
       // Clear logs
-      Logger.recordOutput("Dispenser/Profile/SetpointAngleRad", 0.0);
-      Logger.recordOutput("Dispenser/Profile/SetpointAngleRadPerSec", 0.0);
-      Logger.recordOutput("Dispenser/Profile/GoalAngleRad", 0.0);
+      Logger.recordOutput("Manipulator/Profile/SetpointAngleRad", 0.0);
+      Logger.recordOutput("Manipulator/Profile/SetpointAngleRadPerSec", 0.0);
+      Logger.recordOutput("Manipulator/Profile/GoalAngleRad", 0.0);
     }
     if (isEStopped) {
       pivotIO.stop();
@@ -354,51 +389,55 @@ public class Dispenser {
 
     // Run tunnel and gripper
     if (forceEjectForward) {
-      tunnelIO.runVolts(tunnelDispenseVolts[3].get());
-      gripperIO.runVolts(gripperEjectVolts.get());
-    } else if (forceEjectReverse) {
-      tunnelIO.runVolts(forceEjectReverseVolts.get());
+      mailboxIO.runVolts(CORALEJECT[0].get());
+      funnelRollerIO.runVolts(CORALEJECT[1].get());
     } else if (!isEStopped) {
-      double intakeVolts = tunnelVolts;
-      if (hasCoral) {
-        if (!lastHasCoral) {
-          tunnelPositionController.setSetpoint(
-              tunnelInputs.data.positionRads() + tunnelPositionOffsetRads.get());
+      switch (mailboxGoal) {
+        case IDLE -> {
+          mailboxIO.stop();
+          funnelRollerIO.stop();
         }
-        if (isIntaking || EqualsUtil.epsilonEquals(tunnelVolts, 0.0)) {
-          intakeVolts =
-              MathUtil.clamp(
-                  tunnelPositionController.calculate(tunnelInputs.data.positionRads()),
-                  -tunnelPositionMaxVolts.get(),
-                  tunnelPositionMaxVolts.get());
+        case ALGAEGRAB -> {
+          mailboxIO.runVolts(ALGAEGRAB[0].get());
+          funnelRollerIO.runVolts(ALGAEGRAB[1].get());
         }
-      }
-      tunnelIO.runVolts(intakeVolts);
-
-      switch (gripperGoal) {
-        case IDLE -> gripperIO.stop();
-        case GRIP -> {
-          if (hasAlgae) {
-            gripperIO.runVolts(gripperHoldVolts.get());
-          } else {
-            gripperIO.runVolts(gripperIntakeVolts.get());
-          }
+        case ALGAEHOLD -> {
+          mailboxIO.runVolts(ALGAEHOLD[0].get());
+          funnelRollerIO.runVolts(ALGAEHOLD[1].get());
         }
-        case EJECT -> gripperIO.runVolts(gripperEjectVolts.get());
-        case L1_EJECT -> gripperIO.runVolts(gripperL1EjectVolts.get());
+        case ALGAENET -> {
+          mailboxIO.runVolts(ALGAENET[0].get());
+          funnelRollerIO.runVolts(ALGAENET[1].get());
+        }
+        case CORALINTAKE -> {
+          mailboxIO.runVolts(CORALINTAKE[0].get());
+          funnelRollerIO.runVolts(CORALINTAKE[1].get());
+        }
+        case CORALL4GRIP -> {
+          mailboxIO.runVolts(CORALL4GRIP[0].get());
+          funnelRollerIO.runVolts(CORALL4GRIP[1].get());
+        }
+        case CORALOUTTAKE -> {
+          mailboxIO.runVolts(CORALOUTTAKE[0].get());
+          funnelRollerIO.runVolts(CORALOUTTAKE[1].get());
+        }
+        case CORALBACKUP -> {
+          mailboxIO.runVolts(CORALBACKUP[0].get());
+          funnelRollerIO.runVolts(CORALBACKUP[1].get());
+        }
       }
     } else {
-      tunnelIO.stop();
-      gripperIO.stop();
+      mailboxIO.stop();
+      funnelRollerIO.stop();
     }
     lastHasCoral = hasCoral;
 
     // Check algae & coral states
     if (Constants.getRobot() != Constants.RobotType.SIMBOT) {
-      if (gripperGoal == GripperGoal.GRIP || DriverStation.isDisabled()) {
+      if (mailboxGoal == MailboxGoal.ALGAEGRAB || DriverStation.isDisabled()) {
         hasAlgae =
             algaeDebouncer.calculate(
-                gripperInputs.data.torqueCurrentAmps() >= algaeCurrentThresh.get());
+                mailboxInputs.data.torqueCurrentAmps() >= algaeCurrentThresh.get());
       } else {
         algaeDebouncer.calculate(hasAlgae);
       }
@@ -413,7 +452,7 @@ public class Dispenser {
         coralDebouncer.calculate(hasCoral);
       }
     } else if (DriverStation.isAutonomous()) {
-      var flippedRobot = AllianceFlipUtil.apply(RobotState.getInstance().getEstimatedPose());
+      var flippedRobot = AllianceFlipUtil.apply(Drive.getPose());
       var intakingError =
           flippedRobot.relativeTo(
               flippedRobot.nearest(
@@ -428,7 +467,7 @@ public class Dispenser {
         simIntakingTimer.restart();
       }
 
-      if (!isIntaking && tunnelInputs.data.velocityRadsPerSec() >= 50.0) {
+      if (!isIntaking && mailboxInputs.data.velocityRadsPerSec() >= 50.0) {
         hasCoral = false;
       }
     } else {
@@ -445,7 +484,7 @@ public class Dispenser {
     }
 
     // Update coral grabbed LEDs
-    Leds.getInstance().coralGrabbed = isIntaking && hasCoral;
+    // Leds.getInstance().coralGrabbed = isIntaking && hasCoral;
 
     // Display hasCoral & hasAlgae
     SmartDashboard.putBoolean("Has Coral?", hasCoral);
@@ -455,11 +494,11 @@ public class Dispenser {
     SmartDashboard.putString("Coral Threshold Offset", String.format("%.1f", coralThresholdOffset));
 
     // Log state
-    Logger.recordOutput("Dispenser/CoastOverride", coastOverride.getAsBoolean());
-    Logger.recordOutput("Dispenser/DisabledOverride", disabledOverride.getAsBoolean());
+    Logger.recordOutput("Manipulator/CoastOverride", coastOverride.getAsBoolean());
+    Logger.recordOutput("Manipulator/DisabledOverride", disabledOverride.getAsBoolean());
 
     // Record cycle time
-    LoggedTracer.record("Dispenser");
+    LoggedTracer.record("Manipulator");
   }
 
   public void setGoal(Supplier<Rotation2d> goal) {
@@ -472,7 +511,7 @@ public class Dispenser {
     return goal.getAsDouble();
   }
 
-  @AutoLogOutput(key = "Dispenser/MeasuredAngle")
+  @AutoLogOutput(key = "Manipulator/MeasuredAngle")
   public Rotation2d getPivotAngle() {
     return pivotInputs.data.internalPosition();
   }
@@ -480,7 +519,6 @@ public class Dispenser {
   public void resetHasCoral(boolean value) {
     hasCoral = value;
     lastHasCoral = value;
-    tunnelPositionController.setSetpoint(tunnelInputs.data.positionRads());
     coralDebouncer = new Debouncer(coralDebounceTime, DebounceType.kRising);
     coralDebouncer.calculate(value);
   }
@@ -514,7 +552,7 @@ public class Dispenser {
               state.characterizationOutput = staticCharacterizationRampRate.get() * timer.get();
               pivotIO.runOpenLoop(state.characterizationOutput);
               Logger.recordOutput(
-                  "Dispenser/StaticCharacterizationOutput", state.characterizationOutput);
+                  "Manipulator/StaticCharacterizationOutput", state.characterizationOutput);
             })
         .until(
             () ->
@@ -525,7 +563,8 @@ public class Dispenser {
             () -> {
               stopProfile = false;
               timer.stop();
-              Logger.recordOutput("Dispenser/CharacterizationOutput", state.characterizationOutput);
+              Logger.recordOutput(
+                  "Manipulator/CharacterizationOutput", state.characterizationOutput);
             });
   }
 

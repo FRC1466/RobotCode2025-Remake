@@ -7,15 +7,18 @@
 
 package frc.robot.subsystems.superstructure;
 
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.subsystems.superstructure.elevator.Elevator;
+import frc.robot.subsystems.superstructure.manipulator.Manipulator;
 import frc.robot.util.LoggedTracer;
 import java.util.function.DoubleSupplier;
 
 public class Superstructure extends SubsystemBase {
   private final Elevator elevator;
+  private final Manipulator manipulator;
 
   private final SuperstructureVisualizer measuredVisualizer =
       new SuperstructureVisualizer("Measured");
@@ -23,14 +26,18 @@ public class Superstructure extends SubsystemBase {
       new SuperstructureVisualizer("Setpoint");
   private final SuperstructureVisualizer goalVisualizer = new SuperstructureVisualizer("Goal");
 
-  public Superstructure(Elevator elevator) {
+  public Superstructure(Elevator elevator, Manipulator manipulator) {
     this.elevator = elevator;
+    this.manipulator = manipulator;
   }
 
   @Override
   public void periodic() {
     // Run periodic
     elevator.periodic();
+    manipulator.periodic();
+
+    manipulator.setGoal(() -> Rotation2d.fromRadians(1.15));
 
     // Update visualizer
     measuredVisualizer.update(elevator.getPositionMeters());
