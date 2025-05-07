@@ -9,6 +9,7 @@ package frc.robot;
 
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
+import edu.wpi.first.wpilibj.I2C;
 import edu.wpi.first.wpilibj.RobotBase;
 
 /** This class contains global configuration describing the current robot and runtime mode. */
@@ -16,6 +17,7 @@ public final class Constants {
   public static final double loopPeriodSecs = 0.02;
   private static RobotType robotType = RobotType.SIMBOT;
   public static final boolean tuningMode = false;
+  public static final I2C.Port i2cPort = I2C.Port.kOnboard;
 
   @SuppressWarnings("resource")
   public static RobotType getRobot() {
