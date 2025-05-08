@@ -10,6 +10,7 @@ package frc.robot.subsystems.superstructure;
 import static frc.robot.subsystems.superstructure.SuperstructureConstants.*;
 
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.util.Units;
 import frc.robot.FieldConstants.ReefLevel;
 import frc.robot.util.LoggedTunableNumber;
 import java.util.function.DoubleSupplier;
@@ -83,7 +84,7 @@ public record SuperstructurePose(DoubleSupplier elevatorHeight, Supplier<Rotatio
     }
 
     public double getDispenserAngleDeg() {
-      return angleSupplier.get();
+      return Units.radiansToDegrees(angleSupplier.get());
     }
   }
 
@@ -109,7 +110,7 @@ public record SuperstructurePose(DoubleSupplier elevatorHeight, Supplier<Rotatio
     Preset(DoubleSupplier elevatorHeight, DoubleSupplier pivotAngle) {
       this(
           new SuperstructurePose(
-              elevatorHeight, () -> Rotation2d.fromDegrees(pivotAngle.getAsDouble())));
+              elevatorHeight, () -> Rotation2d.fromRadians(pivotAngle.getAsDouble())));
     }
 
     Preset(String name, double elevatorHeight, double pivotAngle) {

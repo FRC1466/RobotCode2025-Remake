@@ -78,6 +78,12 @@ public class Superstructure extends SubsystemBase {
           "Superstructure emergency disabled due to high position error. Disable the superstructure manually and reenable to reset.",
           Alert.AlertType.kError);
 
+  private final SuperstructureVisualizer measuredVisualizer =
+      new SuperstructureVisualizer("Measured");
+  private final SuperstructureVisualizer setpointVisualizer =
+      new SuperstructureVisualizer("Setpoint");
+  private final SuperstructureVisualizer goalVisualizer = new SuperstructureVisualizer("Goal");
+
   @Setter private Optional<SuperstructureState> reefDangerState = Optional.empty();
 
   @AutoLogOutput @Getter private boolean requestFunnelOuttake = false;
@@ -100,10 +106,10 @@ public class Superstructure extends SubsystemBase {
     // Add edge from start to stow
     graph.addEdge(
         SuperstructureState.START,
-        SuperstructureState.STOWREST,
+        SuperstructureState.STOWTRAVEL,
         EdgeCommand.builder()
             .command(
-                runSuperstructureExtras(SuperstructureState.STOWREST)
+                runSuperstructureExtras(SuperstructureState.STOWTRAVEL)
                     .andThen(
                         runManipulatorPivot(
                             () ->
@@ -118,26 +124,26 @@ public class Superstructure extends SubsystemBase {
                                 Commands.startEnd(
                                     () -> requestFunnelOuttake = true,
                                     () -> requestFunnelOuttake = false)),
-                        runSuperstructurePose(SuperstructureState.STOWREST.getValue().getPose()),
+                        runSuperstructurePose(SuperstructureState.STOWTRAVEL.getValue().getPose()),
                         Commands.waitUntil(this::mechanismsAtGoal)))
             .build());
 
     graph.addEdge(
         SuperstructureState.AUTO_START,
-        SuperstructureState.STOWREST,
+        SuperstructureState.STOWTRAVEL,
         EdgeCommand.builder()
             .command(
                 Commands.runOnce(elevator::setHome)
                     .onlyIf(() -> Constants.getRobot() != RobotType.SIMBOT)
                     .andThen(
-                        runSuperstructurePose(SuperstructurePose.Preset.STOWREST.getPose()),
+                        runSuperstructurePose(SuperstructurePose.Preset.STOWTRAVEL.getPose()),
                         Commands.waitUntil(this::mechanismsAtGoal),
-                        runSuperstructureExtras(SuperstructureState.STOWREST)))
+                        runSuperstructureExtras(SuperstructureState.STOWTRAVEL)))
             .build());
 
     graph.addEdge(
         SuperstructureState.SAFETY,
-        SuperstructureState.STOWREST,
+        SuperstructureState.STOWTRAVEL,
         EdgeCommand.builder()
             .command(
                 runManipulatorPivot(
@@ -148,15 +154,15 @@ public class Superstructure extends SubsystemBase {
                                     pivotMinSafeAngleDeg.get(),
                                     pivotMaxSafeAngleDeg.get())))
                     .andThen(
-                        runSuperstructureExtras(SuperstructureState.STOWREST),
+                        runSuperstructureExtras(SuperstructureState.STOWTRAVEL),
                         Commands.waitUntil(manipulator::isAtGoal),
-                        runSuperstructurePose(SuperstructureState.STOWREST.getValue().getPose()),
+                        runSuperstructurePose(SuperstructureState.STOWTRAVEL.getValue().getPose()),
                         Commands.waitUntil(this::mechanismsAtGoal)))
             .build());
 
     graph.addEdge(
         SuperstructureState.CHARACTERIZATION,
-        SuperstructureState.STOWREST,
+        SuperstructureState.STOWTRAVEL,
         EdgeCommand.builder()
             .command(Commands.idle(this).until(() -> !characterizationModeOn.get()))
             .build());
@@ -216,7 +222,7 @@ public class Superstructure extends SubsystemBase {
     // Add edges for paired states
     final Set<Pair<SuperstructureState, SuperstructureState>> pairedStates =
         Set.of(
-            Pair.of(SuperstructureState.STOWREST, SuperstructureState.CORAL_INTAKE),
+            Pair.of(SuperstructureState.STOWTRAVEL, SuperstructureState.CORAL_INTAKE),
             Pair.of(SuperstructureState.L2_CORAL, SuperstructureState.L2_CORAL_EJECT),
             Pair.of(SuperstructureState.L3_CORAL, SuperstructureState.L3_CORAL_EJECT),
             Pair.of(SuperstructureState.L4_CORAL, SuperstructureState.L4_CORAL_EJECT),
@@ -243,14 +249,14 @@ public class Superstructure extends SubsystemBase {
 
     // Add miscellaneous edges
     addEdge(
-        SuperstructureState.STOWREST,
+        SuperstructureState.STOWTRAVEL,
         SuperstructureState.ALGAE_STOW,
         false,
         AlgaeEdge.ALGAE,
         false);
     addEdge(
         SuperstructureState.ALGAE_STOW,
-        SuperstructureState.STOWREST,
+        SuperstructureState.STOWTRAVEL,
         false,
         AlgaeEdge.NO_ALGAE,
         false);
@@ -376,21 +382,10 @@ public class Superstructure extends SubsystemBase {
         reefDangerState.map(SuperstructureState::toString).orElse(""));
 
     // Update visualizer
-    /* measuredVisualizer.update(
-        elevator.getPositionMeters(),
-        manipulator.getPivotAngle(),
-        manipulator.hasAlgae(),
-        manipulator.hasCoral());
-    setpointVisualizer.update(
-        elevator.getSetpoint().position,
-        Rotation2d.fromRadians(manipulator.getSetpoint().position),
-        manipulator.hasAlgae(),
-        manipulator.hasCoral());
-    goalVisualizer.update(
-        elevator.getGoalMeters(),
-        Rotation2d.fromRadians(manipulator.getGoal()),
-        manipulator.hasAlgae(),
-        manipulator.hasCoral()); */
+    measuredVisualizer.update(
+        elevator.getPositionMeters(), manipulator.getPivotAngle().getRadians());
+    setpointVisualizer.update(elevator.getSetpoint().position, manipulator.getSetpoint().position);
+    goalVisualizer.update(elevator.getGoalMeters(), manipulator.getGoal());
 
     // Record cycle time
     LoggedTracer.record("Superstructure");

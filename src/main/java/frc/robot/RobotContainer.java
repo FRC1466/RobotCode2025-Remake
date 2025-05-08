@@ -40,6 +40,7 @@ import frc.robot.subsystems.rollers.RollerSystemIO;
 import frc.robot.subsystems.rollers.RollerSystemIOSim;
 import frc.robot.subsystems.sensors.CoralSensorIO;
 import frc.robot.subsystems.superstructure.Superstructure;
+import frc.robot.subsystems.superstructure.SuperstructureState;
 import frc.robot.subsystems.superstructure.elevator.Elevator;
 import frc.robot.subsystems.superstructure.elevator.ElevatorIO;
 import frc.robot.subsystems.superstructure.elevator.ElevatorIOSim;
@@ -244,6 +245,18 @@ public class RobotContainer {
             new DriveToStation(drive, driverX, driverY, driverOmega, false)
                 .withName("Coral Station Intake"));
 
+    // Run a random SuperstructureState on POV Up
+    controller
+        .povUp()
+        .whileTrue(
+            runOnce(
+                    () -> {
+                      SuperstructureState[] states = SuperstructureState.values();
+                      int randomIndex = (int) (Math.random() * states.length);
+                      superstructure.runGoal(states[randomIndex]).schedule();
+                    })
+                .withName("Random Superstructure State"))
+        .toggleOnFalse(superstructure.runGoal(SuperstructureState.STOWTRAVEL));
     // Reset gyro
     var driverStartAndBack = controller.start().and(controller.back());
     driverStartAndBack.onTrue(

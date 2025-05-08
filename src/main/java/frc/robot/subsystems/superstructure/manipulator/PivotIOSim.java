@@ -24,7 +24,7 @@ public class PivotIOSim implements PivotIO {
 
   public static final double moi = (1.0 / 3.0) * (ElevatorIOSim.carriageMassKg);
   private static final double cgRadius = Units.inchesToMeters(10.0);
-  public static final DCMotor gearbox = DCMotor.getKrakenX60Foc(1).withReduction(reduction);
+  public static final DCMotor gearbox = DCMotor.getKrakenX60Foc(1);
   public static final Matrix<N2, N2> A =
       MatBuilder.fill(
           Nat.N2(),
@@ -67,7 +67,7 @@ public class PivotIOSim implements PivotIO {
             true,
             true,
             Rotation2d.fromRadians(simState.get(0)),
-            simState.get(0),
+            simState.get(1),
             pivotAppliedVolts,
             (pivotAppliedVolts / 12.0) * inputTorqueCurrent,
             inputTorqueCurrent,
