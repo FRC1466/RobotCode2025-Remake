@@ -8,6 +8,7 @@
 package frc.robot.subsystems.superstructure;
 
 import frc.robot.subsystems.superstructure.SuperstructurePose.Preset;
+import frc.robot.subsystems.superstructure.SuperstructureStateData.Height;
 import frc.robot.subsystems.superstructure.manipulator.Manipulator;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -24,11 +25,25 @@ public enum SuperstructureState {
   CORAL_INTAKE(
       SuperstructureStateData.builder()
           .pose(Preset.CORAL_INTAKE.getPose())
+          .height(Height.BOTTOM)
           .MailboxGoal(Manipulator.MailboxGoal.CORALINTAKE)
           .build()),
-  L2_CORAL(SuperstructureStateData.builder().pose(Preset.L2.getPose()).build()),
-  L3_CORAL(SuperstructureStateData.builder().pose(Preset.L3.getPose()).build()),
-  L4_CORAL(SuperstructureStateData.builder().pose(Preset.L4.getPose()).build()),
+  L2_CORAL(
+      SuperstructureStateData.builder()
+          .height(Height.FIRST_STAGE)
+          .pose(Preset.L2.getPose())
+          .build()),
+  L3_CORAL(
+      SuperstructureStateData.builder()
+          .height(Height.FIRST_STAGE)
+          .pose(Preset.L3.getPose())
+          .build()),
+  L4_CORAL(
+      SuperstructureStateData.builder()
+          .height(Height.SECOND_STAGE)
+          .pose(Preset.L4.getPose())
+          .MailboxGoal(Manipulator.MailboxGoal.CORALL4GRIP)
+          .build()),
   L2_CORAL_EJECT(
       L2_CORAL.getValue().toBuilder().MailboxGoal(Manipulator.MailboxGoal.CORALEJECT).build()),
   L3_CORAL_EJECT(
@@ -43,16 +58,19 @@ public enum SuperstructureState {
   ALGAE_L2_INTAKE(
       SuperstructureStateData.builder()
           .pose(Preset.ALGAE_L2_INTAKE.getPose())
+          .height(Height.FIRST_STAGE)
           .MailboxGoal(Manipulator.MailboxGoal.ALGAEGRAB)
           .build()),
   ALGAE_L3_INTAKE(
       SuperstructureStateData.builder()
           .pose(Preset.ALGAE_L3_INTAKE.getPose())
+          .height(Height.SECOND_STAGE)
           .MailboxGoal(Manipulator.MailboxGoal.ALGAEGRAB)
           .build()),
   PRE_THROW(
       SuperstructureStateData.builder()
           .pose(Preset.THROW.getPose())
+          .height(Height.SECOND_STAGE)
           .MailboxGoal(Manipulator.MailboxGoal.ALGAEHOLD)
           .build()),
   THROW(PRE_THROW.getValue().toBuilder().MailboxGoal(Manipulator.MailboxGoal.ALGAENET).build()),

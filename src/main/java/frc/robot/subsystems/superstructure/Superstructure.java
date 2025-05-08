@@ -7,28 +7,293 @@
 
 package frc.robot.subsystems.superstructure;
 
+import static frc.robot.subsystems.superstructure.SuperstructureConstants.*;
+
+import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.Pair;
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj.Alert;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj2.command.*;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
+import frc.robot.Constants;
+import frc.robot.Constants.Mode;
+import frc.robot.Constants.RobotType;
+import frc.robot.FieldConstants;
+import frc.robot.commands.DriveToStation;
+import frc.robot.subsystems.drive.Drive;
+import frc.robot.subsystems.superstructure.SuperstructureStateData.Height;
 import frc.robot.subsystems.superstructure.elevator.Elevator;
 import frc.robot.subsystems.superstructure.manipulator.Manipulator;
+import frc.robot.util.AllianceFlipUtil;
 import frc.robot.util.LoggedTracer;
+import java.util.*;
+import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
+import java.util.function.Supplier;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
+import org.jgrapht.Graph;
+import org.jgrapht.graph.DefaultDirectedGraph;
+import org.jgrapht.graph.DefaultEdge;
+import org.littletonrobotics.junction.AutoLogOutput;
+import org.littletonrobotics.junction.Logger;
+import org.littletonrobotics.junction.networktables.LoggedNetworkBoolean;
 
 public class Superstructure extends SubsystemBase {
+  private static final Map<SuperstructureState, SuperstructureState> coralEjectPairs =
+      Map.of(
+          SuperstructureState.L2_CORAL, SuperstructureState.L2_CORAL_EJECT,
+          SuperstructureState.L3_CORAL, SuperstructureState.L3_CORAL_EJECT,
+          SuperstructureState.L4_CORAL, SuperstructureState.L4_CORAL_EJECT);
+
   private final Elevator elevator;
   private final Manipulator manipulator;
 
-  private final SuperstructureVisualizer measuredVisualizer =
-      new SuperstructureVisualizer("Measured");
-  private final SuperstructureVisualizer setpointVisualizer =
-      new SuperstructureVisualizer("Setpoint");
-  private final SuperstructureVisualizer goalVisualizer = new SuperstructureVisualizer("Goal");
+  private final Graph<SuperstructureState, EdgeCommand> graph =
+      new DefaultDirectedGraph<>(EdgeCommand.class);
+
+  private EdgeCommand edgeCommand;
+
+  @Getter private SuperstructureState state = SuperstructureState.START;
+  private SuperstructureState next = null;
+  @Getter private SuperstructureState goal = SuperstructureState.START;
+  private boolean wasDisabled = false;
+
+  @AutoLogOutput(key = "Superstructure/EStopped")
+  private boolean isEStopped = false;
+
+  private LoggedNetworkBoolean characterizationModeOn =
+      new LoggedNetworkBoolean("/SmartDashboard/Characterization Mode On", false);
+
+  private BooleanSupplier disableOverride = () -> false;
+  private final Alert driverDisableAlert =
+      new Alert("Superstructure disabled due to driver override.", Alert.AlertType.kWarning);
+  private final Alert emergencyDisableAlert =
+      new Alert(
+          "Superstructure emergency disabled due to high position error. Disable the superstructure manually and reenable to reset.",
+          Alert.AlertType.kError);
+
+  @Setter private Optional<SuperstructureState> reefDangerState = Optional.empty();
+
+  @AutoLogOutput @Getter private boolean requestFunnelOuttake = false;
+  @AutoLogOutput private boolean forceFastConstraints = false;
 
   public Superstructure(Elevator elevator, Manipulator manipulator) {
     this.elevator = elevator;
     this.manipulator = manipulator;
+
+    // Updating E Stop based on disabled override
+    new Trigger(() -> disableOverride.getAsBoolean())
+        .onFalse(Commands.runOnce(() -> isEStopped = false).ignoringDisable(true));
+
+    // Add states as vertices
+    for (var state : SuperstructureState.values()) {
+      graph.addVertex(state);
+    }
+
+    // Populate edges
+    // Add edge from start to stow
+    graph.addEdge(
+        SuperstructureState.START,
+        SuperstructureState.STOWREST,
+        EdgeCommand.builder()
+            .command(
+                runSuperstructureExtras(SuperstructureState.STOWREST)
+                    .andThen(
+                        runManipulatorPivot(
+                            () ->
+                                Rotation2d.fromDegrees(
+                                    MathUtil.clamp(
+                                        manipulator.getPivotAngle().getDegrees(),
+                                        pivotMinSafeAngleDeg.get(),
+                                        pivotMaxSafeAngleDeg.get()))),
+                        Commands.parallel(
+                                Commands.waitSeconds(0.2).andThen(elevator.homingSequence()))
+                            .deadlineFor(
+                                Commands.startEnd(
+                                    () -> requestFunnelOuttake = true,
+                                    () -> requestFunnelOuttake = false)),
+                        runSuperstructurePose(SuperstructureState.STOWREST.getValue().getPose()),
+                        Commands.waitUntil(this::mechanismsAtGoal)))
+            .build());
+
+    graph.addEdge(
+        SuperstructureState.AUTO_START,
+        SuperstructureState.STOWREST,
+        EdgeCommand.builder()
+            .command(
+                Commands.runOnce(elevator::setHome)
+                    .onlyIf(() -> Constants.getRobot() != RobotType.SIMBOT)
+                    .andThen(
+                        runSuperstructurePose(SuperstructurePose.Preset.STOWREST.getPose()),
+                        Commands.waitUntil(this::mechanismsAtGoal),
+                        runSuperstructureExtras(SuperstructureState.STOWREST)))
+            .build());
+
+    graph.addEdge(
+        SuperstructureState.SAFETY,
+        SuperstructureState.STOWREST,
+        EdgeCommand.builder()
+            .command(
+                runManipulatorPivot(
+                        () ->
+                            Rotation2d.fromDegrees(
+                                MathUtil.clamp(
+                                    manipulator.getPivotAngle().getDegrees(),
+                                    pivotMinSafeAngleDeg.get(),
+                                    pivotMaxSafeAngleDeg.get())))
+                    .andThen(
+                        runSuperstructureExtras(SuperstructureState.STOWREST),
+                        Commands.waitUntil(manipulator::isAtGoal),
+                        runSuperstructurePose(SuperstructureState.STOWREST.getValue().getPose()),
+                        Commands.waitUntil(this::mechanismsAtGoal)))
+            .build());
+
+    graph.addEdge(
+        SuperstructureState.CHARACTERIZATION,
+        SuperstructureState.STOWREST,
+        EdgeCommand.builder()
+            .command(Commands.idle(this).until(() -> !characterizationModeOn.get()))
+            .build());
+
+    final Set<SuperstructureState> freeNoAlgaeStates =
+        Set.of(
+            SuperstructureState.STOWREST,
+            SuperstructureState.STOWTRAVEL,
+            SuperstructureState.L2_CORAL,
+            SuperstructureState.L3_CORAL,
+            SuperstructureState.L4_CORAL,
+            SuperstructureState.ALGAE_L2_INTAKE,
+            SuperstructureState.ALGAE_L3_INTAKE);
+
+    final Set<SuperstructureState> freeAlgaeStates =
+        Set.of(
+            SuperstructureState.ALGAE_STOW,
+            SuperstructureState.ALGAE_L2_INTAKE,
+            SuperstructureState.ALGAE_L3_INTAKE,
+            SuperstructureState.PRE_THROW);
+
+    final Set<SuperstructureState> algaeIntakeStates =
+        Set.of(SuperstructureState.ALGAE_L2_INTAKE, SuperstructureState.ALGAE_L3_INTAKE);
+
+    // Add all free edges
+    for (var from : freeNoAlgaeStates) {
+      for (var to : freeNoAlgaeStates) {
+        if (from == to) continue;
+        if (algaeIntakeStates.contains(from) && algaeIntakeStates.contains(to)) continue;
+        if (algaeIntakeStates.contains(from)) {
+          addEdge(from, to, AlgaeEdge.NO_ALGAE);
+        } else {
+          addEdge(from, to);
+        }
+      }
+    }
+
+    for (var from : freeAlgaeStates) {
+      for (var to : freeAlgaeStates) {
+        if (from == to) continue;
+        if (algaeIntakeStates.contains(from) && algaeIntakeStates.contains(to)) continue;
+        if (algaeIntakeStates.contains(from)) {
+          addEdge(from, to, AlgaeEdge.ALGAE);
+        } else {
+          addEdge(from, to);
+        }
+      }
+    }
+
+    for (var from : algaeIntakeStates) {
+      for (var to : algaeIntakeStates) {
+        if (from == to) continue;
+        addEdge(from, to);
+      }
+    }
+
+    // Add edges for paired states
+    final Set<Pair<SuperstructureState, SuperstructureState>> pairedStates =
+        Set.of(
+            Pair.of(SuperstructureState.STOWREST, SuperstructureState.CORAL_INTAKE),
+            Pair.of(SuperstructureState.L2_CORAL, SuperstructureState.L2_CORAL_EJECT),
+            Pair.of(SuperstructureState.L3_CORAL, SuperstructureState.L3_CORAL_EJECT),
+            Pair.of(SuperstructureState.L4_CORAL, SuperstructureState.L4_CORAL_EJECT),
+            Pair.of(SuperstructureState.PRE_PROCESS, SuperstructureState.PROCESS),
+            Pair.of(SuperstructureState.PRE_THROW, SuperstructureState.THROW),
+            Pair.of(SuperstructureState.ALGAE_STOW, SuperstructureState.TOSS));
+    for (var pair : pairedStates) {
+      addEdge(pair.getFirst(), pair.getSecond(), true, AlgaeEdge.NONE, false);
+    }
+
+    // Add recoverable algae states
+    for (var from :
+        Set.of(
+            SuperstructureState.ALGAE_STOW,
+            SuperstructureState.PRE_PROCESS,
+            SuperstructureState.PRE_THROW,
+            SuperstructureState.PROCESS,
+            SuperstructureState.TOSS,
+            SuperstructureState.THROW)) {
+      for (var to : freeNoAlgaeStates) {
+        addEdge(from, to, AlgaeEdge.NO_ALGAE);
+      }
+    }
+
+    // Add miscellaneous edges
+    addEdge(
+        SuperstructureState.STOWREST,
+        SuperstructureState.ALGAE_STOW,
+        false,
+        AlgaeEdge.ALGAE,
+        false);
+    addEdge(
+        SuperstructureState.ALGAE_STOW,
+        SuperstructureState.STOWREST,
+        false,
+        AlgaeEdge.NO_ALGAE,
+        false);
+    addEdge(
+        SuperstructureState.ALGAE_STOW,
+        SuperstructureState.PRE_PROCESS,
+        true,
+        AlgaeEdge.NONE,
+        false);
+
+    setDefaultCommand(
+        runGoal(
+            (Supplier<SuperstructureState>)
+                () -> {
+                  final Pose2d robot = Drive.getPose();
+                  final Pose2d flippedRobot = AllianceFlipUtil.apply(robot);
+
+                  // Check danger state
+                  if (reefDangerState.isPresent()
+                      && DriveToStation.withinDistanceToReef(robot, Units.inchesToMeters(4.0))
+                      && Math.abs(
+                              FieldConstants.Reef.center
+                                  .minus(flippedRobot.getTranslation())
+                                  .getAngle()
+                                  .minus(flippedRobot.getRotation())
+                                  .getDegrees())
+                          <= 30) {
+                    // Reset reef danger state when new goal requested
+                    if (goal != reefDangerState.get()
+                        && !(coralEjectPairs.containsKey(reefDangerState.get())
+                            && goal == coralEjectPairs.get(reefDangerState.get()))) {
+                      reefDangerState = Optional.empty();
+                    } else {
+                      return reefDangerState.get();
+                    }
+                  } else if (reefDangerState.isPresent()) {
+                    reefDangerState = Optional.empty();
+                  }
+
+                  return manipulator.hasAlgae()
+                      ? SuperstructureState.ALGAE_STOW
+                      : SuperstructureState.STOWTRAVEL;
+                }));
   }
 
   @Override
@@ -37,18 +302,423 @@ public class Superstructure extends SubsystemBase {
     elevator.periodic();
     manipulator.periodic();
 
-    manipulator.setGoal(() -> Rotation2d.fromRadians(1.15));
+    if (characterizationModeOn.get()) {
+      state = SuperstructureState.CHARACTERIZATION;
+      next = null;
+    } else {
+    }
+
+    if ((DriverStation.isDisabled() || isEStopped) && !wasDisabled && elevator.isHomed()) {
+      state = SuperstructureState.SAFETY;
+    }
+    wasDisabled = DriverStation.isDisabled() || isEStopped;
+
+    if (DriverStation.isDisabled()) {
+      next = null;
+    } else if (edgeCommand == null || !edgeCommand.getCommand().isScheduled()) {
+      // Update edge to new state
+      if (next != null) {
+        state = next;
+        next = null;
+      }
+
+      // Schedule next command in sequence
+      if (state != goal) {
+        bfs(state, goal)
+            .ifPresent(
+                next -> {
+                  this.next = next;
+                  edgeCommand = graph.getEdge(state, next);
+                  edgeCommand.getCommand().schedule();
+                });
+      }
+    }
+
+    // Tell elevator we are stowed
+    elevator.setStowed(
+        (state == SuperstructureState.STOWTRAVEL && goal == SuperstructureState.STOWTRAVEL)
+            || (state == SuperstructureState.ALGAE_STOW && goal == SuperstructureState.ALGAE_STOW));
+
+    // Tell elevator if we have algae
+    elevator.setHasAlgae(manipulator.hasAlgae());
+
+    // Tell manipulator if intaking
+    manipulator.setIntaking(
+        state == SuperstructureState.CORAL_INTAKE || next == SuperstructureState.CORAL_INTAKE);
+
+    // Force fast constraints
+    elevator.setForceFastConstraints(forceFastConstraints);
+    manipulator.setForceFastConstraints(forceFastConstraints);
+
+    // E Stop Manipulator and Elevator if Necessary
+    isEStopped =
+        (isEStopped || elevator.isShouldEStop() || manipulator.isShouldEStop())
+            && Constants.getMode() == Mode.REAL;
+    elevator.setEStopped(isEStopped);
+    manipulator.setEStopped(isEStopped);
+
+    driverDisableAlert.set(disableOverride.getAsBoolean());
+    emergencyDisableAlert.set(isEStopped);
+
+    // Log state
+    Logger.recordOutput("Superstructure/State", state);
+    Logger.recordOutput("Superstructure/Next", next);
+    Logger.recordOutput("Superstructure/Goal", goal);
+    if (edgeCommand != null) {
+      Logger.recordOutput(
+          "Superstructure/EdgeCommand",
+          graph.getEdgeSource(edgeCommand) + " --> " + graph.getEdgeTarget(edgeCommand));
+    } else {
+      Logger.recordOutput("Superstructure/EdgeCommand", "");
+    }
+    Logger.recordOutput(
+        "Superstructure/ReefDangerState",
+        reefDangerState.map(SuperstructureState::toString).orElse(""));
 
     // Update visualizer
-    measuredVisualizer.update(elevator.getPositionMeters());
-    setpointVisualizer.update(elevator.getSetpoint().position);
-    goalVisualizer.update(elevator.getGoalMeters());
+    /* measuredVisualizer.update(
+        elevator.getPositionMeters(),
+        manipulator.getPivotAngle(),
+        manipulator.hasAlgae(),
+        manipulator.hasCoral());
+    setpointVisualizer.update(
+        elevator.getSetpoint().position,
+        Rotation2d.fromRadians(manipulator.getSetpoint().position),
+        manipulator.hasAlgae(),
+        manipulator.hasCoral());
+    goalVisualizer.update(
+        elevator.getGoalMeters(),
+        Rotation2d.fromRadians(manipulator.getGoal()),
+        manipulator.hasAlgae(),
+        manipulator.hasCoral()); */
 
     // Record cycle time
     LoggedTracer.record("Superstructure");
   }
 
+  public void setOverrides(BooleanSupplier disableOverride) {
+    this.disableOverride = disableOverride;
+  }
+
+  @AutoLogOutput(key = "Superstructure/AtGoal")
+  public boolean atGoal() {
+    return state == goal;
+  }
+
+  public boolean hasAlgae() {
+    return manipulator.hasAlgae();
+  }
+
+  public boolean hasCoral() {
+    return manipulator.hasCoral();
+  }
+
+  public boolean readyForL4() {
+    return elevator.getPositionMeters() >= elevatorL4ClearHeight.get();
+  }
+
+  public void resetHasCoral() {
+    manipulator.resetHasCoral(false);
+  }
+
+  public void resetHasAlgae() {
+    manipulator.resetHasAlgae(false);
+  }
+
+  private void setGoal(SuperstructureState goal) {
+    // Don't do anything if goal is the same
+    if (this.goal == goal) return;
+    this.goal = goal;
+
+    if (next == null) return;
+
+    var edgeToCurrentState = graph.getEdge(next, state);
+    // Figure out if we should schedule a different command to get to goal faster
+    if (edgeCommand.getCommand().isScheduled()
+        && edgeToCurrentState != null
+        && isEdgeAllowed(edgeToCurrentState, goal)) {
+      // Figure out where we would have gone from the previous state
+      bfs(state, goal)
+          .ifPresent(
+              newNext -> {
+                if (newNext == next) {
+                  // We are already on track
+                  return;
+                }
+
+                if (newNext != state && graph.getEdge(next, newNext) != null) {
+                  // We can skip directly to the newNext edge
+                  edgeCommand.getCommand().cancel();
+                  edgeCommand = graph.getEdge(state, newNext);
+                  edgeCommand.getCommand().schedule();
+                  next = newNext;
+                } else {
+                  // Follow the reverse edge from next back to the current edge
+                  edgeCommand.getCommand().cancel();
+                  edgeCommand = graph.getEdge(next, state);
+                  edgeCommand.getCommand().schedule();
+                  var temp = state;
+                  state = next;
+                  next = temp;
+                }
+              });
+    }
+  }
+
+  public Command runGoal(SuperstructureState goal) {
+    return runOnce(() -> setGoal(goal)).andThen(Commands.idle(this));
+  }
+
+  public Command runGoal(Supplier<SuperstructureState> goal) {
+    return run(() -> setGoal(goal.get()));
+  }
+
+  public Command forceEjectManipulator() {
+    return startEnd(
+        () -> manipulator.setForceEjectForward(true),
+        () -> manipulator.setForceEjectForward(false));
+  }
+
+  public void setAutoStart() {
+    state = SuperstructureState.AUTO_START;
+    next = null;
+    if (edgeCommand != null) {
+      edgeCommand.getCommand().cancel();
+    }
+    manipulator.resetHasCoral(true);
+  }
+
+  private Optional<SuperstructureState> bfs(SuperstructureState start, SuperstructureState goal) {
+    // Map to track the parent of each visited node
+    Map<SuperstructureState, SuperstructureState> parents = new HashMap<>();
+    Queue<SuperstructureState> queue = new LinkedList<>();
+    queue.add(start);
+    parents.put(start, null); // Mark the start node as visited with no parent
+    // Perform BFS
+    while (!queue.isEmpty()) {
+      SuperstructureState current = queue.poll();
+      // Check if we've reached the goal
+      if (current == goal) {
+        break;
+      }
+      // Process valid neighbors
+      for (EdgeCommand edge :
+          graph.outgoingEdgesOf(current).stream()
+              .filter(edge -> isEdgeAllowed(edge, goal))
+              .toList()) {
+        SuperstructureState neighbor = graph.getEdgeTarget(edge);
+        // Only process unvisited neighbors
+        if (!parents.containsKey(neighbor)) {
+          parents.put(neighbor, current);
+          queue.add(neighbor);
+        }
+      }
+    }
+
+    // Reconstruct the path to the goal if found
+    if (!parents.containsKey(goal)) {
+      return Optional.empty(); // Goal not reachable
+    }
+
+    // Trace back the path from goal to start
+    SuperstructureState nextState = goal;
+    while (!nextState.equals(start)) {
+      SuperstructureState parent = parents.get(nextState);
+      if (parent == null) {
+        return Optional.empty(); // No valid path found
+      } else if (parent.equals(start)) {
+        // Return the edge from start to the next node
+        return Optional.of(nextState);
+      }
+      nextState = parent;
+    }
+    return Optional.of(nextState);
+  }
+
+  private void addEdge(SuperstructureState from, SuperstructureState to) {
+    addEdge(from, to, AlgaeEdge.NONE);
+  }
+
+  private void addEdge(SuperstructureState from, SuperstructureState to, AlgaeEdge algaeEdge) {
+    addEdge(from, to, false, algaeEdge, false);
+  }
+
+  private void addEdge(
+      SuperstructureState from,
+      SuperstructureState to,
+      boolean reverse,
+      AlgaeEdge algaeEdge,
+      boolean restricted) {
+    graph.addEdge(
+        from,
+        to,
+        EdgeCommand.builder()
+            .command(getEdgeCommand(from, to))
+            .algaeEdgeType(algaeEdge)
+            .restricted(restricted)
+            .build());
+    if (reverse) {
+      graph.addEdge(
+          to,
+          from,
+          EdgeCommand.builder()
+              .command(getEdgeCommand(to, from))
+              .algaeEdgeType(algaeEdge)
+              .restricted(restricted)
+              .build());
+    }
+  }
+
+  private Command getEdgeCommand(SuperstructureState from, SuperstructureState to) {
+    if (from == SuperstructureState.ALGAE_STOW && (to == SuperstructureState.PRE_PROCESS)) {
+      return runElevator(to.getValue().getPose().elevatorHeight())
+          .andThen(
+              Commands.waitUntil(elevator::isAtGoal),
+              runSuperstructurePose(to.getValue().getPose()),
+              Commands.waitUntil(this::mechanismsAtGoal));
+    } else if ((from == SuperstructureState.PRE_PROCESS) && to == SuperstructureState.ALGAE_STOW) {
+      return runManipulatorPivot(to.getValue().getPose().pivotAngle())
+          .andThen(
+              Commands.waitUntil(manipulator::isAtGoal),
+              runSuperstructurePose(to.getValue().getPose()),
+              Commands.waitUntil(this::mechanismsAtGoal))
+          .deadlineFor(
+              Commands.startEnd(
+                  () -> manipulator.forceSlowConstraints(true),
+                  () -> manipulator.forceSlowConstraints(false)));
+    }
+
+    boolean passesThroughCrossMember =
+        from.getValue().getHeight().equals(Height.BOTTOM)
+            != to.getValue().getHeight().equals(Height.BOTTOM);
+    if (passesThroughCrossMember) {
+      boolean isGoingDown = to.getValue().getHeight().lowerThan(from.getValue().getHeight());
+      SuperstructurePose safeSuperstructureSetpoint =
+          new SuperstructurePose(
+              () -> {
+                // Attempt to reach nearest safe point on elevator
+                var currentAngle = from.getValue().getPose().pivotAngle().get();
+                if (currentAngle.getDegrees() <= pivotMaxSafeAngleDeg.get()
+                    && currentAngle.getDegrees() >= pivotMinSafeAngleDeg.get()) {
+                  return to.getValue().getPose().elevatorHeight().getAsDouble();
+                }
+                return isGoingDown
+                    ? from.getValue().getHeight().getPosition() + 0.1
+                    : to.getValue().getHeight().getPosition() - 0.1;
+              },
+              () ->
+                  Rotation2d.fromDegrees(
+                      MathUtil.clamp(
+                          to.getValue().getPose().pivotAngle().get().getDegrees(),
+                          pivotMinSafeAngleDeg.get(),
+                          pivotMaxSafeAngleDeg.get())));
+      return runSuperstructurePose(safeSuperstructureSetpoint)
+          .andThen(
+              Commands.waitUntil(manipulator::isAtGoal),
+              runElevator(to.getValue().getPose().elevatorHeight()),
+              Commands.waitUntil(
+                  () ->
+                      (isGoingDown
+                              ? elevator.getPositionMeters()
+                                  <= to.getValue().getHeight().getPosition()
+                              : elevator.getPositionMeters()
+                                  >= to.getValue().getHeight().getPosition())
+                          || elevator.isAtGoal()),
+              runSuperstructurePose(to.getValue().getPose()),
+              Commands.waitUntil(this::mechanismsAtGoal))
+          .deadlineFor(runSuperstructureExtras(to));
+    } else {
+      return runSuperstructurePose(to.getValue().getPose())
+          .andThen(Commands.waitUntil(this::mechanismsAtGoal))
+          .deadlineFor(runSuperstructureExtras(to));
+    }
+  }
+
+  public Command runHomingSequence() {
+    return runOnce(
+        () -> {
+          state = SuperstructureState.START;
+          next = null;
+          if (edgeCommand != null) {
+            edgeCommand.command.cancel();
+          }
+        });
+  }
+
+  public Command setCharacterizationMode() {
+    return runOnce(
+        () -> {
+          state = SuperstructureState.CHARACTERIZATION;
+          characterizationModeOn.set(true);
+          next = null;
+          if (edgeCommand != null) {
+            edgeCommand.getCommand().cancel();
+          }
+        });
+  }
+
   private Command runElevator(DoubleSupplier elevatorHeight) {
     return Commands.runOnce(() -> elevator.setGoal(elevatorHeight));
+  }
+
+  private Command runManipulatorPivot(Supplier<Rotation2d> pivotAngle) {
+    return Commands.runOnce(() -> manipulator.setGoal(pivotAngle));
+  }
+
+  /** Runs elevator and pivot to {@link SuperstructurePose} pose. Ends immediately. */
+  private Command runSuperstructurePose(SuperstructurePose pose) {
+    return runElevator(pose.elevatorHeight()).alongWith(runManipulatorPivot(pose.pivotAngle()));
+  }
+
+  /** Runs manipulator and slam based on {@link SuperstructureState} state. Ends immediately. */
+  private Command runSuperstructureExtras(SuperstructureState state) {
+    return Commands.runOnce(
+        () -> {
+          manipulator.setMailboxGoal(state.getValue().getMailboxGoal());
+        });
+  }
+
+  private boolean isEdgeAllowed(EdgeCommand edge, SuperstructureState goal) {
+    return (!edge.isRestricted() || goal == graph.getEdgeTarget(edge))
+        && (edge.getAlgaeEdgeType() == AlgaeEdge.NONE
+            || manipulator.hasAlgae() == (edge.getAlgaeEdgeType() == AlgaeEdge.ALGAE));
+  }
+
+  private boolean mechanismsAtGoal() {
+    return elevator.isAtGoal()
+        && (manipulator.isAtGoal() || Constants.getRobot() == RobotType.DEVBOT);
+  }
+
+  /** Get coral scoring state for level and algae state */
+  public static SuperstructureState getScoringState(
+      FieldConstants.ReefLevel height, boolean eject) {
+    var stateGroup = CoralScoreStateGroup.valueOf(height.toString());
+    return eject ? stateGroup.getEjectState() : stateGroup.getHoldState();
+  }
+
+  @RequiredArgsConstructor
+  @Getter
+  private enum CoralScoreStateGroup {
+    L2(SuperstructureState.L2_CORAL, SuperstructureState.L2_CORAL_EJECT),
+    L3(SuperstructureState.L3_CORAL, SuperstructureState.L3_CORAL_EJECT),
+    L4(SuperstructureState.L4_CORAL, SuperstructureState.L4_CORAL_EJECT);
+
+    private final SuperstructureState holdState;
+    private final SuperstructureState ejectState;
+  }
+
+  /** All edge commands should finish and exit properly. */
+  @Builder(toBuilder = true)
+  @Getter
+  public static class EdgeCommand extends DefaultEdge {
+    private final Command command;
+    @Builder.Default private final boolean restricted = false;
+    @Builder.Default private final AlgaeEdge algaeEdgeType = AlgaeEdge.NONE;
+  }
+
+  private enum AlgaeEdge {
+    NONE,
+    NO_ALGAE,
+    ALGAE
   }
 }
