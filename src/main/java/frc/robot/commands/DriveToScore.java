@@ -29,7 +29,7 @@ public class DriveToScore extends DriveToPose {
   private static final LoggedTunableNumber AngularAproachEpsilon =
       new LoggedTunableNumber("DriveToScore/AngularAproachEpsilon", 0.1);
   private static LoggedTunableNumber approachDistance =
-      new LoggedTunableNumber("DriveToScore/ApproachDistance", .7);
+      new LoggedTunableNumber("DriveToScore/ApproachDistance", .8);
 
   /** Constructor for teleop/manual control. Uses default zeroed suppliers for driver input. */
   public DriveToScore(Drive drive, boolean isAuto, Supplier<Integer> coralPovSupplier) {
@@ -96,9 +96,9 @@ public class DriveToScore extends DriveToPose {
               withinDistanceToReef(robot, currentApproachDistance));
           Logger.recordOutput("DriveToScore/ClosestTag", tag);
 
-          if (withinDistanceToReef(robot, currentApproachDistance)
-              || (epsilonEquals(distance, 0, currentApproachEpsilon)
-                  && epsilonEquals(angularDistance, 0, currentAngularApproachEpsilon))) {
+          if ((withinDistanceToReef(robot, currentApproachDistance)
+                  || epsilonEquals(distance, 0, currentApproachEpsilon))
+              && epsilonEquals(angularDistance, 0, currentAngularApproachEpsilon)) {
             return target;
           }
           return approach;
