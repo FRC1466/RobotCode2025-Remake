@@ -48,6 +48,7 @@ public class PivotIOTalonFX implements PivotIO {
 
   // Control Requests
   private final TorqueCurrentFOC torqueCurrentFOC = new TorqueCurrentFOC(0.0).withUpdateFreqHz(0.0);
+  @SuppressWarnings("unused")
   private final PositionTorqueCurrentFOC positionTorqueCurrentFOC =
       new PositionTorqueCurrentFOC(0.0).withUpdateFreqHz(0.0);
   private final PositionVoltage positionVoltage = new PositionVoltage(0).withUpdateFreqHz(0);

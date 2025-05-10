@@ -124,23 +124,6 @@ public class Manipulator {
     new LoggedTunableNumber("Manipulator/Funnel/CORALBACKUP", 0),
   };
 
-  private static final LoggedTunableNumber PIVOTREST =
-      new LoggedTunableNumber("Manipulator/PivotAngles/Rest");
-  private static final LoggedTunableNumber PIVOTL2 =
-      new LoggedTunableNumber("Manipulator/PivotAngles/L2");
-  private static final LoggedTunableNumber PIVOTL3 =
-      new LoggedTunableNumber("Manipulator/PivotAngles/L3");
-  private static final LoggedTunableNumber PIVOTL4 =
-      new LoggedTunableNumber("Manipulator/PivotAngles/L4");
-  private static final LoggedTunableNumber PIVOTALGAEL2 =
-      new LoggedTunableNumber("Manipulator/PivotAngles/AlgaeL2");
-  private static final LoggedTunableNumber PIVOTALGAEL3 =
-      new LoggedTunableNumber("Manipulator/PivotAngles/AlgaeL3");
-  private static final LoggedTunableNumber PIVOTALGAEPROCESSOR =
-      new LoggedTunableNumber("Manipulator/PivotAngles/AlgaeProcessor");
-  private static final LoggedTunableNumber PIVOTALGAENET =
-      new LoggedTunableNumber("Manipulator/PivotAngles/AlgaeNet");
-
   static {
     switch (Constants.getRobot()) {
       case SIMBOT -> {

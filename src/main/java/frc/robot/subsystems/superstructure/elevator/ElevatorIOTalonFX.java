@@ -54,6 +54,7 @@ public class ElevatorIOTalonFX implements ElevatorIO {
 
   private final TorqueCurrentFOC torqueCurrentRequest =
       new TorqueCurrentFOC(0.0).withUpdateFreqHz(0.0);
+  @SuppressWarnings("unused")
   private final PositionTorqueCurrentFOC positionTorqueCurrentRequest =
       new PositionTorqueCurrentFOC(0.0).withUpdateFreqHz(0.0);
   private final VoltageOut voltageRequest = new VoltageOut(0.0).withUpdateFreqHz(0.0);
