@@ -14,6 +14,7 @@ import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.controls.MotionMagicVoltage;
 import com.ctre.phoenix6.controls.PositionTorqueCurrentFOC;
 import com.ctre.phoenix6.controls.PositionVoltage;
 import com.ctre.phoenix6.controls.TorqueCurrentFOC;
@@ -48,11 +49,15 @@ public class PivotIOTalonFX implements PivotIO {
 
   // Control Requests
   private final TorqueCurrentFOC torqueCurrentFOC = new TorqueCurrentFOC(0.0).withUpdateFreqHz(0.0);
+
   @SuppressWarnings("unused")
   private final PositionTorqueCurrentFOC positionTorqueCurrentFOC =
       new PositionTorqueCurrentFOC(0.0).withUpdateFreqHz(0.0);
+
   private final PositionVoltage positionVoltage = new PositionVoltage(0).withUpdateFreqHz(0);
   private final VoltageOut voltageRequest = new VoltageOut(0.0).withUpdateFreqHz(0.0);
+
+  private final MotionMagicVoltage motionMagicVoltage = new MotionMagicVoltage(0);
 
   // Connected debouncers
   private final Debouncer motorConnectedDebouncer = new Debouncer(0.5);
@@ -64,11 +69,22 @@ public class PivotIOTalonFX implements PivotIO {
     encoder.setDutyCycleRange(0, 1);
 
     // Configure motor
-    config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
-    config.Slot0 = new Slot0Configs().withKP(0).withKI(0).withKD(0);
+    var slot0Configs = config.Slot0;
+    slot0Configs.kS = 0.25; // Add 0.25 V output to overcome static friction
+    slot0Configs.kV = 0.12; // A velocity target of 1 rps results in 0.12 V output
+    slot0Configs.kA = 0.01; // An acceleration of 1 rps/s requires 0.01 V output
+    slot0Configs.kP = 4.8; // A position error of 2.5 rotations results in 12 V output
+    slot0Configs.kI = 0; // no output for integrated error
+    slot0Configs.kD = 0.1; // A velocity error of 1 rps results in 0.1 V output
+
+    var motionMagicConfigs = config.MotionMagic;
+    motionMagicConfigs.MotionMagicCruiseVelocity = 1;
+    motionMagicConfigs.MotionMagicAcceleration = 2;
+
     config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
     config.CurrentLimits.SupplyCurrentLimit = 40.0;
     config.CurrentLimits.SupplyCurrentLimitEnable = true;
+
     tryUntilOk(5, () -> talon.getConfigurator().apply(config, 0.25));
 
     // Get and set status signals
@@ -137,7 +153,7 @@ public class PivotIOTalonFX implements PivotIO {
   @Override
   public void runPosition(Rotation2d position, double feedforward) {
     talon.setControl(
-        positionVoltage.withPosition(position.getRotations()).withFeedForward(feedforward));
+        motionMagicVoltage.withPosition(position.getRotations()));
   }
 
   @Override

@@ -653,7 +653,8 @@ public class Superstructure extends SubsystemBase {
   }
 
   private Command runElevator(DoubleSupplier elevatorHeight) {
-    return Commands.runOnce(() -> elevator.setGoal(elevatorHeight));
+    return Commands.runOnce(
+        () -> elevator.setGoal(() -> Units.inchesToMeters(elevatorHeight.getAsDouble())));
   }
 
   private Command runManipulatorPivot(Supplier<Rotation2d> pivotAngle) {

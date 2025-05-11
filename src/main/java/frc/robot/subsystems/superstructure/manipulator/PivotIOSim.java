@@ -25,24 +25,26 @@ public class PivotIOSim implements PivotIO {
   private final double armLength = Units.inchesToMeters(10.0); // Example length
   private final double minAngle = Manipulator.minAngle.getRadians();
   private final double maxAngle = Manipulator.maxAngle.getRadians();
-  private final double moi = (1.0 / 3.0) * (frc.robot.subsystems.superstructure.elevator.ElevatorIOSim.carriageMassKg);
+  private final double moi =
+      (1.0 / 3.0) * (frc.robot.subsystems.superstructure.elevator.ElevatorIOSim.carriageMassKg);
 
   private final Encoder encoder = new Encoder(27, 28);
   private final PWMSparkMax motor = new PWMSparkMax(19);
   private final EncoderSim encoderSim = new EncoderSim(encoder);
 
-  private final SingleJointedArmSim armSim = new SingleJointedArmSim(
-      gearbox,
-      200, // gear ratio
-      moi,
-      armLength,
-      minAngle,
-      maxAngle,
-      true,
-      SuperstructureConstants.elevatorAngle.getRadians(),
-      2.0 * Math.PI / 4096,
-      0.0 // No noise
-  );
+  private final SingleJointedArmSim armSim =
+      new SingleJointedArmSim(
+          gearbox,
+          200, // gear ratio
+          moi,
+          armLength,
+          minAngle,
+          maxAngle,
+          true,
+          SuperstructureConstants.elevatorAngle.getRadians(),
+          2.0 * Math.PI / 4096,
+          0.0 // No noise
+          );
 
   private final PIDController controller = new PIDController(0.0, 0.0, 0.0);
   private double feedforward = 0.0;
@@ -73,16 +75,16 @@ public class PivotIOSim implements PivotIO {
     encoderSim.setDistance(armSim.getAngleRads());
 
     // Output data
-    inputs.data = new PivotIOData(
-        true,
-        true,
-        Rotation2d.fromRadians(armSim.getAngleRads()),
-        armSim.getVelocityRadPerSec(),
-        armSim.getInput(0), // last applied voltage
-        armSim.getCurrentDrawAmps(),
-        0.0, // inputTorqueCurrent not directly available
-        0.0
-    );
+    inputs.data =
+        new PivotIOData(
+            true,
+            true,
+            Rotation2d.fromRadians(armSim.getAngleRads()),
+            armSim.getVelocityRadPerSec(),
+            armSim.getInput(0), // last applied voltage
+            armSim.getCurrentDrawAmps(),
+            0.0, // inputTorqueCurrent not directly available
+            0.0);
   }
 
   @Override

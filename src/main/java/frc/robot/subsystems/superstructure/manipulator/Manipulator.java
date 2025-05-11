@@ -202,8 +202,6 @@ public class Manipulator {
   @Getter()
   private boolean hasCoral = false;
 
-  private boolean lastHasCoral = hasCoral;
-
   @AutoLogOutput
   @Accessors(fluent = true)
   @Getter()
@@ -215,7 +213,6 @@ public class Manipulator {
   private static final double algaeDebounceTime = 0.6;
   private Debouncer coralDebouncer = new Debouncer(coralDebounceTime, DebounceType.kRising);
   private Debouncer algaeDebouncer = new Debouncer(algaeDebounceTime, DebounceType.kBoth);
-  private Debouncer toleranceDebouncer = new Debouncer(0.25, DebounceType.kRising);
 
   @Setter @Getter @AutoLogOutput private double coralThresholdOffset = 0.0;
 
@@ -398,7 +395,6 @@ public class Manipulator {
       mailboxIO.stop();
       funnelRollerIO.stop();
     }
-    lastHasCoral = hasCoral;
 
     // Check algae & coral states
     if (Constants.getRobot() != Constants.RobotType.SIMBOT) {
@@ -484,7 +480,6 @@ public class Manipulator {
 
   public void resetHasCoral(boolean value) {
     hasCoral = value;
-    lastHasCoral = value;
     coralDebouncer = new Debouncer(coralDebounceTime, DebounceType.kRising);
     coralDebouncer.calculate(value);
   }
