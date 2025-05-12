@@ -29,10 +29,10 @@ import frc.robot.subsystems.drive.GyroIOPigeon2;
 import frc.robot.subsystems.drive.ModuleIO;
 import frc.robot.subsystems.drive.ModuleIOSim;
 import frc.robot.subsystems.drive.ModuleIOTalonFX;
+import frc.robot.subsystems.vision.QuestNavSubsystem;
 import frc.robot.subsystems.vision.Vision;
 import frc.robot.subsystems.vision.VisionIO;
 import frc.robot.subsystems.vision.VisionIOPhotonVision;
-import frc.robot.subsystems.vision.VisionIOPhotonVisionSim;
 import java.util.function.DoubleSupplier;
 import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
@@ -47,6 +47,7 @@ public class RobotContainer {
   // Subsystems
   private Drive drive;
   private Vision vision;
+  private QuestNavSubsystem questNavSubsystem;
 
   // Controller
   private final CommandXboxController controller = new CommandXboxController(0);
@@ -56,7 +57,6 @@ public class RobotContainer {
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
-    // Updated switch structure to resemble the provided code, but only for drive and vision
     if (Constants.getMode() != Constants.Mode.REPLAY) {
       switch (Constants.getRobot()) {
         case COMPBOT -> {
@@ -81,10 +81,11 @@ public class RobotContainer {
                   new ModuleIOTalonFX(TunerConstants.FrontRight),
                   new ModuleIOTalonFX(TunerConstants.BackLeft),
                   new ModuleIOTalonFX(TunerConstants.BackRight));
-          vision =
-              new Vision(
-                  drive::addVisionMeasurement,
-                  new VisionIOPhotonVision(camera0Name, robotToCamera0));
+          /* vision =
+          new Vision(
+              drive::addVisionMeasurement,
+              new VisionIOPhotonVision(camera0Name, robotToCamera0)); */
+          questNavSubsystem = new QuestNavSubsystem(drive::addVisionMeasurement);
         }
         case SIMBOT -> {
           drive =
@@ -94,16 +95,12 @@ public class RobotContainer {
                   new ModuleIOSim(TunerConstants.FrontRight),
                   new ModuleIOSim(TunerConstants.BackLeft),
                   new ModuleIOSim(TunerConstants.BackRight));
-          vision =
-              new Vision(
-                  drive::addVisionMeasurement,
-                  new VisionIOPhotonVisionSim(camera0Name, robotToCamera0, drive::getPose),
-                  new VisionIOPhotonVisionSim(camera1Name, robotToCamera1, drive::getPose));
+          questNavSubsystem = new QuestNavSubsystem(drive::addVisionMeasurement);
         }
       }
     }
 
-    // No-op implementations for replay or if not set above
+    // No-op implementations for replay
     if (drive == null) {
       drive =
           new Drive(

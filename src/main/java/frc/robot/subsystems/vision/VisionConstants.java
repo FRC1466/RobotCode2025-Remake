@@ -9,9 +9,14 @@ package frc.robot.subsystems.vision;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
+import edu.wpi.first.math.Matrix;
+import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation3d;
+import edu.wpi.first.math.numbers.N1;
+import edu.wpi.first.math.numbers.N3;
 
 public class VisionConstants {
   // AprilTag layout
@@ -50,4 +55,14 @@ public class VisionConstants {
   public static double linearStdDevMegatag2Factor = 0.5; // More stable than full 3D solve
   public static double angularStdDevMegatag2Factor =
       Double.POSITIVE_INFINITY; // No rotation data available
+
+  public static Matrix<N3, N1> QUESTNAV_STD_DEVS =
+      VecBuilder.fill(
+          0.02, // Trust down to 2cm in X direction
+          0.02, // Trust down to 2cm in Y direction
+          0.035 // Trust down to 2 degrees rotational
+          );
+
+  public static Transform2d QUEST_TO_ROBOT =
+      new Transform2d(/*TODO: Put your x, y, rotational offsets here!*/ );
 }
