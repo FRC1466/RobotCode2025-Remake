@@ -29,10 +29,11 @@ import frc.robot.subsystems.drive.GyroIOPigeon2;
 import frc.robot.subsystems.drive.ModuleIO;
 import frc.robot.subsystems.drive.ModuleIOSim;
 import frc.robot.subsystems.drive.ModuleIOTalonFX;
-import frc.robot.subsystems.vision.QuestNavSubsystem;
 import frc.robot.subsystems.vision.Vision;
 import frc.robot.subsystems.vision.VisionIO;
 import frc.robot.subsystems.vision.VisionIOPhotonVision;
+import frc.robot.subsystems.vision.questnav.QuestNavIOReal;
+import frc.robot.subsystems.vision.questnav.QuestNavSubsystem;
 import java.util.function.DoubleSupplier;
 import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
@@ -85,7 +86,8 @@ public class RobotContainer {
           new Vision(
               drive::addVisionMeasurement,
               new VisionIOPhotonVision(camera0Name, robotToCamera0)); */
-          questNavSubsystem = new QuestNavSubsystem(drive::addVisionMeasurement);
+          questNavSubsystem =
+              new QuestNavSubsystem(drive::addVisionMeasurement, new QuestNavIOReal());
         }
         case SIMBOT -> {
           drive =
@@ -95,7 +97,8 @@ public class RobotContainer {
                   new ModuleIOSim(TunerConstants.FrontRight),
                   new ModuleIOSim(TunerConstants.BackLeft),
                   new ModuleIOSim(TunerConstants.BackRight));
-          questNavSubsystem = new QuestNavSubsystem(drive::addVisionMeasurement);
+          questNavSubsystem =
+              new QuestNavSubsystem(drive::addVisionMeasurement, new QuestNavIOReal());
         }
       }
     }
