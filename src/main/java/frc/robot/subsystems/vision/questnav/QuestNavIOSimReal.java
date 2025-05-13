@@ -19,7 +19,7 @@ import edu.wpi.first.wpilibj.Timer;
 import org.littletonrobotics.junction.Logger;
 
 /** Implementation of OculusIO for real hardware communication via NetworkTables. */
-public class QuestNavIOReal implements QuestNavIO {
+public class QuestNavIOSimReal implements QuestNavIO {
   /** NetworkTable for Oculus communication */
   private final NetworkTable nt4Table;
 
@@ -80,7 +80,7 @@ public class QuestNavIOReal implements QuestNavIO {
    * Creates a new OculusIOReal instance and initializes all NetworkTable publishers and
    * subscribers.
    */
-  public QuestNavIOReal() {
+  public QuestNavIOSimReal() {
     nt4Table = NetworkTableInstance.getDefault().getTable("questnav");
     questMiso = nt4Table.getIntegerTopic("miso").subscribe(0);
     questMosi = nt4Table.getIntegerTopic("mosi").publish();
@@ -108,7 +108,8 @@ public class QuestNavIOReal implements QuestNavIO {
         Seconds.of(Timer.getTimestamp())
             .minus(Microseconds.of(questTimestamp.getLastChange()))
             .lt(OCULUS_CONNECTION_TIMEOUT);
-    inputs.SimReal = false; // This is a real device
+    inputs.SimReal =
+        true; // Simulated* hardware (Still using a real headset but no other vision sources)
     inputs.position = questPosition.get();
     inputs.quaternion = questQuaternion.get();
     inputs.eulerAngles = questEulerAngles.get();

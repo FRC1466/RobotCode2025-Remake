@@ -29,10 +29,12 @@ import frc.robot.subsystems.drive.GyroIOPigeon2;
 import frc.robot.subsystems.drive.ModuleIO;
 import frc.robot.subsystems.drive.ModuleIOSim;
 import frc.robot.subsystems.drive.ModuleIOTalonFX;
+import frc.robot.subsystems.drive.PathPlannerUtils;
 import frc.robot.subsystems.vision.Vision;
 import frc.robot.subsystems.vision.VisionIO;
 import frc.robot.subsystems.vision.VisionIOPhotonVision;
 import frc.robot.subsystems.vision.questnav.QuestNavIOReal;
+import frc.robot.subsystems.vision.questnav.QuestNavIOSimReal;
 import frc.robot.subsystems.vision.questnav.QuestNavSubsystem;
 import java.util.function.DoubleSupplier;
 import org.littletonrobotics.junction.AutoLogOutput;
@@ -49,6 +51,7 @@ public class RobotContainer {
   private Drive drive;
   private Vision vision;
   private QuestNavSubsystem questNavSubsystem;
+  private final PathPlannerUtils pathPlannerUtils;
 
   // Controller
   private final CommandXboxController controller = new CommandXboxController(0);
@@ -87,7 +90,7 @@ public class RobotContainer {
               drive::addVisionMeasurement,
               new VisionIOPhotonVision(camera0Name, robotToCamera0)); */
           questNavSubsystem =
-              new QuestNavSubsystem(drive::addVisionMeasurement, new QuestNavIOReal());
+              new QuestNavSubsystem(drive::addVisionMeasurement, new QuestNavIOReal(), drive);
         }
         case SIMBOT -> {
           drive =
@@ -98,11 +101,10 @@ public class RobotContainer {
                   new ModuleIOSim(TunerConstants.BackLeft),
                   new ModuleIOSim(TunerConstants.BackRight));
           questNavSubsystem =
-              new QuestNavSubsystem(drive::addVisionMeasurement, new QuestNavIOReal());
+              new QuestNavSubsystem(drive::addVisionMeasurement, new QuestNavIOSimReal(), drive);
         }
       }
     }
-
     // No-op implementations for replay
     if (drive == null) {
       drive =
@@ -113,6 +115,7 @@ public class RobotContainer {
               new ModuleIO() {},
               new ModuleIO() {});
     }
+    pathPlannerUtils = new PathPlannerUtils(drive);
     if (vision == null) {
       switch (Constants.getRobot()) {
         case COMPBOT ->
@@ -124,6 +127,9 @@ public class RobotContainer {
 
     // Set up auto routines
     autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
+
+    // Add listener for auto path changes
+    autoChooser.getSendableChooser().onChange(this::handleAutoPathChange);
 
     // Set up SysId routines
     autoChooser.addOption(
@@ -143,6 +149,16 @@ public class RobotContainer {
 
     // Configure the button bindings
     configureButtonBindings();
+  }
+
+  private void handleAutoPathChange(String autoName) {
+    pathPlannerUtils
+        .getAutoStartPose(autoName)
+        .ifPresent(
+            pose -> {
+              drive.setPose(pose);
+              questNavSubsystem.resetPose(pose);
+            });
   }
 
   /**

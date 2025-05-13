@@ -14,8 +14,10 @@ import org.littletonrobotics.junction.AutoLog;
 public interface QuestNavIO {
   /** Data structure for Oculus inputs that can be automatically logged. */
   @AutoLog
-  public static class QuestNavInputs {
+  public static class QuestNavIOInputs {
     public boolean connected = false;
+
+    public boolean SimReal = false;
 
     /** 3D position coordinates [x, y, z] */
     public float[] position = new float[] {0.0f, 0.0f, 0.0f};
@@ -50,7 +52,7 @@ public interface QuestNavIO {
    *
    * @param inputs The input object to update with current values
    */
-  public default void updateInputs(QuestNavInputs inputs) {}
+  public default void updateInputs(QuestNavIOInputs inputs) {}
 
   /**
    * Resets the pose components for resetting the Oculus position tracking. HARD RESET.

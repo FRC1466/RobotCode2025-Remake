@@ -8,7 +8,6 @@
 package frc.robot.subsystems.vision.questnav;
 
 import static frc.robot.subsystems.vision.questnav.OculusConstants.*;
-import static frc.robot.subsystems.vision.questnav.OculusStatus.*;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
@@ -19,8 +18,13 @@ import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
+import edu.wpi.first.wpilibj.Alert;
+import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.subsystems.drive.Drive;
+import frc.robot.subsystems.vision.questnav.OculusConstants.PoseResetStrategy;
+import frc.robot.util.LoggedTunableNumber;
 import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
@@ -38,11 +42,25 @@ import org.littletonrobotics.junction.Logger;
  * tracking is lost
  */
 public class QuestNavSubsystem extends SubsystemBase {
+  final Alert oculusDisconnected = new Alert("Oculus headset disconnected.", AlertType.kWarning);
+  final Alert oculusBatteryLow = new Alert("Oculus headset battery low.", AlertType.kWarning);
+  final Alert oculusBatteryCritical =
+      new Alert("Oculus headset battery critical!", AlertType.kError);
+  final Alert oculusTrackingLost = new Alert("Oculus headset tracking lost.", AlertType.kWarning);
+  final Alert oculusPoseDiscrepency =
+      new Alert("Oculus pose and robot pose are significantly different.", AlertType.kWarning);
+
+  private LoggedTunableNumber oculusPoseDiscrepencyMeters =
+      new LoggedTunableNumber("Oculus/PoseDiscrepencyMeters", 0.5);
+
   /** Hardware communication interface */
   private final QuestNavIO io;
 
   /** Consumer for pose updates from the Oculus */
   private final OculusConsumer oculusConsumer;
+
+  /** Instance of Drive subsystem for reading pose */
+  private final Drive drive;
 
   /** Logged inputs from Quest hardware */
   private final QuestNavIOInputsAutoLogged inputs = new QuestNavIOInputsAutoLogged();
@@ -50,7 +68,8 @@ public class QuestNavSubsystem extends SubsystemBase {
   /** Transform offset applied when using ROBOT_SIDE reset strategy */
   private Transform2d offsetTransform = new Transform2d();
 
-  private boolean questHadTracking = false;
+  /** Timestamp for the last pose discrepancy check */
+  private double lastDiscrepancyCheckTime = 0.0;
 
   /**
    * Creates a new OculusSubsystem.
@@ -61,9 +80,10 @@ public class QuestNavSubsystem extends SubsystemBase {
    * @param oculusConsumer Consumer that receives pose updates from the headset
    * @param io Interface for Quest hardware communication
    */
-  public QuestNavSubsystem(OculusConsumer oculusConsumer, QuestNavIO io) {
+  public QuestNavSubsystem(OculusConsumer oculusConsumer, QuestNavIO io, Drive drive) {
     this.io = io;
     this.oculusConsumer = oculusConsumer;
+    this.drive = drive;
     Logger.recordOutput("Oculus/status", "Initialized");
   }
 
@@ -84,23 +104,40 @@ public class QuestNavSubsystem extends SubsystemBase {
 
     // Notify if we are disconnected
     if (!inputs.connected) {
-      NotificationPresets.Oculus.sendOculusDisconnectedNotification();
+      oculusDisconnected.set(true);
     } else {
-      NotificationPresets.Oculus.sendOculusReconnectedNotification();
+      oculusDisconnected.set(false);
     }
 
     // Notify for battery levels
     if (inputs.batteryPercent < BATTERY_CRITICAL_PERCENT) {
-      NotificationPresets.Oculus.sendOculusBatteryCriticalNotification();
+      oculusBatteryCritical.set(true);
+      oculusBatteryLow.set(false);
     } else if (inputs.batteryPercent < BATTERY_LOW_PERCENT) {
-      NotificationPresets.Oculus.sendOculusBatteryLowNotification();
+      oculusBatteryCritical.set(false);
+      oculusBatteryLow.set(true);
+    } else {
+      oculusBatteryCritical.set(false);
+      oculusBatteryLow.set(false);
     }
 
     // Notify for tracking status
     if (!inputs.isTracking) {
-      NotificationPresets.Oculus.sendOculusTrackingLostNotification(inputs.totalTrackingLostEvents);
+      oculusTrackingLost.set(true);
     } else {
-      NotificationPresets.Oculus.sendOculusTrackingRegainedNotification();
+      oculusTrackingLost.set(false);
+      // Check for pose discrepancy every 5 seconds
+      if (inputs.timestamp - lastDiscrepancyCheckTime >= 1.5) {
+        lastDiscrepancyCheckTime = inputs.timestamp;
+
+        double discrepancy =
+            drive.getPose().getTranslation().getDistance(getPose().getTranslation());
+        if (discrepancy > oculusPoseDiscrepencyMeters.getAsDouble()) {
+          oculusPoseDiscrepency.set(true);
+        } else {
+          oculusPoseDiscrepency.set(false);
+        }
+      }
     }
   }
 
@@ -170,7 +207,6 @@ public class QuestNavSubsystem extends SubsystemBase {
     Logger.recordOutput(
         "Oculus/Log",
         String.format("Resetting pose to WPILib: %s, Oculus: %s", pose, oculusSidePose));
-    NotificationPresets.Oculus.sendOculusPoseResetNotification(pose);
   }
 
   /**
@@ -206,7 +242,6 @@ public class QuestNavSubsystem extends SubsystemBase {
     Logger.recordOutput(
         "Oculus/Log",
         String.format("Resetting pose to WPILib: %s, Oculus: %s", pose, oculusSidePose));
-    NotificationPresets.Oculus.sendOculusPoseResetNotification(pose);
   }
 
   /**
@@ -224,7 +259,6 @@ public class QuestNavSubsystem extends SubsystemBase {
     // Update the offset transform to the new pose
     Logger.recordOutput("Oculus/Log", "Updating offset transform to: " + pose);
     offsetTransform = new Transform2d(pose.getTranslation(), pose.getRotation());
-    NotificationPresets.Oculus.sendOculusTransformUpdateNotification(offsetTransform);
   }
 
   private final AprilTagFieldLayout aprilTagFieldLayout =
@@ -248,8 +282,11 @@ public class QuestNavSubsystem extends SubsystemBase {
       }
 
       // Call the consumer with the new pose
-      oculusConsumer.accept(
-          SwerveDriveSubsystem.VisionSource.OCULUS, pose, timestamp, OCULUS_STD_DEVS);
+      if (inputs.SimReal) {
+        oculusConsumer.accept(pose, timestamp, OCULUS_STD_DEVS_SIM);
+      } else {
+        oculusConsumer.accept(pose, timestamp, OCULUS_STD_DEVS);
+      }
     }
   }
 
