@@ -69,11 +69,16 @@ public enum SuperstructureState {
           .build()),
   PRE_THROW(
       SuperstructureStateData.builder()
-          .pose(Preset.THROW.getPose())
+          .pose(Preset.PRETHROW.getPose())
           .height(Height.SECOND_STAGE)
           .MailboxGoal(Manipulator.MailboxGoal.ALGAEHOLD)
           .build()),
-  THROW(PRE_THROW.getValue().toBuilder().MailboxGoal(Manipulator.MailboxGoal.ALGAENET).build()),
+  THROW(
+      SuperstructureStateData.builder()
+          .pose(Preset.THROW.getPose())
+          .height(Height.SECOND_STAGE)
+          .MailboxGoal(Manipulator.MailboxGoal.ALGAENET)
+          .build()),
   TOSS(
       SuperstructureState.ALGAE_STOW.getValue().toBuilder()
           .MailboxGoal(Manipulator.MailboxGoal.ALGAENET)

@@ -8,18 +8,17 @@
 package frc.robot.subsystems.superstructure.manipulator;
 
 import static edu.wpi.first.units.Units.*;
-import static frc.robot.util.PhoenixUtil.tryUntilOk;
 
 import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import com.ctre.phoenix6.controls.MotionMagicVoltage;
 import com.ctre.phoenix6.controls.PositionTorqueCurrentFOC;
 import com.ctre.phoenix6.controls.PositionVoltage;
 import com.ctre.phoenix6.controls.TorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.TalonFX;
+import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -28,19 +27,20 @@ import edu.wpi.first.wpilibj.DutyCycleEncoder;
 import frc.robot.util.PhoenixUtil;
 
 public class PivotIOTalonFX implements PivotIO {
-  private static final int encoderId = 0;
+  private static final double reduction = 12.8; // Motor to mechanism gear ratio
+  private static final Rotation2d encoderOffset = Rotation2d.fromRadians(-0.4601); // From constants
+  private static final int motorId = 14; // Using armPort from constants
+  private static final int dutyCyclePort = 0; // Using dutyCyclePort from constants
 
   // Hardware
   private final TalonFX talon;
-  private final DutyCycleEncoder encoder;
+  private final DutyCycleEncoder dutyCycleEncoder;
 
   // Config
   private final TalonFXConfiguration config = new TalonFXConfiguration();
-  public static final double absolutePositionOffset = -0.4601;
 
   // Status Signals
   private final StatusSignal<Angle> internalPosition;
-  private final double encoderAbsolutePosition;
   private final StatusSignal<AngularVelocity> internalVelocity;
   private final StatusSignal<Voltage> appliedVolts;
   private final StatusSignal<Current> supplyCurrentAmps;
@@ -54,43 +54,33 @@ public class PivotIOTalonFX implements PivotIO {
   private final PositionTorqueCurrentFOC positionTorqueCurrentFOC =
       new PositionTorqueCurrentFOC(0.0).withUpdateFreqHz(0.0);
 
-  private final PositionVoltage positionVoltage = new PositionVoltage(0).withUpdateFreqHz(0);
   private final VoltageOut voltageRequest = new VoltageOut(0.0).withUpdateFreqHz(0.0);
-
-  private final MotionMagicVoltage motionMagicVoltage = new MotionMagicVoltage(0);
+  private final PositionVoltage positionVoltage = new PositionVoltage(0).withUpdateFreqHz(0);
 
   // Connected debouncers
   private final Debouncer motorConnectedDebouncer = new Debouncer(0.5);
+  private final Debouncer encoderConnectedDebouncer = new Debouncer(0.5);
+
+  private final boolean encoderInverted = true; // From constants
 
   public PivotIOTalonFX() {
-    talon = new TalonFX(14);
-    encoder = new DutyCycleEncoder(encoderId);
-
-    encoder.setDutyCycleRange(0, 1);
+    talon = new TalonFX(motorId);
+    dutyCycleEncoder = new DutyCycleEncoder(dutyCyclePort);
+    dutyCycleEncoder.setDutyCycleRange(0, 1);
 
     // Configure motor
-    var slot0Configs = config.Slot0;
-    slot0Configs.kS = 0.25; // Add 0.25 V output to overcome static friction
-    slot0Configs.kV = 0.12; // A velocity target of 1 rps results in 0.12 V output
-    slot0Configs.kA = 0.01; // An acceleration of 1 rps/s requires 0.01 V output
-    slot0Configs.kP = 4.8; // A position error of 2.5 rotations results in 12 V output
-    slot0Configs.kI = 0; // no output for integrated error
-    slot0Configs.kD = 0.1; // A velocity error of 1 rps results in 0.1 V output
-
-    var motionMagicConfigs = config.MotionMagic;
-    motionMagicConfigs.MotionMagicCruiseVelocity = 1;
-    motionMagicConfigs.MotionMagicAcceleration = 2;
-
     config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
+    config.Slot0 = new Slot0Configs().withKP(0.18).withKI(0.02).withKD(0.02);
+    config.Feedback.SensorToMechanismRatio = 1.0;
+    config.Feedback.RotorToSensorRatio = reduction;
     config.CurrentLimits.SupplyCurrentLimit = 40.0;
     config.CurrentLimits.SupplyCurrentLimitEnable = true;
+    config.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
+    PhoenixUtil.tryUntilOk(5, () -> talon.getConfigurator().apply(config, 0.25));
 
-    tryUntilOk(5, () -> talon.getConfigurator().apply(config, 0.25));
-
-    // Get and set status signals
+    // Get status signals
     internalPosition = talon.getPosition();
     internalVelocity = talon.getVelocity();
-    encoderAbsolutePosition = encoder.get();
     appliedVolts = talon.getMotorVoltage();
     supplyCurrentAmps = talon.getSupplyCurrent();
     torqueCurrentAmps = talon.getTorqueCurrent();
@@ -114,6 +104,9 @@ public class PivotIOTalonFX implements PivotIO {
 
   @Override
   public void updateInputs(PivotIOInputs inputs) {
+    // Get duty cycle encoder position
+    Rotation2d absolutePosition = getAbsolutePosition();
+
     inputs.data =
         new PivotIOData(
             motorConnectedDebouncer.calculate(
@@ -124,15 +117,26 @@ public class PivotIOTalonFX implements PivotIO {
                     supplyCurrentAmps,
                     torqueCurrentAmps,
                     temp)),
-            true,
-            Rotation2d.fromRotations(encoderAbsolutePosition)
-                .minus(Rotation2d.fromRotations(absolutePositionOffset))
-                .unaryMinus(),
+            encoderConnectedDebouncer.calculate(dutyCycleEncoder.isConnected()),
+            Rotation2d.fromRotations(internalPosition.getValueAsDouble()),
+            absolutePosition,
             internalVelocity.getValue().in(RadiansPerSecond),
             appliedVolts.getValue().in(Volts),
             supplyCurrentAmps.getValue().in(Amps),
             torqueCurrentAmps.getValue().in(Amps),
             temp.getValue().in(Celsius));
+  }
+
+  /**
+   * Gets the absolute position from the duty cycle encoder
+   *
+   * @return The position as a Rotation2d
+   */
+  private Rotation2d getAbsolutePosition() {
+    double initialPosition = dutyCycleEncoder.get();
+    Rotation2d position = Rotation2d.fromRotations(initialPosition).minus(encoderOffset);
+
+    return encoderInverted ? position.unaryMinus() : position;
   }
 
   @Override
@@ -153,7 +157,7 @@ public class PivotIOTalonFX implements PivotIO {
   @Override
   public void runPosition(Rotation2d position, double feedforward) {
     talon.setControl(
-        motionMagicVoltage.withPosition(position.getRotations()));
+        positionVoltage.withPosition(position.getRotations()).withFeedForward(feedforward));
   }
 
   @Override
@@ -161,7 +165,7 @@ public class PivotIOTalonFX implements PivotIO {
     config.Slot0.kP = kP;
     config.Slot0.kI = kI;
     config.Slot0.kD = kD;
-    tryUntilOk(5, () -> talon.getConfigurator().apply(config));
+    PhoenixUtil.tryUntilOk(5, () -> talon.getConfigurator().apply(config));
   }
 
   @Override
@@ -170,7 +174,7 @@ public class PivotIOTalonFX implements PivotIO {
             () -> {
               config.MotorOutput.NeutralMode =
                   enabled ? NeutralModeValue.Brake : NeutralModeValue.Coast;
-              tryUntilOk(5, () -> talon.getConfigurator().apply(config));
+              PhoenixUtil.tryUntilOk(5, () -> talon.getConfigurator().apply(config));
             })
         .start();
   }

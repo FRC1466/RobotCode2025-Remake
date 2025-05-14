@@ -7,8 +7,6 @@
 
 package frc.robot.subsystems.superstructure;
 
-import static frc.robot.subsystems.superstructure.SuperstructureConstants.*;
-
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.util.Units;
 import frc.robot.FieldConstants.ReefLevel;
@@ -20,51 +18,51 @@ import lombok.RequiredArgsConstructor;
 
 public record SuperstructurePose(DoubleSupplier elevatorHeight, Supplier<Rotation2d> pivotAngle) {
   private static final LoggedTunableNumber StowHeight =
-      new LoggedTunableNumber("Superstructure/Stow/Height", 0.1);
+      new LoggedTunableNumber("Superstructure/Stow/Height", 0.00254);
   private static final LoggedTunableNumber StowTravelAngle =
       new LoggedTunableNumber("Superstructure/Stow/TravelSafeAngle", .505);
   private static final LoggedTunableNumber StowRestAngle =
       new LoggedTunableNumber("Superstructure/Stow/RestAngle", 0);
 
   private static final LoggedTunableNumber intakeHeight =
-      new LoggedTunableNumber("Superstructure/Intake/Height", 0.1);
+      new LoggedTunableNumber("Superstructure/Intake/Height", 0.00254);
   private static final LoggedTunableNumber intakeAngle =
       new LoggedTunableNumber("Superstructure/Intake/Angle", 0);
 
   private static final LoggedTunableNumber l2ReefIntakeHeight =
-      new LoggedTunableNumber("Superstructure/AlgaeIntake/L2/Height", 24);
+      new LoggedTunableNumber("Superstructure/AlgaeIntake/L2/Height", 0.6096);
   private static final LoggedTunableNumber l2ReefIntakeAngle =
-      new LoggedTunableNumber("Superstructure/AlgaeIntake/L2/Angle", Math.PI - 3);
+      new LoggedTunableNumber("Superstructure/AlgaeIntake/L2/Angle", Math.PI - .3);
 
   private static final LoggedTunableNumber l3ReefIntakeHeight =
-      new LoggedTunableNumber("Superstructure/AlgaeIntake/L3/Height", 42);
+      new LoggedTunableNumber("Superstructure/AlgaeIntake/L3/Height", 1.0668);
   private static final LoggedTunableNumber l3ReefIntakeAngle =
-      new LoggedTunableNumber("Superstructure/AlgaeIntake/L3/Angle", Math.PI - 3);
+      new LoggedTunableNumber("Superstructure/AlgaeIntake/L3/Angle", Math.PI - .3);
 
   private static final LoggedTunableNumber NetHeight =
-      new LoggedTunableNumber("Superstructure/AlgaeScore/Net/Height", 66);
+      new LoggedTunableNumber("Superstructure/AlgaeScore/Net/Height", 1.6764);
   private static final LoggedTunableNumber NetAnglePreThrow =
       new LoggedTunableNumber("Superstructure/AlgaeScore/Net/AnglePreThrow", Math.PI - .3);
   private static final LoggedTunableNumber NetAnglePostThrow =
       new LoggedTunableNumber("Superstructure/AlgaeScore/Net/AnglePostThrow", 0);
 
   private static final LoggedTunableNumber ProcessorHeight =
-      new LoggedTunableNumber("Superstructure/AlgaeScore/Processor/Height", 4.5);
+      new LoggedTunableNumber("Superstructure/AlgaeScore/Processor/Height", 0.11430);
   private static final LoggedTunableNumber ProcessorAngle =
       new LoggedTunableNumber("Superstructure/AlgaeScore/Processor/Angle", Math.PI - .3);
 
   private static final LoggedTunableNumber l2Height =
-      new LoggedTunableNumber("Superstructure/ReefScore/L2/Height", 14);
+      new LoggedTunableNumber("Superstructure/ReefScore/L2/Height", 0.3556);
   private static final LoggedTunableNumber l2Angle =
       new LoggedTunableNumber("Superstructure/ReefScore/L2/Angle", .505);
 
   private static final LoggedTunableNumber l3Height =
-      new LoggedTunableNumber("Superstructure/ReefScore/L3/Height", 30);
+      new LoggedTunableNumber("Superstructure/ReefScore/L3/Height", 0.7620);
   private static final LoggedTunableNumber l3Angle =
       new LoggedTunableNumber("Superstructure/ReefScore/L3/Angle", .505);
 
   private static final LoggedTunableNumber l4Height =
-      new LoggedTunableNumber("Superstructure/ReefScore/L4/Height", 63);
+      new LoggedTunableNumber("Superstructure/ReefScore/L4/Height", 1.6002);
   private static final LoggedTunableNumber l4Angle =
       new LoggedTunableNumber("Superstructure/ReefScore/L4/Angle", 1.15);
 
@@ -101,9 +99,10 @@ public record SuperstructurePose(DoubleSupplier elevatorHeight, Supplier<Rotatio
     ALGAE_L2_INTAKE(l2ReefIntakeHeight, l2ReefIntakeAngle),
     ALGAE_L3_INTAKE(l3ReefIntakeHeight, l3ReefIntakeAngle),
     // ALGAE_ICE_CREAM_INTAKE("AlgaeIceCreamIntake", 0.15, -45.0),
-    THROW("Throw", elevatorMaxTravel, 0.0),
+    PRETHROW("Pre-Throw", NetHeight.get(), NetAnglePreThrow.get()),
+    THROW("Throw", NetHeight.get(), NetAnglePostThrow.get()),
     // ALGAE_STOW("AlgaeStow", intakeHeightBaseline.get(), -15.0),
-    PROCESS("Processed", 0.21, -70.0);
+    PROCESS("Processed", ProcessorHeight.get(), ProcessorAngle.get());
 
     private final SuperstructurePose pose;
 

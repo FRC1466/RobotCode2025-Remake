@@ -7,96 +7,84 @@
 
 package frc.robot.subsystems.superstructure.manipulator;
 
+import edu.wpi.first.math.*;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.numbers.N1;
+import edu.wpi.first.math.numbers.N2;
+import edu.wpi.first.math.system.NumericalIntegration;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.wpilibj.Encoder;
-import edu.wpi.first.wpilibj.RobotController;
-import edu.wpi.first.wpilibj.motorcontrol.PWMSparkMax;
-import edu.wpi.first.wpilibj.simulation.EncoderSim;
-import edu.wpi.first.wpilibj.simulation.SingleJointedArmSim;
 import frc.robot.Constants;
 import frc.robot.subsystems.superstructure.SuperstructureConstants;
+import frc.robot.subsystems.superstructure.elevator.ElevatorIOSim;
 
 public class PivotIOSim implements PivotIO {
-  // Hardware simulation objects
-  private final DCMotor gearbox = DCMotor.getKrakenX60Foc(1);
-  private final double armLength = Units.inchesToMeters(10.0); // Example length
-  private final double minAngle = Manipulator.minAngle.getRadians();
-  private final double maxAngle = Manipulator.maxAngle.getRadians();
-  private final double moi =
-      (1.0 / 3.0) * (frc.robot.subsystems.superstructure.elevator.ElevatorIOSim.carriageMassKg);
+  private static final double reduction = 3.0;
 
-  private final Encoder encoder = new Encoder(27, 28);
-  private final PWMSparkMax motor = new PWMSparkMax(19);
-  private final EncoderSim encoderSim = new EncoderSim(encoder);
+  public static final double moi = (0.5) * (ElevatorIOSim.carriageMassKg);
+  private static final double cgRadius = Units.inchesToMeters(10.0);
+  public static final DCMotor gearbox = DCMotor.getKrakenX60Foc(1).withReduction(reduction);
+  public static final Matrix<N2, N2> A =
+      MatBuilder.fill(
+          Nat.N2(),
+          Nat.N2(),
+          0,
+          1,
+          0,
+          -gearbox.KtNMPerAmp / (gearbox.KvRadPerSecPerVolt * gearbox.rOhms * moi));
+  public static final Vector<N2> B = VecBuilder.fill(0, gearbox.KtNMPerAmp / moi);
 
-  private final SingleJointedArmSim armSim =
-      new SingleJointedArmSim(
-          gearbox,
-          200, // gear ratio
-          moi,
-          armLength,
-          minAngle,
-          maxAngle,
-          true,
-          SuperstructureConstants.elevatorAngle.getRadians(),
-          2.0 * Math.PI / 4096,
-          0.0 // No noise
-          );
+  // State given by pivot angle position and velocity
+  // Input given by torque current to motor
+  private Vector<N2> simState;
+  private double inputTorqueCurrent = 0.0;
+  private double pivotAppliedVolts = 0.0;
 
   private final PIDController controller = new PIDController(0.0, 0.0, 0.0);
   private double feedforward = 0.0;
   private boolean closedLoop = false;
 
   public PivotIOSim() {
-    encoder.setDistancePerPulse(2.0 * Math.PI / 4096);
-    encoderSim.setDistance(Manipulator.maxAngle.getRadians() - 0.1);
-    armSim.setState(Manipulator.maxAngle.getRadians() - 0.1, 0.0);
+    simState = VecBuilder.fill(Manipulator.maxAngle.getRadians() - 0.1, 0.0);
   }
 
   @Override
   public void updateInputs(PivotIOInputs inputs) {
     if (!closedLoop) {
       controller.reset();
-      // Open loop: set input voltage directly
-      armSim.setInput(motor.get() * RobotController.getBatteryVoltage());
+      update(Constants.loopPeriodSecs);
     } else {
-      // Closed loop: PID output as voltage
-      double pidOutput = controller.calculate(encoder.getDistance());
-      armSim.setInput(pidOutput + feedforward);
+      // Run control at 1khz
+      for (int i = 0; i < Constants.loopPeriodSecs / (1.0 / 1000.0); i++) {
+        setInputTorqueCurrent(controller.calculate(simState.get(0)) + feedforward);
+        update(1.0 / 1000.0);
+      }
     }
-
-    // Simulate physics for 20ms
-    armSim.update(Constants.loopPeriodSecs);
-
-    // Update simulated encoder
-    encoderSim.setDistance(armSim.getAngleRads());
-
-    // Output data
+    // Pivot
     inputs.data =
         new PivotIOData(
             true,
             true,
-            Rotation2d.fromRadians(armSim.getAngleRads()),
-            armSim.getVelocityRadPerSec(),
-            armSim.getInput(0), // last applied voltage
-            armSim.getCurrentDrawAmps(),
-            0.0, // inputTorqueCurrent not directly available
+            Rotation2d.fromRadians(simState.get(0) - Manipulator.maxAngle.getRadians()),
+            Rotation2d.fromRadians(simState.get(0)),
+            simState.get(1),
+            pivotAppliedVolts,
+            0.0,
+            inputTorqueCurrent,
             0.0);
   }
 
   @Override
   public void runOpenLoop(double output) {
     closedLoop = false;
-    motor.set(output);
+    setInputTorqueCurrent(output);
   }
 
   @Override
   public void runVolts(double volts) {
     closedLoop = false;
-    motor.setVoltage(volts);
+    setInputVoltage(volts);
   }
 
   @Override
@@ -107,12 +95,54 @@ public class PivotIOSim implements PivotIO {
   @Override
   public void runPosition(Rotation2d position, double feedforward) {
     closedLoop = true;
-    controller.setSetpoint(position.getRadians());
+    controller.setSetpoint(position.getRadians() + Manipulator.maxAngle.getRadians());
     this.feedforward = feedforward;
   }
 
   @Override
   public void setPID(double kP, double kI, double kD) {
     controller.setPID(kP, kI, kD);
+  }
+
+  private void setInputTorqueCurrent(double torqueCurrent) {
+    inputTorqueCurrent = torqueCurrent;
+    pivotAppliedVolts =
+        gearbox.getVoltage(gearbox.getTorque(inputTorqueCurrent), simState.get(1, 0));
+    pivotAppliedVolts = MathUtil.clamp(pivotAppliedVolts, -12.0, 12.0);
+  }
+
+  private void setInputVoltage(double voltage) {
+    setInputTorqueCurrent(gearbox.getCurrent(simState.get(1, 0), voltage));
+  }
+
+  private void update(double dt) {
+    inputTorqueCurrent = MathUtil.clamp(inputTorqueCurrent, -40.0, 40.0);
+    Matrix<N2, N1> updatedState =
+        NumericalIntegration.rkdp(
+            (Matrix<N2, N1> x, Matrix<N1, N1> u) -> {
+              Matrix<N2, N1> xdot = A.times(x).plus(B.times(u));
+              // Add gravity
+              xdot.plus(
+                  -SuperstructureConstants.G
+                      * cgRadius
+                      * Rotation2d.fromRadians(simState.get(0))
+                          .minus(SuperstructureConstants.elevatorAngle)
+                          .getCos()
+                      / moi);
+              return xdot;
+            },
+            simState,
+            VecBuilder.fill(inputTorqueCurrent),
+            dt);
+    // Apply limits
+    simState = VecBuilder.fill(updatedState.get(0, 0), updatedState.get(1, 0));
+    if (simState.get(0) <= Manipulator.minAngle.getRadians()) {
+      simState.set(1, 0, 0.0);
+      simState.set(0, 0, Manipulator.minAngle.getRadians());
+    }
+    if (simState.get(0) >= Manipulator.maxAngle.getRadians()) {
+      simState.set(1, 0, 0.0);
+      simState.set(0, 0, Manipulator.maxAngle.getRadians());
+    }
   }
 }

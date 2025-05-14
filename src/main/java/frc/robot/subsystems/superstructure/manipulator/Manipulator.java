@@ -57,10 +57,6 @@ public class Manipulator {
       new LoggedTunableNumber("Manipulator/MaxVelocityDegPerSec", 1500.0);
   private static final LoggedTunableNumber maxAccelerationDegPerSec2 =
       new LoggedTunableNumber("Manipulator/MaxAccelerationDegPerSec2", 2500.0);
-  private static final LoggedTunableNumber algaeMaxVelocityDegPerSec =
-      new LoggedTunableNumber("Manipulator/AlgaeMaxVelocityDegPerSec", 800.0);
-  private static final LoggedTunableNumber algaeMaxAccelerationDegPerSec2 =
-      new LoggedTunableNumber("Manipulator/AlgaeMaxAccelerationDegPerSec2", 1500.0);
   private static final LoggedTunableNumber slowMaxVelocityDegPerSec =
       new LoggedTunableNumber("Manipulator/SlowMaxVelocityDegPerSec", 800.0);
   private static final LoggedTunableNumber slowMaxAccelerationDegPerSec2 =
@@ -170,10 +166,9 @@ public class Manipulator {
   private BooleanSupplier disabledOverride = () -> false;
 
   @AutoLogOutput(key = "Manipulator/PivotBrakeModeEnabled")
-  private boolean brakeModeEnabled = true;
+  private boolean brakeModeEnabled = true; // Is equal to coastOverride
 
   private TrapezoidProfile profile;
-  private TrapezoidProfile algaeProfile;
   private TrapezoidProfile slowProfile;
   @Getter private State setpoint = new State();
   private DoubleSupplier goal = () -> 0.0;
@@ -187,8 +182,6 @@ public class Manipulator {
   @Accessors(fluent = true)
   @Setter
   private boolean forceSlowConstraints = false;
-
-  private final Timer intakingReverseTimer = new Timer();
 
   @Getter
   @AutoLogOutput(key = "Manipulator/Profile/AtGoal")
@@ -245,7 +238,6 @@ public class Manipulator {
             new TrapezoidProfile.Constraints(
                 Units.degreesToRadians(maxVelocityDegPerSec.get()),
                 Units.degreesToRadians(maxAccelerationDegPerSec2.get())));
-    intakingReverseTimer.start();
   }
 
   public void periodic() {
@@ -284,14 +276,6 @@ public class Manipulator {
                   Units.degreesToRadians(maxVelocityDegPerSec.get()),
                   Units.degreesToRadians(maxAccelerationDegPerSec2.get())));
     }
-    if (algaeMaxVelocityDegPerSec.hasChanged(hashCode())
-        || algaeMaxAccelerationDegPerSec2.hasChanged(hashCode())) {
-      algaeProfile =
-          new TrapezoidProfile(
-              new TrapezoidProfile.Constraints(
-                  Units.degreesToRadians(algaeMaxVelocityDegPerSec.get()),
-                  Units.degreesToRadians(algaeMaxAccelerationDegPerSec2.get())));
-    }
     if (slowMaxVelocityDegPerSec.hasChanged(hashCode())
         || slowMaxAccelerationDegPerSec2.hasChanged(hashCode())) {
       slowProfile =
@@ -320,9 +304,7 @@ public class Manipulator {
               MathUtil.clamp(goal.getAsDouble(), minAngle.getRadians(), maxAngle.getRadians()),
               0.0);
       setpoint =
-          (forceSlowConstraints
-                  ? slowProfile
-                  : hasAlgae && !forceFastConstraints ? algaeProfile : profile)
+          (forceSlowConstraints ? slowProfile : profile)
               .calculate(Constants.loopPeriodSecs, setpoint, goalState);
       pivotIO.runPosition(
           Rotation2d.fromRadians(setpoint.position),
@@ -464,8 +446,7 @@ public class Manipulator {
   }
 
   public void setGoal(Supplier<Rotation2d> goal) {
-    this.goal =
-        () -> MathUtil.inputModulus(goal.get().getRadians(), -3.0 * Math.PI / 2.0, Math.PI / 2.0);
+    this.goal = () -> goal.get().getRadians();
     atGoal = false;
   }
 
