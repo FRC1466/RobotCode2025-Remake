@@ -89,7 +89,7 @@ public class Superstructure extends SubsystemBase {
   @AutoLogOutput @Getter private boolean requestFunnelOuttake = false;
   @AutoLogOutput private boolean forceFastConstraints = false;
 
-  public Superstructure(Elevator elevator, Manipulator manipulator) {
+  public Superstructure(Elevator elevator, Manipulator manipulator, Drive drive) {
     this.elevator = elevator;
     this.manipulator = manipulator;
 
@@ -113,11 +113,11 @@ public class Superstructure extends SubsystemBase {
                     .andThen(
                         runManipulatorPivot(
                             () ->
-                                Rotation2d.fromDegrees(
+                                Rotation2d.fromRadians(
                                     MathUtil.clamp(
-                                        manipulator.getPivotAngle().getDegrees(),
-                                        pivotMinSafeAngleDeg.get(),
-                                        pivotMaxSafeAngleDeg.get()))),
+                                        manipulator.getPivotAngle().getRadians(),
+                                        pivotMinSafeAngleRad.get(),
+                                        pivotMaxSafeAngleRad.get()))),
                         Commands.parallel(
                                 Commands.waitSeconds(0.2).andThen(elevator.homingSequence()))
                             .deadlineFor(
@@ -148,11 +148,11 @@ public class Superstructure extends SubsystemBase {
             .command(
                 runManipulatorPivot(
                         () ->
-                            Rotation2d.fromDegrees(
+                            Rotation2d.fromRadians(
                                 MathUtil.clamp(
-                                    manipulator.getPivotAngle().getDegrees(),
-                                    pivotMinSafeAngleDeg.get(),
-                                    pivotMaxSafeAngleDeg.get())))
+                                    manipulator.getPivotAngle().getRadians(),
+                                    pivotMinSafeAngleRad.get(),
+                                    pivotMaxSafeAngleRad.get())))
                     .andThen(
                         runSuperstructureExtras(SuperstructureState.STOWTRAVEL),
                         Commands.waitUntil(manipulator::isAtGoal),
@@ -223,6 +223,7 @@ public class Superstructure extends SubsystemBase {
     final Set<Pair<SuperstructureState, SuperstructureState>> pairedStates =
         Set.of(
             Pair.of(SuperstructureState.STOWTRAVEL, SuperstructureState.CORAL_INTAKE),
+            Pair.of(SuperstructureState.STOWREST, SuperstructureState.CORAL_INTAKE),
             Pair.of(SuperstructureState.L2_CORAL, SuperstructureState.L2_CORAL_EJECT),
             Pair.of(SuperstructureState.L3_CORAL, SuperstructureState.L3_CORAL_EJECT),
             Pair.of(SuperstructureState.L4_CORAL, SuperstructureState.L4_CORAL_EJECT),
@@ -255,6 +256,12 @@ public class Superstructure extends SubsystemBase {
         AlgaeEdge.ALGAE,
         false);
     addEdge(
+        SuperstructureState.STOWREST,
+        SuperstructureState.ALGAE_STOW,
+        false,
+        AlgaeEdge.ALGAE,
+        false);
+    addEdge(
         SuperstructureState.ALGAE_STOW,
         SuperstructureState.STOWTRAVEL,
         false,
@@ -271,7 +278,7 @@ public class Superstructure extends SubsystemBase {
         runGoal(
             (Supplier<SuperstructureState>)
                 () -> {
-                  final Pose2d robot = Drive.getPose();
+                  final Pose2d robot = drive.getPose();
                   final Pose2d flippedRobot = AllianceFlipUtil.apply(robot);
 
                   // Check danger state
@@ -593,8 +600,8 @@ public class Superstructure extends SubsystemBase {
               () -> {
                 // Attempt to reach nearest safe point on elevator
                 var currentAngle = from.getValue().getPose().pivotAngle().get();
-                if (currentAngle.getDegrees() <= pivotMaxSafeAngleDeg.get()
-                    && currentAngle.getDegrees() >= pivotMinSafeAngleDeg.get()) {
+                if (currentAngle.getRadians() <= pivotMaxSafeAngleRad.get()
+                    && currentAngle.getRadians() >= pivotMinSafeAngleRad.get()) {
                   return to.getValue().getPose().elevatorHeight().getAsDouble();
                 }
                 return isGoingDown
@@ -602,11 +609,11 @@ public class Superstructure extends SubsystemBase {
                     : to.getValue().getHeight().getPosition() - 0.1;
               },
               () ->
-                  Rotation2d.fromDegrees(
+                  Rotation2d.fromRadians(
                       MathUtil.clamp(
-                          to.getValue().getPose().pivotAngle().get().getDegrees(),
-                          pivotMinSafeAngleDeg.get(),
-                          pivotMaxSafeAngleDeg.get())));
+                          to.getValue().getPose().pivotAngle().get().getRadians(),
+                          pivotMinSafeAngleRad.get(),
+                          pivotMaxSafeAngleRad.get())));
       return runSuperstructurePose(safeSuperstructureSetpoint)
           .andThen(
               Commands.waitUntil(manipulator::isAtGoal),
@@ -653,7 +660,7 @@ public class Superstructure extends SubsystemBase {
   }
 
   private Command runElevator(DoubleSupplier elevatorHeight) {
-    return Commands.runOnce(() -> elevator.setGoal(() -> elevatorHeight.getAsDouble()));
+    return Commands.runOnce(() -> elevator.setGoal(elevatorHeight));
   }
 
   private Command runManipulatorPivot(Supplier<Rotation2d> pivotAngle) {

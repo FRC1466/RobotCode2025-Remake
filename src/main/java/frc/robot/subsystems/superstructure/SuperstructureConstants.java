@@ -42,10 +42,10 @@ public class SuperstructureConstants {
   public static final double stage2ToStage3Height = 1.18;
 
   // Min and max safe angles for passing through cross members
-  public static final LoggedTunableNumber pivotMinSafeAngleDeg =
-      new LoggedTunableNumber("Superstructure/PivotMinSafeAngleDegrees", .45);
-  public static final LoggedTunableNumber pivotMaxSafeAngleDeg =
-      new LoggedTunableNumber("Superstructure/PivotMaxSafeAngleDegrees", Math.PI - .2);
+  public static final LoggedTunableNumber pivotMinSafeAngleRad =
+      new LoggedTunableNumber("Superstructure/PivotMinSafeAngleRadians", .45);
+  public static final LoggedTunableNumber pivotMaxSafeAngleRad =
+      new LoggedTunableNumber("Superstructure/PivotMaxSafeAngleRadians", Math.PI - .2);
   public static final LoggedTunableNumber elevatorCrossMemberDangerHeight =
       new LoggedTunableNumber("Superstructure/ElevatorCrossMemberDangerHeight", 0.2);
   public static final LoggedTunableNumber elevatorL4ClearHeight =

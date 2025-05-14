@@ -131,15 +131,16 @@ public class RobotContainer {
           vision =
               new Vision(
                   drive::addVisionMeasurement,
-                  new VisionIOPhotonVisionSim(camera0Name, robotToCamera0, Drive::getPose),
-                  new VisionIOPhotonVisionSim(camera1Name, robotToCamera1, Drive::getPose));
+                  new VisionIOPhotonVisionSim(camera0Name, robotToCamera0, drive::getPose),
+                  new VisionIOPhotonVisionSim(camera1Name, robotToCamera1, drive::getPose));
           elevator = new Elevator(new ElevatorIOSim());
           manipulator =
               new Manipulator(
                   new PivotIOSim(),
                   new RollerSystemIOSim(DCMotor.getKrakenX60Foc(1), 1, 1),
                   new RollerSystemIOSim(DCMotor.getKrakenX60Foc(1), 1, 1),
-                  new CoralSensorIO() {});
+                  new CoralSensorIO() {},
+                  drive);
         }
       }
     }
@@ -234,14 +235,14 @@ public class RobotContainer {
     // Reef Coral Score
     controller
         .rightTrigger()
-        .whileTrue(
+        .whileTrueContinuous(
             new DriveToScore(drive, driverX, driverY, driverOmega, false, () -> leftCoral)
                 .withName("Coral Score"));
 
     // Station Coral Intake
     controller
         .leftTrigger()
-        .whileTrue(
+        .whileTrueContinuous(
             new DriveToStation(drive, driverX, driverY, driverOmega, false)
                 .withName("Coral Station Intake"));
 
@@ -251,11 +252,30 @@ public class RobotContainer {
         .whileTrue(
             runOnce(
                     () -> {
-                      SuperstructureState[] states = SuperstructureState.values();
-                      int randomIndex = (int) (Math.random() * states.length);
-                      superstructure.runGoal(states[randomIndex]).schedule();
+                      superstructure.runGoal(SuperstructureState.L4_CORAL).schedule();
                     })
-                .withName("Random Superstructure State"))
+                .withName("l4 coral"))
+        .toggleOnFalse(superstructure.runGoal(SuperstructureState.STOWTRAVEL));
+
+    controller
+        .povLeft()
+        .whileTrue(
+            runOnce(() -> superstructure.runGoal(SuperstructureState.L2_CORAL_EJECT).schedule())
+                .withName("L2 Coral Eject"))
+        .toggleOnFalse(superstructure.runGoal(SuperstructureState.STOWTRAVEL));
+
+    controller
+        .povRight()
+        .whileTrue(
+            runOnce(() -> superstructure.runGoal(SuperstructureState.PRE_THROW).schedule())
+                .withName("Pre Throw"))
+        .toggleOnFalse(superstructure.runGoal(SuperstructureState.STOWTRAVEL));
+
+    controller
+        .povDown()
+        .whileTrue(
+            runOnce(() -> superstructure.runGoal(SuperstructureState.PRE_PROCESS).schedule())
+                .withName("Process"))
         .toggleOnFalse(superstructure.runGoal(SuperstructureState.STOWTRAVEL));
     // Reset gyro
     var driverStartAndBack = controller.start().and(controller.back());

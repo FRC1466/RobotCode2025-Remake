@@ -155,7 +155,7 @@ public class DriveToPose extends Command {
   public DriveToPose(Drive drive, Supplier<Pose2d> target) {
     this.drive = drive;
     this.target = target;
-    this.robot = Drive::getPose;
+    this.robot = drive::getPose;
 
     // Enable continuous input for theta controller
     thetaController.enableContinuousInput(-Math.PI, Math.PI);

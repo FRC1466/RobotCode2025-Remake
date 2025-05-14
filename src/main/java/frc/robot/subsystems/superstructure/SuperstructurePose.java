@@ -8,7 +8,6 @@
 package frc.robot.subsystems.superstructure;
 
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.util.Units;
 import frc.robot.FieldConstants.ReefLevel;
 import frc.robot.util.LoggedTunableNumber;
 import java.util.function.DoubleSupplier;
@@ -81,8 +80,8 @@ public record SuperstructurePose(DoubleSupplier elevatorHeight, Supplier<Rotatio
       return heightSupplier.get();
     }
 
-    public double getDispenserAngleDeg() {
-      return Units.radiansToDegrees(angleSupplier.get());
+    public double getManipulatorAngleRad() {
+      return angleSupplier.get();
     }
   }
 
@@ -102,7 +101,7 @@ public record SuperstructurePose(DoubleSupplier elevatorHeight, Supplier<Rotatio
     PRETHROW("Pre-Throw", NetHeight.get(), NetAnglePreThrow.get()),
     THROW("Throw", NetHeight.get(), NetAnglePostThrow.get()),
     // ALGAE_STOW("AlgaeStow", intakeHeightBaseline.get(), -15.0),
-    PROCESS("Processed", ProcessorHeight.get(), ProcessorAngle.get());
+    PROCESS("Process", ProcessorHeight.get(), ProcessorAngle.get());
 
     private final SuperstructurePose pose;
 
@@ -122,7 +121,7 @@ public record SuperstructurePose(DoubleSupplier elevatorHeight, Supplier<Rotatio
       pose =
           new SuperstructurePose(
               coralDispenserPose::getElevatorHeight,
-              () -> Rotation2d.fromDegrees(coralDispenserPose.getDispenserAngleDeg()));
+              () -> Rotation2d.fromRadians(coralDispenserPose.getManipulatorAngleRad()));
     }
   }
 }

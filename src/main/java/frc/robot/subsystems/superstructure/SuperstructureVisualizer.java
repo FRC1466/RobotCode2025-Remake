@@ -32,7 +32,7 @@ public class SuperstructureVisualizer {
       new LoggedTunableNumber("Superstructure/Visualizer/AngleOffset", 0.0);
 
   private LoggedTunableNumber angleMultiplier =
-      new LoggedTunableNumber("Superstructure/Visualizer/AngleMultiplier", 1);
+      new LoggedTunableNumber("Superstructure/Visualizer/AngleMultiplier", -1);
 
   // New angle visualization mechanism
   private final LoggedMechanism2d angleMechanism =

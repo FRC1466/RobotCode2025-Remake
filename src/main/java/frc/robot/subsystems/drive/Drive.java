@@ -132,7 +132,7 @@ public class Drive extends SubsystemBase {
         new SwerveModulePosition(),
         new SwerveModulePosition()
       };
-  private static SwerveDrivePoseEstimator poseEstimator =
+  private SwerveDrivePoseEstimator poseEstimator =
       new SwerveDrivePoseEstimator(kinematics, rawGyroRotation, lastModulePositions, new Pose2d());
 
   public Drive(
@@ -155,7 +155,7 @@ public class Drive extends SubsystemBase {
 
     // Configure AutoBuilder for PathPlanner
     AutoBuilder.configure(
-        Drive::getPose,
+        this::getPose,
         this::setPose,
         this::getChassisSpeeds,
         this::runVelocity,
@@ -353,7 +353,7 @@ public class Drive extends SubsystemBase {
 
   /** Returns the current odometry pose. */
   @AutoLogOutput(key = "Odometry/Robot")
-  public static Pose2d getPose() {
+  public Pose2d getPose() {
     return poseEstimator.getEstimatedPosition();
   }
 
@@ -402,12 +402,12 @@ public class Drive extends SubsystemBase {
     };
   }
 
-  public static int getClosestTag(Drive drive) {
+  public int getClosestTag() {
     // Only flip robot pose if on red alliance, comparing to blue tag poses
-    Pose2d robot = Drive.getPose();
+    Pose2d robot = this.getPose();
     // Compute the nearest pose from the list defined earlier
     if (AllianceFlipUtil.shouldFlip()) {
-      robot = AllianceFlipUtil.FlipX(Drive.getPose());
+      robot = AllianceFlipUtil.FlipX(this.getPose());
     }
     Pose2d nearest = robot.nearest(blueTagPoses2d);
     // Calculate index of the pose to get the closest tag

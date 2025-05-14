@@ -69,7 +69,7 @@ public class DriveToStation extends DriveToPose {
     super(
         drive,
         () -> {
-          Pose2d robot = AllianceFlipUtil.apply(Drive.getPose());
+          Pose2d robot = AllianceFlipUtil.apply(drive.getPose());
           List<Pose2d> finalPoses = new ArrayList<>();
           for (Pose2d stationCenter :
               new Pose2d[] {
@@ -116,7 +116,7 @@ public class DriveToStation extends DriveToPose {
               "DriveToStation/RightClosestPose", AllianceFlipUtil.apply(finalPoses.get(1)));
           return goal;
         },
-        Drive::getPose,
+        drive::getPose,
         linearFF,
         theta);
   }

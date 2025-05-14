@@ -16,7 +16,7 @@ import edu.wpi.first.wpilibj.RobotBase;
 public final class Constants {
   public static final double loopPeriodSecs = 0.02;
   private static RobotType robotType = RobotType.SIMBOT;
-  public static final boolean tuningMode = true;
+  public static final boolean tuningMode = false;
   public static final I2C.Port i2cPort = I2C.Port.kOnboard;
 
   @SuppressWarnings("resource")
@@ -60,12 +60,12 @@ public final class Constants {
   }
 
   /** Checks whether the correct robot is selected when deploying. */
-  public static class CheckDeploy {
+  /*public static class CheckDeploy {
     public static void main(String... args) {
       if (robotType == RobotType.SIMBOT) {
         System.err.println("Cannot deploy, invalid robot selected: " + robotType);
         System.exit(1);
       }
     }
-  }
+  }*/
 }

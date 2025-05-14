@@ -9,7 +9,6 @@ package frc.robot.commands;
 
 import static frc.robot.commands.DriveCommands.DEADBAND;
 import static frc.robot.commands.DriveToStation.withinDistanceToReef;
-import static frc.robot.subsystems.drive.Drive.getClosestTag;
 import static frc.robot.util.EqualsUtil.*;
 
 import edu.wpi.first.math.MathUtil;
@@ -77,12 +76,12 @@ public class DriveToScore extends DriveToPose {
     super(
         drive,
         () -> {
-          int tag = getClosestTag(drive);
+          int tag = drive.getClosestTag();
           int pov = coralPovSupplier.get();
           // choose approach and real goal
           Pose2d approach = PathfindConstants.getTargetPoseReefApproach()[tag][pov];
           Pose2d target = PathfindConstants.getTargetPoseReef()[tag][pov];
-          Pose2d robot = Drive.getPose();
+          Pose2d robot = drive.getPose();
           double distance = robot.getTranslation().getDistance(approach.getTranslation());
           double angularDistance =
               Math.abs(
@@ -103,7 +102,7 @@ public class DriveToScore extends DriveToPose {
           }
           return approach;
         },
-        Drive::getPose,
+        drive::getPose,
         linearFF,
         theta);
   }

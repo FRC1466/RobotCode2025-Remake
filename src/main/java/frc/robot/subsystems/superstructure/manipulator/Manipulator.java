@@ -160,6 +160,7 @@ public class Manipulator {
   private final CoralSensorIO coralSensorIO;
   private final CoralSensorIOInputsAutoLogged coralSensorInputs =
       new CoralSensorIOInputsAutoLogged();
+  private final Drive drive;
 
   // Overrides
   private BooleanSupplier coastOverride = () -> false;
@@ -227,11 +228,13 @@ public class Manipulator {
       PivotIO pivotIO,
       RollerSystemIO mailboxIO,
       RollerSystemIO funnelRollerIO,
-      CoralSensorIO coralSensorIO) {
+      CoralSensorIO coralSensorIO,
+      Drive drive) {
     this.pivotIO = pivotIO;
     this.mailboxIO = mailboxIO;
     this.funnelRollerIO = funnelRollerIO;
     this.coralSensorIO = coralSensorIO;
+    this.drive = drive;
 
     profile =
         new TrapezoidProfile(
@@ -396,7 +399,7 @@ public class Manipulator {
         coralDebouncer.calculate(hasCoral);
       }
     } else if (DriverStation.isAutonomous()) {
-      var flippedRobot = AllianceFlipUtil.apply(Drive.getPose());
+      var flippedRobot = AllianceFlipUtil.apply(drive.getPose());
       var intakingError =
           flippedRobot.relativeTo(
               flippedRobot.nearest(
