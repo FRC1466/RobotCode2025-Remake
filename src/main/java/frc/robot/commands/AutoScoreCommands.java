@@ -58,22 +58,22 @@ public class AutoScoreCommands {
   private static final LoggedTunableNumber arcDistanceReadyAuto =
       new LoggedTunableNumber("AutoScore/ArcDistanceReadyAuto", 1.5);
   private static final LoggedTunableNumber[] lowerXToleranceEject = {
-    new LoggedTunableNumber("AutoScore/XToleranceEject/Lower/L1", 0.03),
-    new LoggedTunableNumber("AutoScore/XToleranceEject/Lower/L2", 0.05),
-    new LoggedTunableNumber("AutoScore/XToleranceEject/Lower/L3", 0.05),
-    new LoggedTunableNumber("AutoScore/XToleranceEject/Lower/L4", 0.05)
+    new LoggedTunableNumber("AutoScore/XToleranceEject/Lower/L1", 0.1),
+    new LoggedTunableNumber("AutoScore/XToleranceEject/Lower/L2", 0.1),
+    new LoggedTunableNumber("AutoScore/XToleranceEject/Lower/L3", 0.1),
+    new LoggedTunableNumber("AutoScore/XToleranceEject/Lower/L4", 0.1)
   };
   private static final LoggedTunableNumber[] upperXToleranceEject = {
-    new LoggedTunableNumber("AutoScore/XToleranceEject/Upper/L1", 0.03),
+    new LoggedTunableNumber("AutoScore/XToleranceEject/Upper/L1", 0.1),
     new LoggedTunableNumber("AutoScore/XToleranceEject/Upper/L2", 0.1),
     new LoggedTunableNumber("AutoScore/XToleranceEject/Upper/L3", 0.1),
     new LoggedTunableNumber("AutoScore/XToleranceEject/Upper/L4", 0.1)
   };
   private static final LoggedTunableNumber[] yToleranceEject = {
-    new LoggedTunableNumber("AutoScore/YToleranceEject/L1", 0.05),
-    new LoggedTunableNumber("AutoScore/YToleranceEject/L2", 0.05),
-    new LoggedTunableNumber("AutoScore/YToleranceEject/L3", 0.05),
-    new LoggedTunableNumber("AutoScore/YToleranceEject/L4", 0.05)
+    new LoggedTunableNumber("AutoScore/YToleranceEject/L1", 0.1),
+    new LoggedTunableNumber("AutoScore/YToleranceEject/L2", 0.1),
+    new LoggedTunableNumber("AutoScore/YToleranceEject/L3", 0.1),
+    new LoggedTunableNumber("AutoScore/YToleranceEject/L4", 0.1)
   };
   private static final LoggedTunableNumber[] lookaheadEject = {
     new LoggedTunableNumber("AutoScore/LookaheadToleranceEject/L1", 0.5),
@@ -227,7 +227,6 @@ public class AutoScoreCommands {
             // Run superstructure
             preIntake(
                 superstructure,
-                funnel,
                 () -> robot.get(),
                 () -> reefLevel.get() == ReefLevel.L4,
                 disableReefAutoAlign),
@@ -439,12 +438,7 @@ public class AutoScoreCommands {
                 .alongWith(
                     (funnel.isEmpty()
                             ? Commands.none()
-                            : preIntake(
-                                superstructure,
-                                funnel.get(),
-                                robot,
-                                () -> false,
-                                disableReefAutoAlign))
+                            : preIntake(superstructure, robot, () -> false, disableReefAutoAlign))
                         .andThen(
                             // Check if need wait until pre ready or already ready
                             Commands.waitUntil(
@@ -602,7 +596,6 @@ public class AutoScoreCommands {
 
   private static Command preIntake(
       Superstructure superstructure,
-      RollerSystem funnel,
       Supplier<Pose2d> robot,
       BooleanSupplier shouldClearReef,
       BooleanSupplier disableReefAutoAlign) {

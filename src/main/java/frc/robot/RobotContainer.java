@@ -7,7 +7,6 @@
 
 package frc.robot;
 
-import static edu.wpi.first.wpilibj2.command.Commands.*;
 import static frc.robot.subsystems.vision.VisionConstants.*;
 
 import com.pathplanner.lib.auto.AutoBuilder;
@@ -225,23 +224,6 @@ public class RobotContainer {
         () -> DriveCommands.joystickDrive(drive, driverX, driverY, driverOmega);
     drive.setDefaultCommand(joystickDriveCommandFactory.get());
 
-    controller
-        .povLeft()
-        .onTrue(
-            runOnce(
-                    () -> {
-                      leftCoral = 0;
-                    })
-                .withName("Coral POV Left"));
-    controller
-        .povRight()
-        .onTrue(
-            runOnce(
-                    () -> {
-                      leftCoral = 1;
-                    })
-                .withName("Coral POV Right"));
-
     // Coral intake
     controller
         .leftTrigger()
@@ -386,6 +368,12 @@ public class RobotContainer {
                             AllianceFlipUtil.apply(Rotation2d.kZero))))
             .withName("Reset Gyro")
             .ignoringDisable(true));
+
+    // Raise elevator
+    controller
+        .povUp()
+        .toggleOnTrue(
+            superstructure.runGoal(SuperstructureState.L3_CORAL).withName("Force Raise Elevator"));
 
     // Endgame alerts
     new Trigger(
