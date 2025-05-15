@@ -26,8 +26,9 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import frc.robot.commands.AlgaeScoreCommands;
+import frc.robot.commands.AutoScoreCommands;
 import frc.robot.commands.DriveCommands;
-import frc.robot.commands.DriveToScore;
 import frc.robot.commands.DriveToStation;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.drive.Drive;
@@ -52,9 +53,12 @@ import frc.robot.subsystems.vision.VisionIO;
 import frc.robot.subsystems.vision.VisionIOPhotonVision;
 import frc.robot.subsystems.vision.VisionIOPhotonVisionSim;
 import frc.robot.util.AllianceFlipUtil;
+import frc.robot.util.Container;
 import frc.robot.util.DoublePressTracker;
 import frc.robot.util.TriggerUtil;
+import java.util.Optional;
 import java.util.function.DoubleSupplier;
+import java.util.function.Supplier;
 import lombok.experimental.ExtensionMethod;
 import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
@@ -75,6 +79,9 @@ public class RobotContainer {
 
   // Controllers
   private final CommandXboxController controller = new CommandXboxController(0);
+  private final Trigger disableReefAutoAlign = new Trigger(() -> false);
+  private final Trigger disableCoralStationAutoAlign = new Trigger(() -> false);
+  private final Trigger disableAlgaeScoreAutoAlign = new Trigger(() -> false);
 
   private final Alert driverDisconnected =
       new Alert("Driver controller disconnected (port 0).", AlertType.kWarning);
@@ -172,9 +179,10 @@ public class RobotContainer {
               new PivotIO() {},
               new RollerSystemIO() {},
               new RollerSystemIO() {},
-              new CoralSensorIO() {});
+              new CoralSensorIO() {},
+              drive);
     }
-    superstructure = new Superstructure(elevator, manipulator);
+    superstructure = new Superstructure(elevator, manipulator, drive);
 
     // Set up auto routines
     autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
@@ -213,7 +221,9 @@ public class RobotContainer {
     DoubleSupplier driverY = () -> -controller.getLeftX();
     DoubleSupplier driverOmega = () -> -controller.getRightX();
 
-    drive.setDefaultCommand(DriveCommands.joystickDrive(drive, driverX, driverY, driverOmega));
+    Supplier<Command> joystickDriveCommandFactory =
+        () -> DriveCommands.joystickDrive(drive, driverX, driverY, driverOmega);
+    drive.setDefaultCommand(joystickDriveCommandFactory.get());
 
     controller
         .povLeft()
@@ -232,51 +242,139 @@ public class RobotContainer {
                     })
                 .withName("Coral POV Right"));
 
-    // Reef Coral Score
-    controller
-        .rightTrigger()
-        .whileTrueContinuous(
-            new DriveToScore(drive, driverX, driverY, driverOmega, false, () -> leftCoral)
-                .withName("Coral Score"));
-
-    // Station Coral Intake
+    // Coral intake
     controller
         .leftTrigger()
-        .whileTrueContinuous(
-            new DriveToStation(drive, driverX, driverY, driverOmega, false)
+        .whileTrue(
+            Commands.either(
+                    joystickDriveCommandFactory.get(),
+                    new DriveToStation(drive, driverX, driverY, driverOmega, false),
+                    disableCoralStationAutoAlign)
+                .alongWith(
+                    // IntakeCommands.intake(superstructure, funnel),
+                    Commands.runOnce(superstructure::resetHasCoral))
                 .withName("Coral Station Intake"));
 
-    // Run a random SuperstructureState on POV Up
+    // Algae reef intake & score
+    Trigger onOpposingSide =
+        new Trigger(
+            () -> AllianceFlipUtil.applyX(drive.getPose().getX()) > FieldConstants.fieldLength / 2);
+    Trigger shouldProcess =
+        new Trigger(
+            () ->
+                AllianceFlipUtil.apply(
+                                drive
+                                    .getPose()
+                                    .exp(
+                                        drive
+                                            .getChassisSpeeds()
+                                            .toTwist2d(
+                                                AlgaeScoreCommands.getLookaheadSecs().get())))
+                            .getY()
+                        < FieldConstants.fieldWidth / 2 - Drive.DRIVE_BASE_WIDTH
+                    || onOpposingSide.getAsBoolean());
+    Container<Boolean> hasAlgae = new Container<>(false);
     controller
-        .povUp()
-        .whileTrue(
-            runOnce(
-                    () -> {
-                      superstructure.runGoal(SuperstructureState.L4_CORAL).schedule();
-                    })
-                .withName("l4 coral"))
-        .toggleOnFalse(superstructure.runGoal(SuperstructureState.STOWTRAVEL));
+        .leftBumper()
+        .onTrue(Commands.runOnce(() -> hasAlgae.value = superstructure.hasAlgae()));
 
+    // Algae reef intake
+    // TODO: Use a fixed AlgaeObjective for reef intake
     controller
-        .povLeft()
+        .leftBumper()
+        .and(() -> !hasAlgae.value)
         .whileTrue(
-            runOnce(() -> superstructure.runGoal(SuperstructureState.L2_CORAL_EJECT).schedule())
-                .withName("L2 Coral Eject"))
-        .toggleOnFalse(superstructure.runGoal(SuperstructureState.STOWTRAVEL));
+            AutoScoreCommands.reefIntake(
+                    drive,
+                    superstructure,
+                    () -> Optional.of(new frc.robot.FieldConstants.AlgaeObjective(0)),
+                    driverX,
+                    driverY,
+                    driverOmega,
+                    joystickDriveCommandFactory.get(),
+                    () -> false,
+                    disableReefAutoAlign)
+                .withName("Algae Reef Intake (Test)"));
 
+    // Algae pre-processor
     controller
-        .povRight()
-        .whileTrue(
-            runOnce(() -> superstructure.runGoal(SuperstructureState.PRE_THROW).schedule())
-                .withName("Pre Throw"))
-        .toggleOnFalse(superstructure.runGoal(SuperstructureState.STOWTRAVEL));
+        .leftBumper()
+        .and(shouldProcess)
+        .and(() -> hasAlgae.value)
+        .and(controller.a().negate())
+        .or(AlgaeScoreCommands::shouldForceProcess)
+        .whileTrueContinuous(
+            AlgaeScoreCommands.process(
+                    drive,
+                    superstructure,
+                    driverX,
+                    driverY,
+                    driverOmega,
+                    joystickDriveCommandFactory,
+                    onOpposingSide,
+                    controller.leftBumper(),
+                    false,
+                    disableAlgaeScoreAutoAlign)
+                .withName("Algae Pre-Processor"));
 
+    // Algae process
     controller
-        .povDown()
+        .leftBumper()
+        .and(shouldProcess)
+        .and(() -> hasAlgae.value)
+        .and(controller.a())
+        .whileTrueContinuous(
+            AlgaeScoreCommands.process(
+                    drive,
+                    superstructure,
+                    driverX,
+                    driverY,
+                    driverOmega,
+                    joystickDriveCommandFactory,
+                    onOpposingSide,
+                    controller.leftBumper(),
+                    true,
+                    disableAlgaeScoreAutoAlign)
+                .withName("Algae Processing"));
+
+    // Algae pre-net
+    controller
+        .leftBumper()
+        .and(shouldProcess.negate())
+        .and(() -> hasAlgae.value)
+        .and(controller.a().negate())
         .whileTrue(
-            runOnce(() -> superstructure.runGoal(SuperstructureState.PRE_PROCESS).schedule())
-                .withName("Process"))
-        .toggleOnFalse(superstructure.runGoal(SuperstructureState.STOWTRAVEL));
+            AlgaeScoreCommands.netThrowLineup(
+                    drive,
+                    superstructure,
+                    driverX,
+                    driverY,
+                    joystickDriveCommandFactory.get(),
+                    disableAlgaeScoreAutoAlign)
+                .withName("Algae Pre-Net"))
+        // Indicate ready for score
+        .and(() -> superstructure.getState() == SuperstructureState.PRE_THROW)
+        .whileTrue(
+            controllerRumbleCommand()
+                .withTimeout(0.1)
+                .andThen(Commands.waitSeconds(0.1))
+                .repeatedly());
+
+    // Algae net score
+    controller
+        .leftBumper()
+        .and(shouldProcess.negate())
+        .and(() -> hasAlgae.value)
+        .and(controller.a())
+        .whileTrue(
+            AlgaeScoreCommands.netThrowScore(drive, superstructure).withName("Algae Net Score"));
+
+    // Algae eject
+    controller
+        .a()
+        .and(controller.leftBumper().negate())
+        .whileTrue(superstructure.runGoal(SuperstructureState.TOSS).withName("Algae Toss"));
+
     // Reset gyro
     var driverStartAndBack = controller.start().and(controller.back());
     driverStartAndBack.onTrue(
@@ -284,7 +382,7 @@ public class RobotContainer {
                 () ->
                     drive.setPose(
                         new Pose2d(
-                            Drive.getPose().getTranslation(),
+                            drive.getPose().getTranslation(),
                             AllianceFlipUtil.apply(Rotation2d.kZero))))
             .withName("Reset Gyro")
             .ignoringDisable(true));

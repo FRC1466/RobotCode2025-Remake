@@ -1,5 +1,5 @@
-// Copyright (c) 2025 FRC 6328
-// http://github.com/Mechanical-Advantage
+// Copyright (c) 2025 FRC 1466
+// http://github.com/FRC1466
 //
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file at
@@ -12,11 +12,6 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
-import java.util.function.BooleanSupplier;
-import java.util.function.DoubleSupplier;
-import java.util.function.Supplier;
-import lombok.Getter;
-import lombok.experimental.Accessors;
 import frc.robot.FieldConstants;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.superstructure.Superstructure;
@@ -25,6 +20,11 @@ import frc.robot.util.AllianceFlipUtil;
 import frc.robot.util.Container;
 import frc.robot.util.GeomUtil;
 import frc.robot.util.LoggedTunableNumber;
+import java.util.function.BooleanSupplier;
+import java.util.function.DoubleSupplier;
+import java.util.function.Supplier;
+import lombok.Getter;
+import lombok.experimental.Accessors;
 
 public class AlgaeScoreCommands {
   private static final LoggedTunableNumber processLineupXOffset =
@@ -34,7 +34,7 @@ public class AlgaeScoreCommands {
   private static final LoggedTunableNumber processLineupClear =
       new LoggedTunableNumber("AlgaeScoreCommands/ProcessLineupClear", 0.3);
   private static final LoggedTunableNumber processEjectDegOffset =
-      new LoggedTunableNumber("AlgaeScoreCommands/ProcessEjectDegreeOffset", 15.0);
+      new LoggedTunableNumber("AlgaeScoreCommands/ProcessEjectDegreeOffset", 1.0);
   private static final LoggedTunableNumber throwLineupDistance =
       new LoggedTunableNumber("AlgaeScoreCommands/ThrowLineupDistance", 1.5);
   private static final LoggedTunableNumber throwDriveDistance =
@@ -93,10 +93,9 @@ public class AlgaeScoreCommands {
                                       Rotation2d.kPi.plus(
                                           Rotation2d.fromDegrees(
                                               eject ? processEjectDegOffset.get() : 0.0))));
-                      return AutoScoreCommands.getDriveTarget(
-                          Drive.getPose(), goalPose.value);
+                      return AutoScoreCommands.getDriveTarget(drive.getPose(), goalPose.value);
                     },
-                    Drive::getPose,
+                    drive::getPose,
                     () ->
                         DriveCommands.getLinearVelocityFromJoysticks(
                                 driverX.getAsDouble(), driverY.getAsDouble())
@@ -114,8 +113,8 @@ public class AlgaeScoreCommands {
                     shouldForceProcess =
                         !disableAlgaeScoreAutoAlign.getAsBoolean()
                             && superstructure.getState() == SuperstructureState.PRE_PROCESS
-                            && RobotState.getInstance()
-                                    .getEstimatedPose()
+                            && drive
+                                    .getPose()
                                     .getTranslation()
                                     .getDistance(goalPose.value.getTranslation())
                                 < forceProcessorMaxDistance.get()))
@@ -136,9 +135,9 @@ public class AlgaeScoreCommands {
                 new Pose2d(
                     AllianceFlipUtil.applyX(
                         FieldConstants.fieldLength / 2.0 - throwLineupDistance.get()),
-                    RobotState.getInstance().getEstimatedPose().getY(),
-                    AllianceFlipUtil.apply(Rotation2d.kZero)),
-            RobotState.getInstance()::getEstimatedPose,
+                    drive.getPose().getY(),
+                    AllianceFlipUtil.apply(Rotation2d.k180deg)),
+            drive::getPose,
             () ->
                 DriveCommands.getLinearVelocityFromJoysticks(
                         driverX.getAsDouble(), driverY.getAsDouble())
@@ -162,7 +161,7 @@ public class AlgaeScoreCommands {
     Timer driveTimer = new Timer();
     return Commands.runOnce(
             () -> {
-              startPose.value = RobotState.getInstance().getEstimatedPose();
+              startPose.value = drive.getPose();
               driveTimer.restart();
             })
         .andThen(
@@ -171,7 +170,7 @@ public class AlgaeScoreCommands {
                     () ->
                         startPose.value.transformBy(
                             GeomUtil.toTransform2d(
-                                Math.min(
+                                -Math.min(
                                     driveTimer.get() * throwDriveVelocity.get(),
                                     throwDriveDistance.get()),
                                 0)))
