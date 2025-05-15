@@ -18,6 +18,7 @@ import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.GenericHID.RumbleType;
+import edu.wpi.first.wpilibj.I2C;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -38,15 +39,20 @@ import frc.robot.subsystems.drive.ModuleIOSim;
 import frc.robot.subsystems.drive.ModuleIOTalonFX;
 import frc.robot.subsystems.rollers.RollerSystemIO;
 import frc.robot.subsystems.rollers.RollerSystemIOSim;
+import frc.robot.subsystems.rollers.RollerSystemIOSpark;
+import frc.robot.subsystems.rollers.RollerSystemIOTalonFX;
 import frc.robot.subsystems.sensors.CoralSensorIO;
+import frc.robot.subsystems.sensors.CoralSensorIOColorSensor;
 import frc.robot.subsystems.superstructure.Superstructure;
 import frc.robot.subsystems.superstructure.SuperstructureState;
 import frc.robot.subsystems.superstructure.elevator.Elevator;
 import frc.robot.subsystems.superstructure.elevator.ElevatorIO;
 import frc.robot.subsystems.superstructure.elevator.ElevatorIOSim;
+import frc.robot.subsystems.superstructure.elevator.ElevatorIOTalonFX;
 import frc.robot.subsystems.superstructure.manipulator.Manipulator;
 import frc.robot.subsystems.superstructure.manipulator.PivotIO;
 import frc.robot.subsystems.superstructure.manipulator.PivotIOSim;
+import frc.robot.subsystems.superstructure.manipulator.PivotIOTalonFX;
 import frc.robot.subsystems.vision.Vision;
 import frc.robot.subsystems.vision.VisionIO;
 import frc.robot.subsystems.vision.VisionIOPhotonVision;
@@ -112,6 +118,14 @@ public class RobotContainer {
                   drive::addVisionMeasurement,
                   new VisionIOPhotonVision(camera0Name, robotToCamera0),
                   new VisionIOPhotonVision(camera1Name, robotToCamera1));
+          elevator = new Elevator(new ElevatorIOTalonFX());
+          manipulator =
+              new Manipulator(
+                  new PivotIOTalonFX(),
+                  new RollerSystemIOTalonFX(15, "", 40, false, true, 5),
+                  new RollerSystemIOSpark(19, false),
+                  new CoralSensorIOColorSensor(I2C.Port.kOnboard) {},
+                  drive);
         }
         case DEVBOT -> {
           drive =
@@ -373,7 +387,19 @@ public class RobotContainer {
     controller
         .povUp()
         .toggleOnTrue(
-            superstructure.runGoal(SuperstructureState.L3_CORAL).withName("Force Raise Elevator"));
+            superstructure.runElevator(() -> .6).withName("Force Raise Elevator l2 algae"))
+        .toggleOnFalse(superstructure.runElevator(() -> 0.25));
+
+    controller
+        .povLeft()
+        .toggleOnTrue(
+            superstructure.runElevator(() -> 1.0668).withName("Force Raise Elevator l3 algae"))
+        .toggleOnFalse(superstructure.runElevator(() -> 0.25));
+
+    controller
+        .povRight()
+        .toggleOnTrue(superstructure.runElevator(() -> 1.6).withName("Force Raise Elevator"))
+        .toggleOnFalse(superstructure.runElevator(() -> 0.25));
 
     // Endgame alerts
     new Trigger(

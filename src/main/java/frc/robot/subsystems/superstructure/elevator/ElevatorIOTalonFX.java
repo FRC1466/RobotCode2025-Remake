@@ -16,17 +16,13 @@ import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.PositionTorqueCurrentFOC;
 import com.ctre.phoenix6.controls.PositionVoltage;
-import com.ctre.phoenix6.controls.TorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.ParentDevice;
 import com.ctre.phoenix6.hardware.TalonFX;
-import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.*;
-import frc.robot.Constants;
-import frc.robot.Constants.RobotType;
 import frc.robot.util.PhoenixUtil;
 
 public class ElevatorIOTalonFX implements ElevatorIO {
@@ -52,8 +48,7 @@ public class ElevatorIOTalonFX implements ElevatorIO {
   private final Debouncer connectedDebouncer = new Debouncer(0.5);
   private final Debouncer followerConnectedDebouncer = new Debouncer(0.5);
 
-  private final TorqueCurrentFOC torqueCurrentRequest =
-      new TorqueCurrentFOC(0.0).withUpdateFreqHz(0.0);
+  private final VoltageOut torqueCurrentRequest = new VoltageOut(0.0).withUpdateFreqHz(0.0);
 
   @SuppressWarnings("unused")
   private final PositionTorqueCurrentFOC positionTorqueCurrentRequest =
@@ -64,18 +59,13 @@ public class ElevatorIOTalonFX implements ElevatorIO {
       new PositionVoltage(0.0).withUpdateFreqHz(0.0);
 
   public ElevatorIOTalonFX() {
-    talon = new TalonFX(Constants.getRobot() == RobotType.DEVBOT ? 13 : 17, "*");
-    followerTalon = new TalonFX(Constants.getRobot() == RobotType.DEVBOT ? 14 : 9, "*");
+    talon = new TalonFX(17);
+    followerTalon = new TalonFX(16);
     followerTalon.setControl(new Follower(talon.getDeviceID(), true));
 
     // Configure motor
     config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
     config.Slot0 = new Slot0Configs().withKP(0).withKI(0).withKD(0);
-    config.CurrentLimits.SupplyCurrentLimit = 80.0;
-    config.CurrentLimits.SupplyCurrentLimitEnable = true;
-    config.CurrentLimits.SupplyCurrentLowerLimit = 40.0;
-    config.CurrentLimits.SupplyCurrentLowerTime = 1.5;
-    config.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
     tryUntilOk(5, () -> talon.getConfigurator().apply(config, 0.25));
 
     position = talon.getPosition();
@@ -105,7 +95,7 @@ public class ElevatorIOTalonFX implements ElevatorIO {
 
     // Register signals for refresh
     PhoenixUtil.registerSignals(
-        true,
+        false,
         position,
         velocity,
         appliedVolts,
@@ -131,7 +121,7 @@ public class ElevatorIOTalonFX implements ElevatorIO {
                     followerTorqueCurrent,
                     followerSupplyCurrent,
                     followerTemp)),
-            Units.rotationsToRadians(position.getValueAsDouble()),
+            position.getValueAsDouble(),
             Units.rotationsToRadians(velocity.getValueAsDouble()),
             appliedVolts.getValueAsDouble(),
             torqueCurrent.getValueAsDouble(),
@@ -160,10 +150,7 @@ public class ElevatorIOTalonFX implements ElevatorIO {
 
   @Override
   public void runPosition(double positionRad, double feedforward) {
-    talon.setControl(
-        positionVoltageRequest
-            .withPosition(Units.radiansToRotations(positionRad))
-            .withFeedForward(feedforward));
+    talon.setControl(positionVoltageRequest.withPosition(positionRad).withFeedForward(feedforward));
   }
 
   @Override

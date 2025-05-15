@@ -31,6 +31,7 @@ import frc.robot.generated.TunerConstants;
 import frc.robot.util.DummyLogReceiver;
 import frc.robot.util.LoggedTracer;
 import frc.robot.util.NTClientLogger;
+import frc.robot.util.PhoenixUtil;
 import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
@@ -101,7 +102,7 @@ public class Robot extends LoggedRobot {
       case REAL:
         // Running on a real robot, log to a USB stick ("/U/logs")
         Logger.addDataReceiver(new WPILOGWriter());
-        Logger.addDataReceiver(new RLOGServer());
+        Logger.addDataReceiver(new NT4Publisher());
         break;
 
       case SIM:
@@ -225,6 +226,8 @@ public class Robot extends LoggedRobot {
   @Override
   public void robotPeriodic() {
     LoggedTracer.reset();
+    PhoenixUtil.refreshAll();
+    LoggedTracer.record("PhoenixRefresh");
 
     CommandScheduler.getInstance().run();
     LoggedTracer.record("Commands");

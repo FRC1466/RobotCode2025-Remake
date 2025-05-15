@@ -313,7 +313,7 @@ public class Superstructure extends SubsystemBase {
   public void periodic() {
     // Run periodic
     elevator.periodic();
-    manipulator.periodic();
+    // manipulator.periodic();
 
     if (characterizationModeOn.get()) {
       state = SuperstructureState.CHARACTERIZATION;
@@ -659,7 +659,7 @@ public class Superstructure extends SubsystemBase {
         });
   }
 
-  private Command runElevator(DoubleSupplier elevatorHeight) {
+  public Command runElevator(DoubleSupplier elevatorHeight) {
     return Commands.runOnce(() -> elevator.setGoal(elevatorHeight));
   }
 
