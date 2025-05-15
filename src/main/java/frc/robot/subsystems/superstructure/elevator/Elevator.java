@@ -85,7 +85,7 @@ public class Elevator {
   static {
     switch (Constants.getRobot()) {
       case COMPBOT, DEVBOT -> {
-        kP.initDefault(0);
+        kP.initDefault(1);
         kD.initDefault(0);
         for (int stage = 0; stage < 3; stage++) {
           kS[stage].initDefault(0);
