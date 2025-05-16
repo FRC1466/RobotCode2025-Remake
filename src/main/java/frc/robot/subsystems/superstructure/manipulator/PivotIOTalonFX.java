@@ -27,8 +27,8 @@ import edu.wpi.first.wpilibj.DutyCycleEncoder;
 import frc.robot.util.PhoenixUtil;
 
 public class PivotIOTalonFX implements PivotIO {
-  private static final double reduction = 12.8; // Motor to mechanism gear ratio
-  private static final Rotation2d encoderOffset = Rotation2d.fromRadians(-0.4601); // From constants
+  private static final double reduction = 18.69; // Motor to mechanism gear ratio
+  private static final Rotation2d encoderOffset = Rotation2d.fromRadians(-2.82); // From constants
   private static final int motorId = 14; // Using armPort from constants
   private static final int dutyCyclePort = 0; // Using dutyCyclePort from constants
 
@@ -71,11 +71,12 @@ public class PivotIOTalonFX implements PivotIO {
     // Configure motor
     config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
     config.Slot0 = new Slot0Configs().withKP(0.18).withKI(0.02).withKD(0.02);
-    config.Feedback.SensorToMechanismRatio = 1.0;
-    config.Feedback.RotorToSensorRatio = reduction;
+    config.Feedback.SensorToMechanismRatio = reduction;
+    config.Feedback.RotorToSensorRatio = 1;
+    config.Feedback.FeedbackRotorOffset = -0.013672;
     config.CurrentLimits.SupplyCurrentLimit = 40.0;
     config.CurrentLimits.SupplyCurrentLimitEnable = true;
-    config.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
+    config.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
     PhoenixUtil.tryUntilOk(5, () -> talon.getConfigurator().apply(config, 0.25));
 
     // Get status signals
