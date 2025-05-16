@@ -22,7 +22,8 @@ import frc.robot.subsystems.superstructure.elevator.ElevatorIOSim;
 public class PivotIOSim implements PivotIO {
   private static final double reduction = 3.0;
 
-  public static final double moi = (0.5) * (ElevatorIOSim.carriageMassKg);
+  public static final double moi =
+      (1.0 / 3.0) * (ElevatorIOSim.carriageMassKg) * Math.pow(Units.inchesToMeters(7.2), 2.0);
   private static final double cgRadius = Units.inchesToMeters(10.0);
   public static final DCMotor gearbox = DCMotor.getKrakenX60Foc(1).withReduction(reduction);
   public static final Matrix<N2, N2> A =
@@ -70,7 +71,7 @@ public class PivotIOSim implements PivotIO {
             Rotation2d.fromRadians(simState.get(0)),
             simState.get(1),
             pivotAppliedVolts,
-            0.0,
+            (pivotAppliedVolts / 12.0) * inputTorqueCurrent,
             inputTorqueCurrent,
             0.0);
   }
@@ -95,7 +96,7 @@ public class PivotIOSim implements PivotIO {
   @Override
   public void runPosition(Rotation2d position, double feedforward) {
     closedLoop = true;
-    controller.setSetpoint(position.getRadians() + Manipulator.maxAngle.getRadians());
+    controller.setSetpoint(position.getRadians());
     this.feedforward = feedforward;
   }
 
