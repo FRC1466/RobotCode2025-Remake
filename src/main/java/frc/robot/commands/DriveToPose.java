@@ -100,23 +100,26 @@ public class DriveToPose extends Command {
     thetakP.initDefault(5.0);
     thetakD.initDefault(0.5);
 
-    driveMaxVelocity.initDefault(3.92);
-    driveMaxVelocityTop.initDefault(3.92);
-    driveMaxAcceleration.initDefault(3.5);
-    driveMaxAccelerationTop.initDefault(1.5);
-    driveMaxVelocityAuto.initDefault(3.5);
-    driveMaxVelocityAutoTop.initDefault(3.5);
-    driveMaxAccelerationAuto.initDefault(4.0);
-    driveMaxAccelerationAutoTop.initDefault(2.0);
+    double velocityScale = 3.6 / 3.92; // Was previously relative thinking 3.92 was the top speed, but real life speed is slower
 
-    thetaMaxVelocity.initDefault(Units.degreesToRadians(360.0));
-    thetaMaxVelocityTop.initDefault(Units.degreesToRadians(200.0));
-    thetaMaxAcceleration.initDefault(8.0);
-    thetaMaxAccelerationTop.initDefault(6.0);
-    thetaMaxVelocityAuto.initDefault(Units.degreesToRadians(360.0));
-    thetaMaxVelocityAutoTop.initDefault(Units.degreesToRadians(200.0));
-    thetaMaxAccelerationAuto.initDefault(8.0);
-    thetaMaxAccelerationAutoTop.initDefault(6.0);
+    driveMaxVelocity.initDefault(3.6);
+    driveMaxVelocityTop.initDefault(3.6);
+    driveMaxAcceleration.initDefault(3.5 * velocityScale);
+    driveMaxAccelerationTop.initDefault(1.5 * velocityScale);
+    driveMaxVelocityAuto.initDefault(3.5 * velocityScale);
+    driveMaxVelocityAutoTop.initDefault(3.5 * velocityScale);
+    driveMaxAccelerationAuto.initDefault(4.0 * velocityScale);
+    driveMaxAccelerationAutoTop.initDefault(2.0 * velocityScale);
+
+    thetaMaxVelocity.initDefault(Units.degreesToRadians(360.0 * velocityScale));
+    thetaMaxVelocityTop.initDefault(Units.degreesToRadians(200.0 * velocityScale));
+    thetaMaxAcceleration.initDefault(8.0 * velocityScale);
+    thetaMaxAccelerationTop.initDefault(6.0 * velocityScale);
+    thetaMaxVelocityAuto.initDefault(Units.degreesToRadians(360.0 * velocityScale));
+    thetaMaxVelocityAutoTop.initDefault(
+        Units.degreesToRadians(200.0 * velocityScale));
+    thetaMaxAccelerationAuto.initDefault(8.0 * velocityScale);
+    thetaMaxAccelerationAutoTop.initDefault(6.0 * velocityScale);
 
     driveTolerance.initDefault(0.01);
     thetaTolerance.initDefault(Units.degreesToRadians(1.0));
