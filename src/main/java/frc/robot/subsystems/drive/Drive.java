@@ -44,6 +44,9 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.Constants;
 import frc.robot.Constants.Mode;
+import frc.robot.FieldConstants.CoralObjective;
+import frc.robot.FieldConstants.Reef;
+import frc.robot.FieldConstants.ReefLevel;
 import frc.robot.generated.TunerConstants;
 import frc.robot.util.AllianceFlipUtil;
 import frc.robot.util.LocalADStarAK;
@@ -417,5 +420,25 @@ public class Drive extends SubsystemBase {
     } else {
       return idx;
     }
+  }
+
+  public CoralObjective getClosestCoralObjective() {
+    Pose2d robotPose = getPose();
+    CoralObjective closest = null;
+    double minDist = Double.POSITIVE_INFINITY;
+    // Loop through all coral objectives in FieldConstants
+    for (int branchId = 0; branchId < Reef.branchPositions.size(); branchId++) {
+      for (ReefLevel level : ReefLevel.values()) {
+        var poseMap = Reef.branchPositions.get(branchId);
+        if (!poseMap.containsKey(level)) continue;
+        Pose2d branchPose = poseMap.get(level).toPose2d();
+        double dist = robotPose.getTranslation().getDistance(branchPose.getTranslation());
+        if (dist < minDist) {
+          minDist = dist;
+          closest = new CoralObjective(branchId, level);
+        }
+      }
+    }
+    return closest;
   }
 }

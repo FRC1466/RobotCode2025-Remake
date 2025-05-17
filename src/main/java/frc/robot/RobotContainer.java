@@ -283,7 +283,10 @@ public class RobotContainer {
             AutoScoreCommands.reefIntake(
                     drive,
                     superstructure,
-                    () -> Optional.of(new frc.robot.FieldConstants.AlgaeObjective(0)),
+                    () ->
+                        Optional.of(
+                            new frc.robot.FieldConstants.AlgaeObjective(
+                                drive.getClosestCoralObjective().branchId() / 2)),
                     driverX,
                     driverY,
                     driverOmega,
