@@ -22,6 +22,7 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants;
 import frc.robot.subsystems.drive.Drive;
+import frc.robot.subsystems.superstructure.elevator.Elevator;
 import frc.robot.util.GeomUtil;
 import frc.robot.util.LoggedTunableNumber;
 import java.util.function.DoubleSupplier;
@@ -66,6 +67,8 @@ public class DriveToPose extends Command {
       new LoggedTunableNumber("DriveToPose/ThetaMaxAccelerationAuto");
   private static final LoggedTunableNumber thetaMaxAccelerationAutoTop =
       new LoggedTunableNumber("DriveToPose/ThetaMaxAccelerationAutoTop");
+  private static final LoggedTunableNumber elevatorMinExtension =
+      new LoggedTunableNumber("DriveToPose/ElevatorMinExtension", 0.4);
   private static final LoggedTunableNumber driveTolerance =
       new LoggedTunableNumber("DriveToPose/DriveTolerance");
   private static final LoggedTunableNumber thetaTolerance =
@@ -92,19 +95,19 @@ public class DriveToPose extends Command {
       new LoggedTunableNumber("DriveToPose/Reset/MinThetaFF");
 
   static {
-    drivekP.initDefault(1.0);
+    drivekP.initDefault(1.8);
     drivekD.initDefault(0.0);
-    thetakP.initDefault(4.0);
+    thetakP.initDefault(5.0);
     thetakD.initDefault(0.5);
 
-    driveMaxVelocity.initDefault(4.0);
-    driveMaxVelocityTop.initDefault(4.0);
+    driveMaxVelocity.initDefault(3.92);
+    driveMaxVelocityTop.initDefault(3.92);
     driveMaxAcceleration.initDefault(3.5);
     driveMaxAccelerationTop.initDefault(1.5);
-    driveMaxVelocityAuto.initDefault(4.0);
-    driveMaxVelocityAutoTop.initDefault(4.0);
-    driveMaxAccelerationAuto.initDefault(4.5);
-    driveMaxAccelerationAutoTop.initDefault(2.5);
+    driveMaxVelocityAuto.initDefault(3.5);
+    driveMaxVelocityAutoTop.initDefault(3.5);
+    driveMaxAccelerationAuto.initDefault(4.0);
+    driveMaxAccelerationAutoTop.initDefault(2.0);
 
     thetaMaxVelocity.initDefault(Units.degreesToRadians(360.0));
     thetaMaxVelocityTop.initDefault(Units.degreesToRadians(200.0));
@@ -203,19 +206,40 @@ public class DriveToPose extends Command {
       thetaController.setTolerance(thetaTolerance.get());
     }
 
+    // Update constraints
+    double extensionS =
+        MathUtil.clamp(
+            (Elevator.getElevatorExtensionPercent() - elevatorMinExtension.get())
+                / (1.0 - elevatorMinExtension.get()),
+            0.0,
+            1.0);
     driveProfile =
         new TrapezoidProfile(
             DriverStation.isAutonomous()
                 ? new TrapezoidProfile.Constraints(
-                    driveMaxVelocityAuto.get(), driveMaxAccelerationAuto.get())
+                    MathUtil.interpolate(
+                        driveMaxVelocityAuto.get(), driveMaxVelocityAutoTop.get(), extensionS),
+                    MathUtil.interpolate(
+                        driveMaxAccelerationAuto.get(),
+                        driveMaxAccelerationAutoTop.get(),
+                        extensionS))
                 : new TrapezoidProfile.Constraints(
-                    driveMaxVelocity.get(), driveMaxAcceleration.get()));
+                    MathUtil.interpolate(
+                        driveMaxVelocity.get(), driveMaxVelocityTop.get(), extensionS),
+                    MathUtil.interpolate(
+                        driveMaxAcceleration.get(), driveMaxAccelerationTop.get(), extensionS)));
     thetaController.setConstraints(
         new TrapezoidProfile.Constraints(
-            DriverStation.isAutonomous() ? thetaMaxVelocityAuto.get() : thetaMaxVelocity.get(),
             DriverStation.isAutonomous()
-                ? thetaMaxAccelerationAuto.get()
-                : thetaMaxAcceleration.get()));
+                ? MathUtil.interpolate(
+                    thetaMaxVelocityAuto.get(), thetaMaxVelocityAutoTop.get(), extensionS)
+                : MathUtil.interpolate(
+                    thetaMaxVelocity.get(), thetaMaxVelocityTop.get(), extensionS),
+            DriverStation.isAutonomous()
+                ? MathUtil.interpolate(
+                    thetaMaxAccelerationAuto.get(), thetaMaxAccelerationAutoTop.get(), extensionS)
+                : MathUtil.interpolate(
+                    thetaMaxAcceleration.get(), thetaMaxAccelerationTop.get(), extensionS)));
 
     // Get current pose and target pose
     Pose2d currentPose = robot.get();

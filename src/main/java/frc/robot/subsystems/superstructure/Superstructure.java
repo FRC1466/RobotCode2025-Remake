@@ -313,7 +313,7 @@ public class Superstructure extends SubsystemBase {
   public void periodic() {
     // Run periodic
     elevator.periodic();
-    // manipulator.periodic();
+    manipulator.periodic();
 
     if (characterizationModeOn.get()) {
       state = SuperstructureState.CHARACTERIZATION;

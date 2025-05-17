@@ -80,7 +80,7 @@ public class Elevator {
   private static final LoggedTunableNumber tolerance =
       new LoggedTunableNumber("Elevator/Tolerance", 0.5);
 
-  @Setter @Getter private static double elevatorExtensionPercent = 0.0;
+  @AutoLogOutput @Setter @Getter private static double elevatorExtensionPercent = 0.0;
 
   static {
     switch (Constants.getRobot()) {
