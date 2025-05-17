@@ -119,6 +119,10 @@ public class Manipulator {
     new LoggedTunableNumber("Manipulator/Mailbox/CORALBACKUP", .5),
     new LoggedTunableNumber("Manipulator/Funnel/CORALBACKUP", 0),
   };
+  public static final LoggedTunableNumber[] CORALL1 = {
+    new LoggedTunableNumber("Manipulator/Mailbox/CORALL1", 1),
+    new LoggedTunableNumber("Manipulator/Funnel/CORALBACKUP", 0),
+  };
 
   static {
     switch (Constants.getRobot()) {
@@ -146,7 +150,8 @@ public class Manipulator {
     CORALL4GRIP,
     CORALOUTTAKE,
     CORALBACKUP,
-    CORALEJECT
+    CORALEJECT,
+    CORALL1
   }
 
   // Hardware
@@ -374,6 +379,10 @@ public class Manipulator {
         case CORALEJECT -> {
           mailboxIO.runVolts(CORALEJECT[0].get());
           funnelRollerIO.runVolts(CORALEJECT[1].get());
+        }
+        case CORALL1 -> {
+          mailboxIO.runVolts(CORALL1[0].get());
+          funnelRollerIO.runVolts(CORALL1[1].get());
         }
       }
     } else {

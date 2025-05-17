@@ -47,9 +47,14 @@ import org.littletonrobotics.junction.networktables.LoggedNetworkBoolean;
 public class Superstructure extends SubsystemBase {
   private static final Map<SuperstructureState, SuperstructureState> coralEjectPairs =
       Map.of(
-          SuperstructureState.L2_CORAL, SuperstructureState.L2_CORAL_EJECT,
-          SuperstructureState.L3_CORAL, SuperstructureState.L3_CORAL_EJECT,
-          SuperstructureState.L4_CORAL, SuperstructureState.L4_CORAL_EJECT);
+          SuperstructureState.L1_CORAL,
+          SuperstructureState.L1_CORAL_EJECT,
+          SuperstructureState.L2_CORAL,
+          SuperstructureState.L2_CORAL_EJECT,
+          SuperstructureState.L3_CORAL,
+          SuperstructureState.L3_CORAL_EJECT,
+          SuperstructureState.L4_CORAL,
+          SuperstructureState.L4_CORAL_EJECT);
 
   private final Elevator elevator;
   private final Manipulator manipulator;
@@ -161,6 +166,32 @@ public class Superstructure extends SubsystemBase {
             .build());
 
     graph.addEdge(
+        SuperstructureState.L1_CORAL_EJECT,
+        SuperstructureState.STOWTRAVEL,
+        EdgeCommand.builder()
+            .command(
+                runSuperstructureExtras(SuperstructureState.STOWTRAVEL)
+                    .andThen(
+                        runManipulatorPivot(
+                                () ->
+                                    Rotation2d.fromRadians(
+                                        MathUtil.clamp(
+                                            SuperstructureState.STOWTRAVEL
+                                                .getValue()
+                                                .getPose()
+                                                .pivotAngle()
+                                                .get()
+                                                .getRadians(),
+                                            pivotMinSafeAngleRad.get(),
+                                            pivotMaxSafeAngleRad.get())))
+                            .andThen(
+                                Commands.waitUntil(this::mechanismsAtGoal),
+                                runSuperstructurePose(
+                                    SuperstructureState.STOWTRAVEL.getValue().getPose())),
+                        Commands.waitUntil(this::mechanismsAtGoal)))
+            .build());
+
+    graph.addEdge(
         SuperstructureState.CHARACTERIZATION,
         SuperstructureState.STOWTRAVEL,
         EdgeCommand.builder()
@@ -171,6 +202,7 @@ public class Superstructure extends SubsystemBase {
         Set.of(
             SuperstructureState.STOWREST,
             SuperstructureState.STOWTRAVEL,
+            SuperstructureState.L1_CORAL,
             SuperstructureState.L2_CORAL,
             SuperstructureState.L3_CORAL,
             SuperstructureState.L4_CORAL,
@@ -224,6 +256,7 @@ public class Superstructure extends SubsystemBase {
         Set.of(
             Pair.of(SuperstructureState.STOWTRAVEL, SuperstructureState.CORAL_INTAKE),
             Pair.of(SuperstructureState.STOWREST, SuperstructureState.CORAL_INTAKE),
+            Pair.of(SuperstructureState.L1_CORAL, SuperstructureState.L1_CORAL_EJECT),
             Pair.of(SuperstructureState.L2_CORAL, SuperstructureState.L2_CORAL_EJECT),
             Pair.of(SuperstructureState.L3_CORAL, SuperstructureState.L3_CORAL_EJECT),
             Pair.of(SuperstructureState.L4_CORAL, SuperstructureState.L4_CORAL_EJECT),
@@ -701,6 +734,7 @@ public class Superstructure extends SubsystemBase {
   @RequiredArgsConstructor
   @Getter
   private enum CoralScoreStateGroup {
+    L1(SuperstructureState.L1_CORAL, SuperstructureState.L1_CORAL_EJECT),
     L2(SuperstructureState.L2_CORAL, SuperstructureState.L2_CORAL_EJECT),
     L3(SuperstructureState.L3_CORAL, SuperstructureState.L3_CORAL_EJECT),
     L4(SuperstructureState.L4_CORAL, SuperstructureState.L4_CORAL_EJECT);

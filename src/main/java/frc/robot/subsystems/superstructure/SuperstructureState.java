@@ -28,6 +28,11 @@ public enum SuperstructureState {
           .height(Height.BOTTOM)
           .MailboxGoal(Manipulator.MailboxGoal.CORALINTAKE)
           .build()),
+  L1_CORAL(
+      SuperstructureStateData.builder()
+          .height(Height.FIRST_STAGE)
+          .pose(Preset.L1.getPose())
+          .build()),
   L2_CORAL(
       SuperstructureStateData.builder()
           .height(Height.FIRST_STAGE)
@@ -44,6 +49,8 @@ public enum SuperstructureState {
           .pose(Preset.L4.getPose())
           .MailboxGoal(Manipulator.MailboxGoal.CORALL4GRIP)
           .build()),
+  L1_CORAL_EJECT(
+      L1_CORAL.getValue().toBuilder().MailboxGoal(Manipulator.MailboxGoal.CORALEJECT).build()),
   L2_CORAL_EJECT(
       L2_CORAL.getValue().toBuilder().MailboxGoal(Manipulator.MailboxGoal.CORALEJECT).build()),
   L3_CORAL_EJECT(

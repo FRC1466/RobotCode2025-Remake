@@ -50,6 +50,11 @@ public record SuperstructurePose(DoubleSupplier elevatorHeight, Supplier<Rotatio
   private static final LoggedTunableNumber ProcessorAngle =
       new LoggedTunableNumber("Superstructure/AlgaeScore/Processor/Angle", Math.PI - .3);
 
+  private static final LoggedTunableNumber l1Height =
+      new LoggedTunableNumber("Superstructure/ReefScore/L1/Height", 0.3556);
+  private static final LoggedTunableNumber l1Angle =
+      new LoggedTunableNumber("Superstructure/ReefScore/L1/Angle", Math.PI - .3);
+
   private static final LoggedTunableNumber l2Height =
       new LoggedTunableNumber("Superstructure/ReefScore/L2/Height", 0.3556);
   private static final LoggedTunableNumber l2Angle =
@@ -68,6 +73,7 @@ public record SuperstructurePose(DoubleSupplier elevatorHeight, Supplier<Rotatio
   @Getter
   @RequiredArgsConstructor
   public enum CoralDispenserPose {
+    L1(ReefLevel.L1, l1Height, l1Angle),
     L2(ReefLevel.L2, l2Height, l2Angle),
     L3(ReefLevel.L3, l3Height, l3Angle),
     L4(ReefLevel.L4, l4Height, l4Angle);
@@ -92,6 +98,7 @@ public record SuperstructurePose(DoubleSupplier elevatorHeight, Supplier<Rotatio
     STOWREST(StowHeight, StowRestAngle),
     STOWTRAVEL(StowHeight, StowTravelAngle),
     CORAL_INTAKE(intakeHeight, intakeAngle),
+    L1(CoralDispenserPose.L1),
     L2(CoralDispenserPose.L2),
     L3(CoralDispenserPose.L3),
     L4(CoralDispenserPose.L4),

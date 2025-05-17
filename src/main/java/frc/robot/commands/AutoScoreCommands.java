@@ -22,7 +22,6 @@ import frc.robot.FieldConstants.CoralObjective;
 import frc.robot.FieldConstants.Reef;
 import frc.robot.FieldConstants.ReefLevel;
 import frc.robot.subsystems.drive.Drive;
-import frc.robot.subsystems.rollers.RollerSystem;
 import frc.robot.subsystems.superstructure.Superstructure;
 import frc.robot.subsystems.superstructure.SuperstructureState;
 import frc.robot.util.*;
@@ -91,6 +90,8 @@ public class AutoScoreCommands {
       new LoggedTunableNumber("AutoScore/L2ReefIntakeDistance", 0.12);
   private static final LoggedTunableNumber l3ReefIntakeDistance =
       new LoggedTunableNumber("AutoScore/L3ReefIntakeDistance", 0.14);
+  private static final LoggedTunableNumber l1ScoreDistance =
+      new LoggedTunableNumber("AutoScore/L1ScoreDistance", 0.3);
   private static final LoggedTunableNumber l2ScoreDistance =
       new LoggedTunableNumber("AutoScore/L2ScoreDistance", 0.1);
   private static final LoggedTunableNumber l3ScoreDistance =
@@ -100,7 +101,7 @@ public class AutoScoreCommands {
   private static final LoggedTunableNumber maxAimingAngle =
       new LoggedTunableNumber("AutoScore/MaxAimingAngle", 20.0);
   private static final LoggedTunableNumber l1AlignOffsetX =
-      new LoggedTunableNumber("AutoScore/L1AlignOffsetX", 0.45);
+      new LoggedTunableNumber("AutoScore/L1AlignOffsetX", 0.6);
   private static final LoggedTunableNumber l1AlignOffsetY =
       new LoggedTunableNumber("AutoScore/L1AlignOffsetY", 0.0);
   private static final LoggedTunableNumber l1AlignOffsetTheta =
@@ -125,7 +126,6 @@ public class AutoScoreCommands {
   public static Command autoScore(
       Drive drive,
       Superstructure superstructure,
-      RollerSystem funnel,
       Supplier<ReefLevel> reefLevel,
       Supplier<Optional<CoralObjective>> coralObjective,
       DoubleSupplier driverX,
@@ -244,7 +244,7 @@ public class AutoScoreCommands {
 
                   // Get back!
                   if (ready
-                      && (reefLevel.get() == ReefLevel.L4 || superstructure.hasAlgae())
+                      && (reefLevel.get() == ReefLevel.L4 || reefLevel.get() == ReefLevel.L1)
                       && !disableReefAutoAlign.getAsBoolean()
                       && DriverStation.isTeleopEnabled()) {
                     needsToGetBack.value = true;
@@ -325,13 +325,11 @@ public class AutoScoreCommands {
   public static Command autoScore(
       Drive drive,
       Superstructure superstructure,
-      RollerSystem funnel,
       Supplier<ReefLevel> reefLevel,
       Supplier<Optional<CoralObjective>> coralObjective) {
     return autoScore(
         drive,
         superstructure,
-        funnel,
         reefLevel,
         coralObjective,
         () -> 0,
@@ -347,7 +345,6 @@ public class AutoScoreCommands {
   public static Command reefIntake(
       Drive drive,
       Superstructure superstructure,
-      Optional<RollerSystem> funnel,
       Supplier<Optional<AlgaeObjective>> algaeObjective,
       DoubleSupplier driverX,
       DoubleSupplier driverY,
@@ -436,46 +433,38 @@ public class AutoScoreCommands {
                         () -> DriveCommands.getOmegaFromJoysticks(driverOmega.getAsDouble())),
                     disableReefAutoAlign)
                 .alongWith(
-                    (funnel.isEmpty()
-                            ? Commands.none()
-                            : preIntake(superstructure, robot, () -> false, disableReefAutoAlign))
-                        .andThen(
-                            // Check if need wait until pre ready or already ready
-                            Commands.waitUntil(
-                                () -> {
-                                  boolean ready =
-                                      readyForSuperstructure(
-                                                  robot.get(),
-                                                  AllianceFlipUtil.apply(goal.get()),
-                                                  false)
-                                              && algaeObjective.get().isPresent()
-                                          || disableReefAutoAlign.getAsBoolean();
-                                  Logger.recordOutput("ReefIntake/AllowReady", ready);
-                                  // Get back!
-                                  if (ready && DriverStation.isTeleopEnabled()) {
-                                    needsToGetBack.value = true;
-                                  }
-                                  return ready;
-                                }),
-                            superstructure
-                                .runGoal(algaeIntakeState)
-                                .alongWith(
-                                    Commands.waitUntil(
-                                            () ->
-                                                superstructure.getState() == algaeIntakeState.get())
-                                        .andThen(
-                                            () ->
-                                                superstructure.setReefDangerState(
-                                                    disableReefAutoAlign.getAsBoolean()
-                                                        ? Optional.empty()
-                                                        : Optional.of(algaeIntakeState.get()))))),
+                    // Check if need wait until pre ready or already ready
                     Commands.waitUntil(
-                            () -> superstructure.hasAlgae() && algaeObjective.get().isPresent())
-                        .andThen(
-                            Commands.runOnce(
-                                () -> {
-                                  algaeIntaked.value = algaeObjective.get().get();
-                                }))))
+                        () -> {
+                          boolean ready =
+                              readyForSuperstructure(
+                                          robot.get(), AllianceFlipUtil.apply(goal.get()), false)
+                                      && algaeObjective.get().isPresent()
+                                  || disableReefAutoAlign.getAsBoolean();
+                          Logger.recordOutput("ReefIntake/AllowReady", ready);
+                          // Get back!
+                          if (ready && DriverStation.isTeleopEnabled()) {
+                            needsToGetBack.value = true;
+                          }
+                          return ready;
+                        }),
+                    superstructure
+                        .runGoal(algaeIntakeState)
+                        .alongWith(
+                            Commands.waitUntil(
+                                    () -> superstructure.getState() == algaeIntakeState.get())
+                                .andThen(
+                                    () ->
+                                        superstructure.setReefDangerState(
+                                            disableReefAutoAlign.getAsBoolean()
+                                                ? Optional.empty()
+                                                : Optional.of(algaeIntakeState.get()))))),
+            Commands.waitUntil(() -> superstructure.hasAlgae() && algaeObjective.get().isPresent())
+                .andThen(
+                    Commands.runOnce(
+                        () -> {
+                          algaeIntaked.value = algaeObjective.get().get();
+                        })))
         .until(() -> complete.value)
         .finallyDo(
             () -> {
@@ -486,33 +475,9 @@ public class AutoScoreCommands {
             Commands.run(() -> Logger.recordOutput("ReefIntake/Complete", complete.value)));
   }
 
-  public static Command reefIntake(
-      Drive drive,
-      Superstructure superstructure,
-      Supplier<Optional<AlgaeObjective>> algaeObjective,
-      DoubleSupplier driverX,
-      DoubleSupplier driverY,
-      DoubleSupplier driverOmega,
-      Command joystickDrive,
-      BooleanSupplier robotRelative,
-      BooleanSupplier disableReefAutoAlign) {
-    return reefIntake(
-        drive,
-        superstructure,
-        Optional.empty(),
-        algaeObjective,
-        driverX,
-        driverY,
-        driverOmega,
-        joystickDrive,
-        robotRelative,
-        disableReefAutoAlign);
-  }
-
   public static Command superAutoScore(
       Drive drive,
       Superstructure superstructure,
-      RollerSystem funnel,
       Supplier<ReefLevel> reefLevel,
       Supplier<Optional<CoralObjective>> coralObjective,
       DoubleSupplier driverX,
@@ -527,7 +492,6 @@ public class AutoScoreCommands {
     return reefIntake(
             drive,
             superstructure,
-            Optional.of(funnel),
             () ->
                 coralObjective.get().map(objective -> new AlgaeObjective(objective.branchId() / 2)),
             driverX,
@@ -540,7 +504,6 @@ public class AutoScoreCommands {
             autoScore(
                 drive,
                 superstructure,
-                funnel,
                 reefLevel,
                 coralObjective,
                 driverX,
@@ -604,7 +567,7 @@ public class AutoScoreCommands {
                 outOfDistanceToReef(robot.get(), minDistanceReefClearL4.get())
                     || !shouldClearReef.getAsBoolean()
                     || disableReefAutoAlign.getAsBoolean())
-        // .andThen(IntakeCommands.intake(superstructure, funnel).until(superstructure::hasCoral))
+        .andThen(IntakeCommands.intake(superstructure).until(superstructure::hasCoral))
         .onlyIf(() -> !superstructure.hasCoral());
   }
 
@@ -640,10 +603,10 @@ public class AutoScoreCommands {
         .transformBy(
             GeomUtil.toTransform2d(
                 (switch (coralObjective.reefLevel()) {
+                      case L1 -> l1ScoreDistance.get();
                       case L2 -> l2ScoreDistance.get();
                       case L3 -> l3ScoreDistance.get();
                       case L4 -> l4ScoreDistance.get();
-                      case L1 -> 0.0;
                     })
                     + Drive.DRIVE_BASE_LENGTH / 2.0,
                 0.0))
