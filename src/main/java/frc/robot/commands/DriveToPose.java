@@ -100,7 +100,9 @@ public class DriveToPose extends Command {
     thetakP.initDefault(5.0);
     thetakD.initDefault(0.5);
 
-    double velocityScale = 3.6 / 3.92; // Was previously relative thinking 3.92 was the top speed, but real life speed is slower
+    double velocityScale =
+        3.6 / 3.92; // Was previously relative thinking 3.92 was the top speed, but real life speed
+    // is slower
 
     driveMaxVelocity.initDefault(3.6);
     driveMaxVelocityTop.initDefault(3.6);
@@ -116,8 +118,7 @@ public class DriveToPose extends Command {
     thetaMaxAcceleration.initDefault(8.0 * velocityScale);
     thetaMaxAccelerationTop.initDefault(6.0 * velocityScale);
     thetaMaxVelocityAuto.initDefault(Units.degreesToRadians(360.0 * velocityScale));
-    thetaMaxVelocityAutoTop.initDefault(
-        Units.degreesToRadians(200.0 * velocityScale));
+    thetaMaxVelocityAutoTop.initDefault(Units.degreesToRadians(200.0 * velocityScale));
     thetaMaxAccelerationAuto.initDefault(8.0 * velocityScale);
     thetaMaxAccelerationAutoTop.initDefault(6.0 * velocityScale);
 

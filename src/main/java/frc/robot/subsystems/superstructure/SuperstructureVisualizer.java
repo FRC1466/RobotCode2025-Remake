@@ -9,6 +9,9 @@ package frc.robot.subsystems.superstructure;
 
 import static frc.robot.subsystems.superstructure.SuperstructureConstants.*;
 
+import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.util.Color;
 import edu.wpi.first.wpilibj.util.Color8Bit;
@@ -28,11 +31,27 @@ public class SuperstructureVisualizer {
           Units.inchesToMeters(28.0), Units.feetToMeters(7.0), new Color8Bit(Color.kDarkGray));
   private final LoggedMechanismLigament2d elevatorMechanism;
 
-  private LoggedTunableNumber angleOffset =
-      new LoggedTunableNumber("Superstructure/Visualizer/AngleOffset", 0.0);
+  private final LoggedTunableNumber angleOffset =
+      new LoggedTunableNumber("Superstructure/Visualizer/AngleOffset", 10);
 
-  private LoggedTunableNumber angleMultiplier =
+  private final LoggedTunableNumber angleMultiplier =
       new LoggedTunableNumber("Superstructure/Visualizer/AngleMultiplier", -1);
+
+  // Tunable numbers for 3D mechanism visualization
+  private final LoggedTunableNumber comp1MaxHeight =
+      new LoggedTunableNumber("Superstructure/Visualizer/Comp1MaxHeight", 0.925);
+  private final LoggedTunableNumber comp2HeightMultiplier =
+      new LoggedTunableNumber("Superstructure/Visualizer/Comp2HeightMultiplier", 0.5);
+  private final LoggedTunableNumber comp3XOffset =
+      new LoggedTunableNumber("Superstructure/Visualizer/Comp3XOffset", 0.28);
+  private final LoggedTunableNumber comp3ZOffset =
+      new LoggedTunableNumber("Superstructure/Visualizer/Comp3ZOffset", 0.365);
+  private final LoggedTunableNumber comp3YOffset =
+      new LoggedTunableNumber("Superstructure/Visualizer/Comp3YOffset", 0);
+  private final LoggedTunableNumber comp3YRotOffset =
+      new LoggedTunableNumber("Superstructure/Visualizer/Comp3YRotOffset", -28.934369);
+  private final LoggedTunableNumber armAngleMultiplier =
+      new LoggedTunableNumber("Superstructure/Visualizer/ArmAngleMultiplier", 1);
 
   // New angle visualization mechanism
   private final LoggedMechanism2d angleMechanism =
@@ -91,7 +110,7 @@ public class SuperstructureVisualizer {
   }
 
   /**
-   * Updates both the elevator height and angle visualization.
+   * Updates both the elevator height and angle visualization, and logs 3D component poses.
    *
    * @param elevatorHeightMeters The height of the elevator in meters
    * @param angleRadians The angle in radians to visualize
@@ -99,5 +118,33 @@ public class SuperstructureVisualizer {
   public void update(double elevatorHeightMeters, double angleRadians) {
     update(elevatorHeightMeters);
     updateAngle(angleRadians);
+
+    // 3D component visualization using tunable numbers
+    double totalMaxHeight = comp1MaxHeight.getAsDouble() + comp2HeightMultiplier.getAsDouble();
+    double heightRatio = elevatorHeightMeters / totalMaxHeight;
+
+    double comp1Height =
+        Math.min(heightRatio * comp1MaxHeight.getAsDouble(), comp1MaxHeight.getAsDouble());
+    double comp2Height = comp1Height + (heightRatio * comp2HeightMultiplier.getAsDouble());
+
+    double armAngleDegrees =
+        armAngleMultiplier.getAsDouble() * Units.radiansToDegrees(angleRadians);
+
+    Pose3d component1Pose = new Pose3d(new Translation3d(0, 0, comp1Height), new Rotation3d());
+    Pose3d component2Pose = new Pose3d(new Translation3d(0, 0, comp2Height), new Rotation3d());
+    Pose3d component3Pose =
+        new Pose3d(
+            new Translation3d(
+                comp3XOffset.getAsDouble(),
+                comp3YOffset.getAsDouble(),
+                comp2Height + comp3ZOffset.getAsDouble()),
+            new Rotation3d(
+                0,
+                Units.degreesToRadians(armAngleDegrees)
+                    + Units.degreesToRadians(comp3YRotOffset.getAsDouble()),
+                0));
+
+    Pose3d[] componentPoses = new Pose3d[] {component1Pose, component2Pose, component3Pose};
+    Logger.recordOutput("Mechanism3d/" + name + "/Components", componentPoses);
   }
 }
