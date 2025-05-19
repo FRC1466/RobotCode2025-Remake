@@ -83,11 +83,9 @@ public class Superstructure extends SubsystemBase {
           "Superstructure emergency disabled due to high position error. Disable the superstructure manually and reenable to reset.",
           Alert.AlertType.kError);
 
-  private final SuperstructureVisualizer measuredVisualizer =
-      new SuperstructureVisualizer("Measured");
-  private final SuperstructureVisualizer setpointVisualizer =
-      new SuperstructureVisualizer("Setpoint");
-  private final SuperstructureVisualizer goalVisualizer = new SuperstructureVisualizer("Goal");
+  private SuperstructureVisualizer measuredVisualizer;
+  private SuperstructureVisualizer setpointVisualizer;
+  private SuperstructureVisualizer goalVisualizer;
 
   @Setter private Optional<SuperstructureState> reefDangerState = Optional.empty();
 
@@ -97,6 +95,10 @@ public class Superstructure extends SubsystemBase {
   public Superstructure(Elevator elevator, Manipulator manipulator, Drive drive) {
     this.elevator = elevator;
     this.manipulator = manipulator;
+
+    this.measuredVisualizer = new SuperstructureVisualizer("Measured");
+    this.setpointVisualizer = new SuperstructureVisualizer("Setpoint");
+    this.goalVisualizer = new SuperstructureVisualizer("Goal");
 
     // Updating E Stop based on disabled override
     new Trigger(() -> disableOverride.getAsBoolean())

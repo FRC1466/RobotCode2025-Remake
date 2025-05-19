@@ -60,6 +60,7 @@ public class SuperstructureVisualizer {
 
   public SuperstructureVisualizer(String name) {
     this.name = name;
+
     LoggedMechanismRoot2d root =
         mechanism.getRoot(
             name + " Root", superstructureOrigin2d.getX(), superstructureOrigin2d.getY());
