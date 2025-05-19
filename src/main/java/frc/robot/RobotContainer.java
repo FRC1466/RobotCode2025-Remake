@@ -67,7 +67,6 @@ import java.util.Optional;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 import lombok.experimental.ExtensionMethod;
-import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
 
@@ -228,9 +227,6 @@ public class RobotContainer {
    * edu.wpi.first.wpilibj.Joystick} or {@link XboxController}), and then passing it to a {@link
    * edu.wpi.first.wpilibj2.command.button.JoystickButton}.
    */
-  // Moved leftCoral to be a field so it can be modified in lambdas
-  @AutoLogOutput private int leftCoral = 0;
-
   private void configureButtonBindings() {
     DoubleSupplier driverX = () -> -controller.getLeftY();
     DoubleSupplier driverY = () -> -controller.getLeftX();
@@ -240,24 +236,32 @@ public class RobotContainer {
         () -> DriveCommands.joystickDrive(drive, driverX, driverY, driverOmega);
     drive.setDefaultCommand(joystickDriveCommandFactory.get());
 
-    // Bind coral score function
-    final Trigger coralScoreL1 =
-        controller.rightTrigger().and(controller.rightTrigger().doublePress().negate());
-    final Trigger coralScoreL2 = controller.rightTrigger().doublePress();
-    final Trigger coralScoreL3 =
-        controller.rightBumper().and(controller.rightBumper().doublePress().negate());
-    final Trigger coralScoreL4 = controller.rightBumper().doublePress();
+    final Container<ReefLevel> selectedCoralScoreLevel = new Container<>(ReefLevel.L4);
 
-    // Level 1 auto score (right trigger)
-    Container<Boolean> autoScoreL1Running = new Container<>(false);
-    Trigger autoScoreL1Available = new Trigger(() -> drive.getClosestCoralObjective() != null);
-    coralScoreL1
-        .and(autoScoreL1Available)
+    // POV selection for coral score level
+    controller.povUp().onTrue(Commands.runOnce(() -> selectedCoralScoreLevel.value = ReefLevel.L4));
+    controller
+        .povLeft()
+        .onTrue(Commands.runOnce(() -> selectedCoralScoreLevel.value = ReefLevel.L3));
+    controller
+        .povRight()
+        .onTrue(Commands.runOnce(() -> selectedCoralScoreLevel.value = ReefLevel.L2));
+    controller
+        .povDown()
+        .onTrue(Commands.runOnce(() -> selectedCoralScoreLevel.value = ReefLevel.L1));
+
+    // Auto score trigger (right trigger)
+    Container<Boolean> autoScoreRunning = new Container<>(false);
+    Trigger autoScoreAvailable = new Trigger(() -> drive.getClosestCoralObjective() != null);
+
+    controller
+        .rightTrigger()
+        .and(autoScoreAvailable)
         .whileTrue(
             AutoScoreCommands.autoScore(
                     drive,
                     superstructure,
-                    () -> ReefLevel.L1, // Level 1
+                    () -> selectedCoralScoreLevel.value,
                     () -> Optional.ofNullable(drive.getClosestCoralObjective()),
                     driverX,
                     driverY,
@@ -269,111 +273,12 @@ public class RobotContainer {
                     controller.b().doublePress())
                 .deadlineFor(
                     Commands.startEnd(
-                        () -> autoScoreL1Running.value = true,
-                        () -> autoScoreL1Running.value = false))
-                .withName("Auto Score Level 1"));
-    coralScoreL1
-        .and(autoScoreL1Available.negate())
-        .and(() -> !autoScoreL1Running.value)
-        .onTrue(
-            Commands.sequence(
-                controllerRumbleCommand().withTimeout(0.1),
-                Commands.waitSeconds(0.1),
-                controllerRumbleCommand().withTimeout(0.1)));
-
-    // Level 2 auto score (double right trigger)
-    Container<Boolean> autoScoreL2Running = new Container<>(false);
-    Trigger autoScoreL2Available = new Trigger(() -> drive.getClosestCoralObjective() != null);
-    coralScoreL2
-        .and(autoScoreL2Available)
-        .whileTrue(
-            AutoScoreCommands.autoScore(
-                    drive,
-                    superstructure,
-                    () -> ReefLevel.L2, // Level 2
-                    () -> Optional.ofNullable(drive.getClosestCoralObjective()),
-                    driverX,
-                    driverY,
-                    driverOmega,
-                    joystickDriveCommandFactory.get(),
-                    Commands.none(),
-                    () -> false,
-                    disableReefAutoAlign,
-                    controller.b().doublePress())
-                .deadlineFor(
-                    Commands.startEnd(
-                        () -> autoScoreL2Running.value = true,
-                        () -> autoScoreL2Running.value = false))
-                .withName("Auto Score Level 2"));
-    coralScoreL2
-        .and(autoScoreL2Available.negate())
-        .and(() -> !autoScoreL2Running.value)
-        .onTrue(
-            Commands.sequence(
-                controllerRumbleCommand().withTimeout(0.1),
-                Commands.waitSeconds(0.1),
-                controllerRumbleCommand().withTimeout(0.1)));
-
-    // Level 3 auto score (right bumper)
-    Container<Boolean> autoScoreL3Running = new Container<>(false);
-    Trigger autoScoreL3Available = new Trigger(() -> drive.getClosestCoralObjective() != null);
-    coralScoreL3
-        .and(autoScoreL3Available)
-        .whileTrue(
-            AutoScoreCommands.autoScore(
-                    drive,
-                    superstructure,
-                    () -> ReefLevel.L3, // Level 3
-                    () -> Optional.ofNullable(drive.getClosestCoralObjective()),
-                    driverX,
-                    driverY,
-                    driverOmega,
-                    joystickDriveCommandFactory.get(),
-                    Commands.none(),
-                    () -> false,
-                    disableReefAutoAlign,
-                    controller.b().doublePress())
-                .deadlineFor(
-                    Commands.startEnd(
-                        () -> autoScoreL3Running.value = true,
-                        () -> autoScoreL3Running.value = false))
-                .withName("Auto Score Level 3"));
-    coralScoreL3
-        .and(autoScoreL3Available.negate())
-        .and(() -> !autoScoreL3Running.value)
-        .onTrue(
-            Commands.sequence(
-                controllerRumbleCommand().withTimeout(0.1),
-                Commands.waitSeconds(0.1),
-                controllerRumbleCommand().withTimeout(0.1)));
-
-    // Level 4 auto score (double right bumper)
-    Container<Boolean> autoScoreL4Running = new Container<>(false);
-    Trigger autoScoreL4Available = new Trigger(() -> drive.getClosestCoralObjective() != null);
-    coralScoreL4
-        .and(autoScoreL4Available)
-        .whileTrue(
-            AutoScoreCommands.autoScore(
-                    drive,
-                    superstructure,
-                    () -> ReefLevel.L4, // Level 4
-                    () -> Optional.ofNullable(drive.getClosestCoralObjective()),
-                    driverX,
-                    driverY,
-                    driverOmega,
-                    joystickDriveCommandFactory.get(),
-                    Commands.none(),
-                    () -> false,
-                    disableReefAutoAlign,
-                    controller.b().doublePress())
-                .deadlineFor(
-                    Commands.startEnd(
-                        () -> autoScoreL4Running.value = true,
-                        () -> autoScoreL4Running.value = false))
-                .withName("Auto Score Level 4"));
-    coralScoreL4
-        .and(autoScoreL4Available.negate())
-        .and(() -> !autoScoreL4Running.value)
+                        () -> autoScoreRunning.value = true, () -> autoScoreRunning.value = false))
+                .withName("Auto Score Selected Level"));
+    controller
+        .rightTrigger()
+        .and(autoScoreAvailable.negate())
+        .and(() -> !autoScoreRunning.value)
         .onTrue(
             Commands.sequence(
                 controllerRumbleCommand().withTimeout(0.1),
@@ -394,7 +299,6 @@ public class RobotContainer {
         .onFalse(
             Commands.runOnce(
                 () -> {
-                  // If we don't have a coral, just stow once (don't keep running)
                   if (!superstructure.hasCoral()) {
                     superstructure.runGoal(() -> SuperstructureState.STOWREST).schedule();
                   }
@@ -424,7 +328,6 @@ public class RobotContainer {
         .onTrue(Commands.runOnce(() -> hasAlgae.value = superstructure.hasAlgae()));
 
     // Algae reef intake
-    // TODO: Use a fixed AlgaeObjective for reef intake
     controller
         .leftBumper()
         .and(() -> !hasAlgae.value)
@@ -434,7 +337,7 @@ public class RobotContainer {
                     superstructure,
                     () ->
                         Optional.of(
-                            new frc.robot.FieldConstants.AlgaeObjective(
+                            new FieldConstants.AlgaeObjective(
                                 drive.getClosestCoralObjective().branchId() / 2)),
                     driverX,
                     driverY,
@@ -534,24 +437,6 @@ public class RobotContainer {
                             AllianceFlipUtil.apply(Rotation2d.kZero))))
             .withName("Reset Gyro")
             .ignoringDisable(true));
-
-    // Raise elevator
-    controller
-        .povUp()
-        .toggleOnTrue(
-            superstructure.runElevator(() -> .6).withName("Force Raise Elevator l2 algae"))
-        .toggleOnFalse(superstructure.runElevator(() -> 0.25));
-
-    controller
-        .povLeft()
-        .toggleOnTrue(
-            superstructure.runElevator(() -> 1.0668).withName("Force Raise Elevator l3 algae"))
-        .toggleOnFalse(superstructure.runElevator(() -> 0.25));
-
-    controller
-        .povRight()
-        .toggleOnTrue(superstructure.runElevator(() -> 1.6).withName("Force Raise Elevator"))
-        .toggleOnFalse(superstructure.runElevator(() -> 0.25));
 
     // Endgame alerts
     new Trigger(

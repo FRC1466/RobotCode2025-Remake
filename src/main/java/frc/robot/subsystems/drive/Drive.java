@@ -423,7 +423,7 @@ public class Drive extends SubsystemBase {
   }
 
   public CoralObjective getClosestCoralObjective() {
-    Pose2d robotPose = getPose();
+    Pose2d robotPose = AllianceFlipUtil.apply(getPose());
     CoralObjective closest = null;
     double minDist = Double.POSITIVE_INFINITY;
     // Loop through all coral objectives in FieldConstants
