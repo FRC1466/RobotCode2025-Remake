@@ -134,7 +134,7 @@ public class AutoScoreCommands {
       DoubleSupplier driverY,
       DoubleSupplier driverOmega,
       Command joystickDrive,
-      Command controllerRumble,
+      Supplier<Command> controllerRumble,
       BooleanSupplier robotRelative,
       BooleanSupplier disableReefAutoAlign,
       BooleanSupplier manualEject) {
@@ -300,9 +300,10 @@ public class AutoScoreCommands {
                       return ready;
                     },
                     manualEject,
-                    disableReefAutoAlign)
+                    disableReefAutoAlign,
+                    controllerRumble.get())
                 .andThen(
-                    new ScheduleCommand(controllerRumble.withTimeout(controllerRumbleSecs)),
+                    new ScheduleCommand(controllerRumble.get().withTimeout(controllerRumbleSecs)),
                     superstructure
                         .runGoal(() -> Superstructure.getScoringState(reefLevel.get(), false))
                         .until(() -> !disableReefAutoAlign.getAsBoolean())))
@@ -338,7 +339,7 @@ public class AutoScoreCommands {
         () -> 0,
         () -> 0,
         Commands.none(),
-        Commands.none(),
+        Commands::none,
         () -> false,
         () -> false,
         () -> false);
@@ -612,7 +613,7 @@ public class AutoScoreCommands {
                 driverY,
                 driverOmega,
                 joystickDriveCommandFactory.get(),
-                controllerRumbleCommandFactory.get(),
+                controllerRumbleCommandFactory,
                 robotRelative,
                 disableReefAutoAlign,
                 manualEject))
@@ -635,7 +636,8 @@ public class AutoScoreCommands {
       Supplier<Optional<CoralObjective>> coralObjective,
       BooleanSupplier eject,
       BooleanSupplier forceEject,
-      BooleanSupplier disableReefAutoAlign) {
+      BooleanSupplier disableReefAutoAlign,
+      Command controllerRumble) {
     final Timer ejectTimer = new Timer();
     return superstructure
         .runGoal(() -> Superstructure.getScoringState(reefLevel.get(), false))
@@ -647,7 +649,8 @@ public class AutoScoreCommands {
                 .until(
                     () ->
                         ejectTimer.hasElapsed(ejectTimeSeconds[reefLevel.get().levelNumber].get())
-                            && !forceEject.getAsBoolean()));
+                            && !forceEject.getAsBoolean())
+                .andThen(controllerRumble));
   }
 
   public static Command superstructureAimAndEject(
@@ -656,7 +659,13 @@ public class AutoScoreCommands {
       Supplier<Optional<CoralObjective>> coralObjective,
       BooleanSupplier eject) {
     return superstructureAimAndEject(
-        superstructure, reefLevel, coralObjective, eject, () -> false, () -> false);
+        superstructure,
+        reefLevel,
+        coralObjective,
+        eject,
+        () -> false,
+        () -> false,
+        Commands.none());
   }
 
   private static Command preIntake(

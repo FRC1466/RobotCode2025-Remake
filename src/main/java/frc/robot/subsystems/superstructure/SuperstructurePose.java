@@ -31,7 +31,7 @@ public record SuperstructurePose(DoubleSupplier elevatorHeight, Supplier<Rotatio
   private static final LoggedTunableNumber IceCreamIntakeHeight =
       new LoggedTunableNumber("Superstructure/AlgaeIntake/IceCream/Height", 0.2);
   private static final LoggedTunableNumber IceCreamIntakeAngle =
-      new LoggedTunableNumber("Superstructure/AlgaeIntake/IceCream/Angle", Math.PI + .2);
+      new LoggedTunableNumber("Superstructure/AlgaeIntake/IceCream/Angle", Math.PI);
 
   private static final LoggedTunableNumber l2ReefIntakeHeight =
       new LoggedTunableNumber("Superstructure/AlgaeIntake/L2/Height", 0.6096);

@@ -84,7 +84,7 @@ public class RobotContainer {
   private final Superstructure superstructure;
 
   // Controllers
-  private final CommandXboxController controller = new CommandXboxController(0);
+  private static final CommandXboxController controller = new CommandXboxController(0);
   private final Trigger disableReefAutoAlign = new Trigger(() -> false);
   private final Trigger disableCoralStationAutoAlign = new Trigger(() -> false);
   private final Trigger disableAlgaeScoreAutoAlign = new Trigger(() -> false);
@@ -267,10 +267,10 @@ public class RobotContainer {
                     driverY,
                     driverOmega,
                     joystickDriveCommandFactory.get(),
-                    Commands.none(),
+                    () -> controllerRumbleCommand().withTimeout(0.2),
                     () -> false,
-                    disableReefAutoAlign,
-                    controller.b().doublePress())
+                    disableReefAutoAlign::getAsBoolean,
+                    controller.b().doublePress()::getAsBoolean)
                 .deadlineFor(
                     Commands.startEnd(
                         () -> autoScoreRunning.value = true, () -> autoScoreRunning.value = false))
@@ -323,7 +323,7 @@ public class RobotContainer {
                         < FieldConstants.fieldWidth / 2 - Drive.DRIVE_BASE_WIDTH
                     || onOpposingSide.getAsBoolean());
     Trigger shouldIceCream =
-        new Trigger(() -> AllianceFlipUtil.applyX(drive.getPose().getX()) < 2.75);
+        new Trigger(() -> AllianceFlipUtil.applyX(drive.getPose().getX()) < 2.4);
     Container<Boolean> hasAlgae = new Container<>(false);
     controller
         .leftBumper()
@@ -476,14 +476,15 @@ public class RobotContainer {
   }
 
   // Creates controller rumble command
-  private Command controllerRumbleCommand() {
+  public static Command controllerRumbleCommand() {
     return Commands.startEnd(
-        () -> {
-          controller.getHID().setRumble(RumbleType.kBothRumble, 1.0);
-        },
-        () -> {
-          controller.getHID().setRumble(RumbleType.kBothRumble, 0.0);
-        });
+            () -> {
+              controller.getHID().setRumble(RumbleType.kBothRumble, 1.0);
+            },
+            () -> {
+              controller.getHID().setRumble(RumbleType.kBothRumble, 0.0);
+            })
+        .withName("Controller Rumble");
   }
 
   // Update dashboard data
