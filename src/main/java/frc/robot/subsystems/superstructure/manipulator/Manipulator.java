@@ -407,25 +407,6 @@ public class Manipulator {
       } else {
         coralDebouncer.calculate(hasCoral);
       }
-    } else if (DriverStation.isAutonomous()) {
-      var flippedRobot = AllianceFlipUtil.apply(drive.getPose());
-      var intakingError =
-          flippedRobot.relativeTo(
-              flippedRobot.nearest(
-                  List.of(
-                      FieldConstants.CoralStation.leftCenterFace,
-                      FieldConstants.CoralStation.rightCenterFace)));
-      if (isIntaking
-          && intakingError.getX() <= Units.inchesToMeters(48.0)
-          && Math.abs(intakingError.getY()) <= Units.inchesToMeters(48.0)) {
-        hasCoral = simIntakingTimer.hasElapsed(simIntakingTime.get());
-      } else {
-        simIntakingTimer.restart();
-      }
-
-      if (!isIntaking && mailboxInputs.data.velocityRadsPerSec() >= 50.0) {
-        hasCoral = false;
-      }
     } else {
       boolean algaeButtonPressed = DriverStation.getStickButtonPressed(2, 1);
       boolean coralButtonPressed = DriverStation.getStickButtonPressed(2, 2);
@@ -437,6 +418,25 @@ public class Manipulator {
       }
       lastAlgaeButtonPressed = algaeButtonPressed;
       lastCoralButtonPressed = coralButtonPressed;
+    }
+
+    var flippedRobot = AllianceFlipUtil.apply(drive.getPose());
+    var intakingError =
+        flippedRobot.relativeTo(
+            flippedRobot.nearest(
+                List.of(
+                    FieldConstants.CoralStation.leftCenterFace,
+                    FieldConstants.CoralStation.rightCenterFace)));
+    if (isIntaking
+        && intakingError.getX() <= Units.inchesToMeters(48.0)
+        && Math.abs(intakingError.getY()) <= Units.inchesToMeters(48.0)) {
+      hasCoral = simIntakingTimer.hasElapsed(simIntakingTime.get());
+    } else {
+      simIntakingTimer.restart();
+    }
+
+    if (!isIntaking && mailboxInputs.data.velocityRadsPerSec() >= 50.0) {
+      hasCoral = false;
     }
 
     // Update coral grabbed LEDs
