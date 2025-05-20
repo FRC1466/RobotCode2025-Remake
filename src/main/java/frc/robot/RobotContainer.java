@@ -322,15 +322,36 @@ public class RobotContainer {
                             .getY()
                         < FieldConstants.fieldWidth / 2 - Drive.DRIVE_BASE_WIDTH
                     || onOpposingSide.getAsBoolean());
+    Trigger shouldIceCream =
+        new Trigger(() -> AllianceFlipUtil.applyX(drive.getPose().getX()) < 2.75);
     Container<Boolean> hasAlgae = new Container<>(false);
     controller
         .leftBumper()
         .onTrue(Commands.runOnce(() -> hasAlgae.value = superstructure.hasAlgae()));
 
+    // Algae ice cream intake
+    controller
+        .leftBumper()
+        .and(() -> !hasAlgae.value)
+        .and(shouldIceCream)
+        .whileTrue(
+            AutoScoreCommands.iceCreamIntake(
+                drive,
+                superstructure,
+                () -> Optional.ofNullable(drive.getClosestIceCream()),
+                driverX,
+                driverY,
+                driverOmega,
+                joystickDriveCommandFactory.get(),
+                () -> false,
+                () -> false,
+                controller.a()));
+
     // Algae reef intake
     controller
         .leftBumper()
         .and(() -> !hasAlgae.value)
+        .and(shouldIceCream.negate())
         .whileTrue(
             AutoScoreCommands.reefIntake(
                     drive,

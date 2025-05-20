@@ -62,6 +62,11 @@ public enum SuperstructureState {
           .pose(Preset.PROCESS.getPose())
           .MailboxGoal(Manipulator.MailboxGoal.ALGAEHOLD)
           .build()),
+  ALGAE_ICE_CREAM_INTAKE(
+      SuperstructureStateData.builder()
+          .pose(Preset.ALGAE_ICE_CREAM_INTAKE.getPose())
+          .MailboxGoal(Manipulator.MailboxGoal.ALGAEGRAB)
+          .build()),
   ALGAE_L2_INTAKE(
       SuperstructureStateData.builder()
           .pose(Preset.ALGAE_L2_INTAKE.getPose())

@@ -28,6 +28,11 @@ public record SuperstructurePose(DoubleSupplier elevatorHeight, Supplier<Rotatio
   private static final LoggedTunableNumber intakeAngle =
       new LoggedTunableNumber("Superstructure/Intake/Angle", 0);
 
+  private static final LoggedTunableNumber IceCreamIntakeHeight =
+      new LoggedTunableNumber("Superstructure/AlgaeIntake/IceCream/Height", 0.2);
+  private static final LoggedTunableNumber IceCreamIntakeAngle =
+      new LoggedTunableNumber("Superstructure/AlgaeIntake/IceCream/Angle", Math.PI + .2);
+
   private static final LoggedTunableNumber l2ReefIntakeHeight =
       new LoggedTunableNumber("Superstructure/AlgaeIntake/L2/Height", 0.6096);
   private static final LoggedTunableNumber l2ReefIntakeAngle =
@@ -104,7 +109,8 @@ public record SuperstructurePose(DoubleSupplier elevatorHeight, Supplier<Rotatio
     L4(CoralDispenserPose.L4),
     ALGAE_L2_INTAKE(l2ReefIntakeHeight, l2ReefIntakeAngle),
     ALGAE_L3_INTAKE(l3ReefIntakeHeight, l3ReefIntakeAngle),
-    // ALGAE_ICE_CREAM_INTAKE("AlgaeIceCreamIntake", 0.15, -45.0),
+    ALGAE_ICE_CREAM_INTAKE(
+        "AlgaeIceCreamIntake", IceCreamIntakeHeight.get(), IceCreamIntakeAngle.get()),
     PRETHROW("Pre-Throw", NetHeight.get(), NetAnglePreThrow.get()),
     THROW("Throw", NetHeight.get(), NetAnglePostThrow.get()),
     // ALGAE_STOW("AlgaeStow", intakeHeightBaseline.get(), -15.0),

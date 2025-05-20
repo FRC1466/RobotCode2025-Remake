@@ -209,17 +209,22 @@ public class Superstructure extends SubsystemBase {
             SuperstructureState.L3_CORAL,
             SuperstructureState.L4_CORAL,
             SuperstructureState.ALGAE_L2_INTAKE,
-            SuperstructureState.ALGAE_L3_INTAKE);
+            SuperstructureState.ALGAE_L3_INTAKE,
+            SuperstructureState.ALGAE_ICE_CREAM_INTAKE);
 
     final Set<SuperstructureState> freeAlgaeStates =
         Set.of(
             SuperstructureState.ALGAE_STOW,
+            SuperstructureState.ALGAE_ICE_CREAM_INTAKE,
             SuperstructureState.ALGAE_L2_INTAKE,
             SuperstructureState.ALGAE_L3_INTAKE,
             SuperstructureState.PRE_THROW);
 
     final Set<SuperstructureState> algaeIntakeStates =
-        Set.of(SuperstructureState.ALGAE_L2_INTAKE, SuperstructureState.ALGAE_L3_INTAKE);
+        Set.of(
+            SuperstructureState.ALGAE_L2_INTAKE,
+            SuperstructureState.ALGAE_L3_INTAKE,
+            SuperstructureState.ALGAE_ICE_CREAM_INTAKE);
 
     // Add all free edges
     for (var from : freeNoAlgaeStates) {
@@ -393,6 +398,14 @@ public class Superstructure extends SubsystemBase {
     // Tell manipulator if intaking
     manipulator.setIntaking(
         state == SuperstructureState.CORAL_INTAKE || next == SuperstructureState.CORAL_INTAKE);
+
+    manipulator.setIntakingAlgae(
+        state == SuperstructureState.ALGAE_L2_INTAKE
+            || next == SuperstructureState.ALGAE_L2_INTAKE
+            || state == SuperstructureState.ALGAE_L3_INTAKE
+            || next == SuperstructureState.ALGAE_L3_INTAKE
+            || state == SuperstructureState.ALGAE_ICE_CREAM_INTAKE
+            || next == SuperstructureState.ALGAE_ICE_CREAM_INTAKE);
 
     // Force fast constraints
     elevator.setForceFastConstraints(forceFastConstraints);

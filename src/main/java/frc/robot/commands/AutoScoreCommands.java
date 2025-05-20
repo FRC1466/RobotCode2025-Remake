@@ -17,8 +17,10 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.ScheduleCommand;
+import frc.robot.FieldConstants;
 import frc.robot.FieldConstants.AlgaeObjective;
 import frc.robot.FieldConstants.CoralObjective;
+import frc.robot.FieldConstants.IceCreamObjective;
 import frc.robot.FieldConstants.Reef;
 import frc.robot.FieldConstants.ReefLevel;
 import frc.robot.subsystems.drive.Drive;
@@ -475,6 +477,106 @@ public class AutoScoreCommands {
             Commands.run(() -> Logger.recordOutput("ReefIntake/Complete", complete.value)));
   }
 
+  public static Command iceCreamIntake(
+      Drive drive,
+      Superstructure superstructure,
+      Supplier<Optional<IceCreamObjective>> iceCreamObjective,
+      DoubleSupplier driverX,
+      DoubleSupplier driverY,
+      DoubleSupplier driverOmega,
+      Command joystickDrive,
+      BooleanSupplier robotRelative,
+      BooleanSupplier disableIceCreamAutoAlign,
+      BooleanSupplier intake) {
+
+    Supplier<Pose2d> robot = drive::getPose;
+
+    Supplier<SuperstructureState> iceCreamIntakeState =
+        () -> SuperstructureState.ALGAE_ICE_CREAM_INTAKE;
+
+    Container<Boolean> complete = new Container<>(false);
+    Timer hasIceCreamTimer = new Timer();
+    hasIceCreamTimer.start();
+
+    Supplier<Pose2d> goal =
+        () ->
+            iceCreamObjective.get().map(AutoScoreCommands::getIceCreamIntakePose).orElseGet(robot);
+
+    Timer intakeDriveTimer = new Timer();
+
+    return Commands.runOnce(
+            () -> {
+              complete.value = false;
+              intakeDriveTimer.reset();
+              intakeDriveTimer.stop();
+            })
+        .andThen(
+            Commands.either(
+                    joystickDrive,
+                    new DriveToPose(
+                        drive,
+                        () -> {
+                          Pose2d goalPose = goal.get();
+                          if (superstructure.hasAlgae()) {
+                            if (hasIceCreamTimer.hasElapsed(algaeBackupTime.get())
+                                && !disableIceCreamAutoAlign.getAsBoolean()) {
+                              complete.value = true;
+                            }
+                          } else {
+                            hasIceCreamTimer.restart();
+                          }
+
+                          // If intake is pressed, start timer and drive forward slowly
+                          if (intake.getAsBoolean()) {
+                            if (!intakeDriveTimer.isRunning()) {
+                              intakeDriveTimer.restart();
+                            }
+                            // Move forward based on timer (similar to netThrowScore approach)
+                            double forwardDistance = Math.min(intakeDriveTimer.get() * 1, .6);
+                            goalPose =
+                                goalPose.transformBy(GeomUtil.toTransform2d(forwardDistance, 0.0));
+                          } else {
+                            intakeDriveTimer.stop();
+                            intakeDriveTimer.reset();
+                          }
+
+                          return getDriveTarget(robot.get(), AllianceFlipUtil.apply(goalPose));
+                        },
+                        robot,
+                        () ->
+                            DriveCommands.getLinearVelocityFromJoysticks(
+                                    driverX.getAsDouble(), driverY.getAsDouble())
+                                .times(AllianceFlipUtil.shouldFlip() ? -1.0 : 1.0),
+                        () -> DriveCommands.getOmegaFromJoysticks(driverOmega.getAsDouble())),
+                    disableIceCreamAutoAlign)
+                .alongWith(
+                    Commands.waitUntil(
+                        () -> {
+                          boolean ready =
+                              readyForSuperstructure(
+                                      robot.get(), AllianceFlipUtil.apply(goal.get()), false)
+                                  || disableIceCreamAutoAlign.getAsBoolean();
+                          Logger.recordOutput("IceCreamIntake/AllowReady", ready);
+                          return ready;
+                        }),
+                    superstructure.runGoal(iceCreamIntakeState)),
+            Commands.waitUntil(() -> superstructure.hasAlgae())
+                .andThen(
+                    Commands.runOnce(
+                        () -> {
+                          // Optionally record which index was intaked
+                        })))
+        .until(() -> complete.value)
+        .finallyDo(
+            () -> {
+              complete.value = false;
+              intakeDriveTimer.stop();
+              intakeDriveTimer.reset();
+            })
+        .deadlineFor(
+            Commands.run(() -> Logger.recordOutput("IceCreamIntake/Complete", complete.value)));
+  }
+
   public static Command superAutoScore(
       Drive drive,
       Superstructure superstructure,
@@ -699,5 +801,11 @@ public class AutoScoreCommands {
         .transformBy(
             new Transform2d(
                 branchFudgeX[objective.reefLevel().levelNumber].get(), 0, Rotation2d.kZero));
+  }
+
+  public static Pose2d getIceCreamIntakePose(IceCreamObjective objective) {
+    return FieldConstants.iceCreamPositions
+        .get(objective)
+        .transformBy(new Transform2d(1, 0, Rotation2d.kPi));
   }
 }

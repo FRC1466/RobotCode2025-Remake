@@ -152,16 +152,20 @@ public class FieldConstants {
     }
   }
 
-  public static class StagingPositions {
-    // Measured from the center of the ice cream
-    public static final double separation = Units.inchesToMeters(72.0);
-    public static final Pose2d middleIceCream =
-        new Pose2d(Units.inchesToMeters(48), fieldWidth / 2.0, Rotation2d.kZero);
-    public static final Pose2d leftIceCream =
-        new Pose2d(Units.inchesToMeters(48), middleIceCream.getY() + separation, Rotation2d.kZero);
-    public static final Pose2d rightIceCream =
-        new Pose2d(Units.inchesToMeters(48), middleIceCream.getY() - separation, Rotation2d.kZero);
-  }
+  public static final Map<IceCreamObjective, Pose2d> iceCreamPositions =
+      Map.of(
+          new IceCreamObjective(1),
+              new Pose2d(
+                  Units.inchesToMeters(48),
+                  fieldWidth / 2.0 + Units.inchesToMeters(72.0),
+                  Rotation2d.kZero),
+          new IceCreamObjective(2),
+              new Pose2d(Units.inchesToMeters(48), fieldWidth / 2.0, Rotation2d.kZero),
+          new IceCreamObjective(3),
+              new Pose2d(
+                  Units.inchesToMeters(48),
+                  fieldWidth / 2.0 - Units.inchesToMeters(72.0),
+                  Rotation2d.kZero));
 
   public enum ReefLevel {
     L1(0, Units.inchesToMeters(25.0), 0),
@@ -241,6 +245,8 @@ public class FieldConstants {
   }
 
   public record CoralObjective(int branchId, ReefLevel reefLevel) {}
+
+  public record IceCreamObjective(int iceCreamPosition) {}
 
   public record AlgaeObjective(int id, boolean low) {
     public AlgaeObjective(int id) {

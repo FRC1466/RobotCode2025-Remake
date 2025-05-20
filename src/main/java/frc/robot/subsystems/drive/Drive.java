@@ -44,7 +44,9 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.Constants;
 import frc.robot.Constants.Mode;
+import frc.robot.FieldConstants;
 import frc.robot.FieldConstants.CoralObjective;
+import frc.robot.FieldConstants.IceCreamObjective;
 import frc.robot.FieldConstants.Reef;
 import frc.robot.FieldConstants.ReefLevel;
 import frc.robot.generated.TunerConstants;
@@ -426,7 +428,6 @@ public class Drive extends SubsystemBase {
     Pose2d robotPose = AllianceFlipUtil.apply(getPose());
     CoralObjective closest = null;
     double minDist = Double.POSITIVE_INFINITY;
-    // Loop through all coral objectives in FieldConstants
     for (int branchId = 0; branchId < Reef.branchPositions.size(); branchId++) {
       for (ReefLevel level : ReefLevel.values()) {
         var poseMap = Reef.branchPositions.get(branchId);
@@ -437,6 +438,23 @@ public class Drive extends SubsystemBase {
           minDist = dist;
           closest = new CoralObjective(branchId, level);
         }
+      }
+    }
+    return closest;
+  }
+
+  public IceCreamObjective getClosestIceCream() {
+    Pose2d robotPose = AllianceFlipUtil.apply(getPose());
+    IceCreamObjective closest = null;
+    double minDist = Double.POSITIVE_INFINITY;
+    for (int iceCreamID = 1;
+        iceCreamID < FieldConstants.iceCreamPositions.size() + 1;
+        iceCreamID++) {
+      Pose2d iceCreamPose = FieldConstants.iceCreamPositions.get(new IceCreamObjective(iceCreamID));
+      double dist = robotPose.getTranslation().getDistance(iceCreamPose.getTranslation());
+      if (dist < minDist) {
+        minDist = dist;
+        closest = new IceCreamObjective(iceCreamID);
       }
     }
     return closest;

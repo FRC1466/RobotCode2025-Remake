@@ -11,6 +11,8 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Transform2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.State;
 import edu.wpi.first.math.util.Units;
@@ -24,6 +26,7 @@ import frc.robot.Constants;
 import frc.robot.Constants.RobotType;
 import frc.robot.FieldConstants;
 import frc.robot.Robot;
+import frc.robot.commands.AutoScoreCommands;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.rollers.RollerSystemIO;
 import frc.robot.subsystems.rollers.RollerSystemIOInputsAutoLogged;
@@ -45,7 +48,7 @@ import org.littletonrobotics.junction.Logger;
 
 public class Manipulator {
   public static final Rotation2d minAngle = Rotation2d.fromRadians(0);
-  public static final Rotation2d maxAngle = Rotation2d.fromRadians(Math.PI);
+  public static final Rotation2d maxAngle = Rotation2d.fromRadians(Math.PI + 2);
 
   // Tunable numbers
   private static final LoggedTunableNumber kP = new LoggedTunableNumber("Manipulator/kP");
@@ -82,6 +85,8 @@ public class Manipulator {
       new LoggedTunableNumber("Manipulator/HomingVelocityThreshold", 0.1);
   public static final LoggedTunableNumber simIntakingTime =
       new LoggedTunableNumber("Manipulator/SimIntakingTime", 0.5);
+  public static final LoggedTunableNumber simIntakingTimeAlgae =
+      new LoggedTunableNumber("Manipulator/SimIntakingTimeAlgae", 0.5);
 
   public static final LoggedTunableNumber[] IDLE = {
     new LoggedTunableNumber("Manipulator/Mailbox/IDLE", 0),
@@ -182,6 +187,7 @@ public class Manipulator {
   @Getter private boolean shouldEStop = false;
   @Setter private boolean isEStopped = false;
   @Setter private boolean isIntaking = false;
+  @Setter private boolean isIntakingAlgae = false;
   @Setter private boolean forceFastConstraints = false;
   @Setter private boolean forceEjectForward = false;
 
@@ -226,6 +232,7 @@ public class Manipulator {
       new Alert("Manipulator funnel disconnected!", Alert.AlertType.kWarning);
 
   private final Timer simIntakingTimer = new Timer();
+  private final Timer simIntakingTimerAlgae = new Timer();
   private boolean lastAlgaeButtonPressed = false;
   private boolean lastCoralButtonPressed = false;
 
@@ -421,6 +428,20 @@ public class Manipulator {
     }
 
     var flippedRobot = AllianceFlipUtil.apply(drive.getPose());
+    var algaeIntakingError =
+        flippedRobot.relativeTo(flippedRobot.nearest(List.of(FieldConstants.Reef.centerFaces)));
+    var algaeIceCreamIntakingError =
+        flippedRobot.relativeTo(
+            flippedRobot.nearest(
+                List.of(
+                    AutoScoreCommands.getIceCreamIntakePose(new FieldConstants.IceCreamObjective(1))
+                        .transformBy(new Transform2d(new Translation2d(0.6, 0), new Rotation2d())),
+                    AutoScoreCommands.getIceCreamIntakePose(new FieldConstants.IceCreamObjective(2))
+                        .transformBy(new Transform2d(new Translation2d(0.6, 0), new Rotation2d())),
+                    AutoScoreCommands.getIceCreamIntakePose(new FieldConstants.IceCreamObjective(3))
+                        .transformBy(
+                            new Transform2d(new Translation2d(0.6, 0), new Rotation2d())))));
+    Logger.recordOutput("Error", algaeIceCreamIntakingError);
     var intakingError =
         flippedRobot.relativeTo(
             flippedRobot.nearest(
@@ -434,9 +455,22 @@ public class Manipulator {
     } else {
       simIntakingTimer.restart();
     }
-
-    if (!isIntaking && mailboxInputs.data.velocityRadsPerSec() >= 50.0) {
+    if (!isIntaking
+        && (mailboxGoal != MailboxGoal.IDLE && mailboxGoal != MailboxGoal.CORALL4GRIP)) {
       hasCoral = false;
+    }
+
+    if (isIntakingAlgae
+        && ((Math.abs(algaeIntakingError.getX()) <= Units.inchesToMeters(24.0)
+                && Math.abs(algaeIntakingError.getY()) <= Units.inchesToMeters(24.0))
+            || (Math.abs(algaeIceCreamIntakingError.getX()) <= Units.inchesToMeters(12.0)
+                && Math.abs(algaeIceCreamIntakingError.getY()) <= Units.inchesToMeters(12.0)))) {
+      hasAlgae = simIntakingTimerAlgae.hasElapsed(simIntakingTimeAlgae.get());
+    } else {
+      simIntakingTimerAlgae.restart();
+    }
+    if (!isIntakingAlgae && (mailboxGoal != MailboxGoal.ALGAEHOLD)) {
+      hasAlgae = false;
     }
 
     // Update coral grabbed LEDs
