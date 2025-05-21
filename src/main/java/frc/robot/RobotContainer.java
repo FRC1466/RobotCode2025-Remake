@@ -211,11 +211,8 @@ public class RobotContainer {
     var autoBuilder = new AutoBuilder(drive, superstructure, push::get);
     autoChooser.addDefaultOption("None", Commands.none());
     autoChooser.addOption("Default Auto", autoBuilder.DefaultAuto());
-    autoChooser.addOption("Faster Auto", autoBuilder.FasterAuto());
-    autoChooser.addOption("Density Auto", autoBuilder.DensityAuto());
-    autoChooser.addOption("Density Auto Fast", autoBuilder.DensityAutoFast());
-    autoChooser.addOption("Simplicity Auto", autoBuilder.upInTheSimplicityAuto());
-    autoChooser.addOption("Inspirational Auto", autoBuilder.upInTheInspirationalAuto());
+    autoChooser.addOption("The One Piece is real!", autoBuilder.TheOnePiece());
+    autoChooser.addOption("Taxi", autoBuilder.Taxi());
 
     /* // Set up SysId routines
     autoChooser.addOption(

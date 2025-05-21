@@ -45,18 +45,6 @@ public class AutoBuilder {
     return Autonomous(ReefLevel.L4, ReefLevel.L4, ReefLevel.L4, ReefLevel.L2, 8, 10, 11, 0);
   }
 
-  public Command FasterAuto() {
-    return Autonomous(ReefLevel.L4, ReefLevel.L4, ReefLevel.L4, ReefLevel.L2, 8, 12, 0, 1);
-  }
-
-  public Command DensityAuto() {
-    return Autonomous(ReefLevel.L2, ReefLevel.L2, ReefLevel.L2, ReefLevel.L2, 8, 12, 0, 1);
-  }
-
-  public Command DensityAutoFast() {
-    return Autonomous(ReefLevel.L2, ReefLevel.L2, ReefLevel.L2, ReefLevel.L2, 8, 10, 11, 0);
-  }
-
   public Command Autonomous(
       ReefLevel height1,
       ReefLevel height2,
@@ -94,7 +82,7 @@ public class AutoBuilder {
               currentObjectiveIndex.value = 0;
             })
         .andThen(
-            getUpInThePush(),
+            Push(),
             Commands.sequence(
                     // Intake
                     driveToStation
@@ -149,7 +137,7 @@ public class AutoBuilder {
                             drive.getPose(), AutoScoreCommands.minDistanceReefClearL4.get())));
   }
 
-  public Command upInTheSimplicityAuto() {
+  public Command TheOnePiece() {
     final var objective = new CoralObjective(7, ReefLevel.L4);
     return Commands.runOnce(
             () -> {
@@ -163,7 +151,7 @@ public class AutoBuilder {
               superstructure.setAutoStart();
             })
         .andThen(
-            getUpInThePush(),
+            Push(),
             AutoScoreCommands.autoScore(
                 drive,
                 superstructure,
@@ -181,7 +169,7 @@ public class AutoBuilder {
                         Superstructure.getScoringState(objective.reefLevel(), false))));
   }
 
-  public Command upInTheInspirationalAuto() {
+  public Command Taxi() {
     return Commands.runOnce(
             () ->
                 drive.setPose(
@@ -198,7 +186,7 @@ public class AutoBuilder {
                 .withTimeout(0.6));
   }
 
-  private Command getUpInThePush() {
+  private Command Push() {
     return new DriveToPose(
             drive,
             () -> {
