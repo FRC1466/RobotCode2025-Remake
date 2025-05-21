@@ -35,6 +35,7 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.system.plant.DCMotor;
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -92,6 +93,11 @@ public class Drive extends SubsystemBase {
       Math.abs(TunerConstants.FrontLeft.LocationX - TunerConstants.BackLeft.LocationX);
   public static final double DRIVE_BASE_WIDTH =
       Math.abs(TunerConstants.FrontLeft.LocationY - TunerConstants.FrontRight.LocationY);
+
+  /** Includes bumpers! */
+  public static final double robotWidth =
+      DRIVE_BASE_WIDTH + 2 * Units.inchesToMeters(2.0) + 2 * Units.inchesToMeters(2);
+
   public static final double DRIVE_BASE_RADIUS =
       Math.max(
           Math.max(
