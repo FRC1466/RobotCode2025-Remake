@@ -336,16 +336,17 @@ public class RobotContainer {
         .and(shouldIceCream)
         .whileTrue(
             AutoScoreCommands.iceCreamIntake(
-                drive,
-                superstructure,
-                () -> Optional.ofNullable(drive.getClosestIceCream()),
-                driverX,
-                driverY,
-                driverOmega,
-                joystickDriveCommandFactory.get(),
-                () -> false,
-                () -> false,
-                controller.a()));
+                    drive,
+                    superstructure,
+                    () -> Optional.ofNullable(drive.getClosestIceCream()),
+                    driverX,
+                    driverY,
+                    driverOmega,
+                    joystickDriveCommandFactory.get(),
+                    () -> false,
+                    () -> false,
+                    controller.a())
+                .withName("Algae Ice Cream Intake"));
 
     // Algae reef intake
     controller
@@ -366,7 +367,7 @@ public class RobotContainer {
                     joystickDriveCommandFactory.get(),
                     () -> false,
                     disableReefAutoAlign)
-                .withName("Algae Reef Intake (Test)"));
+                .withName("Algae Reef Intake"));
 
     // Algae pre-processor
     controller
