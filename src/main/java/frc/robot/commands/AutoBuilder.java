@@ -31,9 +31,9 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class AutoBuilder {
   private static final LoggedTunableNumber scoreCancelSecs =
-      new LoggedTunableNumber("AutoBuilder/ScoreCancelSeconds", 1.5);
+      new LoggedTunableNumber("AutoBuilder/ScoreCancelSeconds", 6);
   private static final LoggedTunableNumber intakeTimeSecs =
-      new LoggedTunableNumber("AutoBuilder/IntakeTimeSecs", 0.15);
+      new LoggedTunableNumber("AutoBuilder/IntakeTimeSecs", 1);
 
   private final Drive drive;
   private final Superstructure superstructure;
@@ -88,7 +88,7 @@ public class AutoBuilder {
                           new Pose2d(
                               startingLineX - Drive.robotWidth / 2.0,
                               fieldWidth - FieldConstants.Barge.closeCage.getY(),
-                              Rotation2d.kCCW_Pi_2))));
+                              Rotation2d.kPi))));
               superstructure.setAutoStart();
               autoTimer.restart();
               currentObjectiveIndex.value = 0;
@@ -124,14 +124,6 @@ public class AutoBuilder {
                                         + (currentObjectiveIndex.value + 1)
                                         + " at %.2f\n",
                                     autoTimer.get());
-                                currentObjectiveIndex.value++;
-                              } else {
-                                System.out.printf(
-                                    "Scoring Coral #"
-                                        + (currentObjectiveIndex.value + 1)
-                                        + " INTERRUPTED/TIMED OUT at %.2f. Moving to next objective.\n",
-                                    autoTimer.get());
-                                // Increment index even if interrupted to avoid getting stuck
                                 currentObjectiveIndex.value++;
                               }
                             })

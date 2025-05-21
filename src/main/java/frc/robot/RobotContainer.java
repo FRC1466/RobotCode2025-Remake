@@ -9,7 +9,6 @@ package frc.robot;
 
 import static frc.robot.subsystems.vision.VisionConstants.*;
 
-import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.system.plant.DCMotor;
@@ -25,9 +24,9 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
-import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.FieldConstants.ReefLevel;
 import frc.robot.commands.AlgaeScoreCommands;
+import frc.robot.commands.AutoBuilder;
 import frc.robot.commands.AutoScoreCommands;
 import frc.robot.commands.DriveCommands;
 import frc.robot.commands.DriveToStation;
@@ -62,6 +61,7 @@ import frc.robot.subsystems.vision.VisionIOPhotonVisionSim;
 import frc.robot.util.AllianceFlipUtil;
 import frc.robot.util.Container;
 import frc.robot.util.DoublePressTracker;
+import frc.robot.util.MirrorUtil;
 import frc.robot.util.TriggerUtil;
 import java.util.Optional;
 import java.util.function.DoubleSupplier;
@@ -199,9 +199,25 @@ public class RobotContainer {
     superstructure = new Superstructure(elevator, manipulator, drive);
 
     // Set up auto routines
-    autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
+    autoChooser = new LoggedDashboardChooser<>("Auto Choices");
+    LoggedDashboardChooser<Boolean> mirror = new LoggedDashboardChooser<>("Processor Side?");
+    mirror.addDefaultOption("Yes", false);
+    mirror.addOption("No", true);
+    LoggedDashboardChooser<Boolean> push = new LoggedDashboardChooser<>("Pushing?");
+    push.addDefaultOption("No", false);
+    push.addOption("Yes", true);
+    MirrorUtil.setMirror(mirror::get);
 
-    // Set up SysId routines
+    var autoBuilder = new AutoBuilder(drive, superstructure, push::get);
+    autoChooser.addDefaultOption("None", Commands.none());
+    autoChooser.addOption("Default Auto", autoBuilder.DefaultAuto());
+    autoChooser.addOption("Faster Auto", autoBuilder.FasterAuto());
+    autoChooser.addOption("Density Auto", autoBuilder.DensityAuto());
+    autoChooser.addOption("Density Auto Fast", autoBuilder.DensityAutoFast());
+    autoChooser.addOption("Simplicity Auto", autoBuilder.upInTheSimplicityAuto());
+    autoChooser.addOption("Inspirational Auto", autoBuilder.upInTheInspirationalAuto());
+
+    /* // Set up SysId routines
     autoChooser.addOption(
         "Drive Wheel Radius Characterization", DriveCommands.wheelRadiusCharacterization(drive));
     autoChooser.addOption(
@@ -215,7 +231,7 @@ public class RobotContainer {
     autoChooser.addOption(
         "Drive SysId (Dynamic Forward)", drive.sysIdDynamic(SysIdRoutine.Direction.kForward));
     autoChooser.addOption(
-        "Drive SysId (Dynamic Reverse)", drive.sysIdDynamic(SysIdRoutine.Direction.kReverse));
+        "Drive SysId (Dynamic Reverse)", drive.sysIdDynamic(SysIdRoutine.Direction.kReverse)); */
 
     // Configure the button bindings
     configureButtonBindings();
@@ -267,7 +283,7 @@ public class RobotContainer {
                     driverY,
                     driverOmega,
                     joystickDriveCommandFactory.get(),
-                    () -> controllerRumbleCommand().withTimeout(0.2),
+                    Commands.none(),
                     () -> false,
                     disableReefAutoAlign::getAsBoolean,
                     controller.b().doublePress()::getAsBoolean)

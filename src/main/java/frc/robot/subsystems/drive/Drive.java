@@ -96,7 +96,7 @@ public class Drive extends SubsystemBase {
 
   /** Includes bumpers! */
   public static final double robotWidth =
-      DRIVE_BASE_WIDTH + 2 * Units.inchesToMeters(2.0) + 2 * Units.inchesToMeters(2);
+      Units.inchesToMeters(28.0) + 2 * Units.inchesToMeters(2.0);
 
   public static final double DRIVE_BASE_RADIUS =
       Math.max(
