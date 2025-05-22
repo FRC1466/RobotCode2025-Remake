@@ -26,6 +26,31 @@ import java.util.function.Supplier;
 import lombok.Getter;
 import lombok.experimental.Accessors;
 
+/**
+ * AlgaeScoreCommands provides autonomous scoring functionality for the robot.
+ *
+ * <p>This class contains commands for processing game pieces and throwing game elements into
+ * targets like the processor or net. It uses tunable parameters to adjust alignment and positioning
+ * during these operations.
+ *
+ * <p>Key functionalities:
+ *
+ * <ul>
+ *   <li>Process - Aligns robot with the processor for game piece scoring or ejection
+ *   <li>Net Throw Lineup - Positions robot for throwing game elements
+ *   <li>Net Throw Score - Executes the throwing sequence with coordinated drive and superstructure
+ *       movements
+ * </ul>
+ *
+ * <p>The class uses LoggedTunableNumbers for runtime adjustment of alignment offsets, distances,
+ * tolerances, and velocities to fine-tune autonomous scoring behavior.
+ *
+ * @see Drive
+ * @see Superstructure
+ * @see SuperstructureState
+ * @see DriveToPose
+ * @see FieldConstants
+ */
 public class AlgaeScoreCommands {
   private static final LoggedTunableNumber processLineupXOffset =
       new LoggedTunableNumber("AlgaeScoreCommands/ProcessLineupXOffset", 0.1);

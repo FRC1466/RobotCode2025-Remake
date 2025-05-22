@@ -32,6 +32,25 @@ import java.util.Optional;
 import java.util.function.*;
 import org.littletonrobotics.junction.Logger;
 
+/**
+ * Commands for automatically scoring game pieces on the field reef structures.
+ *
+ * <p>This class provides a collection of autonomous and assisted commands for: - Auto-scoring coral
+ * at different reef levels (L1-L4) - Auto-intake of algae from reef branches - Auto-intake of algae
+ * from ice cream positions - Super auto-scoring that combines coral scoring and reef intake
+ *
+ * <p>The commands handle alignment, approach, and automated superstructure sequencing using
+ * configurable tolerances and parameters through LoggedTunableNumbers.
+ *
+ * <p>Key features: - Path planning and targeting relative to field elements - Automatic pose
+ * adjustment based on robot position and reef geometry - Superstructure state management during
+ * scoring sequences - Eject timing and positioning tolerances for reliable scoring - Manual
+ * override capabilities through driver inputs - Alliance-aware positioning (automatic flipping
+ * based on alliance color)
+ *
+ * <p>All alignment tolerances, distances, and timing parameters are tunable through NetworkTables
+ * using the LoggedTunableNumber system.
+ */
 public class AutoScoreCommands {
   // Radius of regular hexagon is side length
   private static final double reefRadius = Reef.faceLength;
@@ -44,7 +63,7 @@ public class AutoScoreCommands {
   public static final LoggedTunableNumber minDistanceReefClearL4 =
       new LoggedTunableNumber("AutoScore/MinDistanceReefClear", Units.inchesToMeters(6.0));
   public static final LoggedTunableNumber minDistanceReefClearAlgaeL4 =
-      new LoggedTunableNumber("AutoScore/MinDistanceReefClearAlgae", 0.45);
+      new LoggedTunableNumber("AutoScore/MinDistanceReefClearAlgae", 0.8);
   public static final LoggedTunableNumber minAngleReefClear =
       new LoggedTunableNumber("AutoScore/MinAngleReefClear", 30.0);
   public static final LoggedTunableNumber algaeBackupTime =
@@ -90,9 +109,9 @@ public class AutoScoreCommands {
   private static final LoggedTunableNumber l4EjectDelayAuto =
       new LoggedTunableNumber("AutoScore/L4EjectDelayAuto", 0.05);
   private static final LoggedTunableNumber l2ReefIntakeDistance =
-      new LoggedTunableNumber("AutoScore/L2ReefIntakeDistance", 0.12);
+      new LoggedTunableNumber("AutoScore/L2ReefIntakeDistance", 0);
   private static final LoggedTunableNumber l3ReefIntakeDistance =
-      new LoggedTunableNumber("AutoScore/L3ReefIntakeDistance", 0.14);
+      new LoggedTunableNumber("AutoScore/L3ReefIntakeDistance", 0);
   private static final LoggedTunableNumber maxAimingAngle =
       new LoggedTunableNumber("AutoScore/MaxAimingAngle", 20.0);
   private static final LoggedTunableNumber l1AlignOffsetX =
@@ -352,7 +371,7 @@ public class AutoScoreCommands {
       Command joystickDrive,
       BooleanSupplier robotRelative,
       BooleanSupplier disableReefAutoAlign,
-      boolean isSuper) {
+      Boolean isSuper) {
     Supplier<Pose2d> drivePoseSupplier = () -> drive.getPose();
 
     Supplier<SuperstructureState> algaeIntakeState =
@@ -435,44 +454,37 @@ public class AutoScoreCommands {
                         () -> DriveCommands.getOmegaFromJoysticks(driverOmega.getAsDouble())),
                     disableReefAutoAlign)
                 .alongWith(
-                    (!isSuper ? Commands.none() : Commands.waitUntil(superstructure::hasCoral))
-                        .andThen(
-                            // Check if need wait until pre ready or already ready
-                            Commands.waitUntil(
-                                () -> {
-                                  boolean ready =
-                                      readyForSuperstructure(
-                                                  drivePoseSupplier.get(),
-                                                  AllianceFlipUtil.apply(goal.get()),
-                                                  false)
-                                              && algaeObjective.get().isPresent()
-                                          || disableReefAutoAlign.getAsBoolean();
-                                  Logger.recordOutput("ReefIntake/AllowReady", ready);
-                                  // Get back!
-                                  if (ready && DriverStation.isTeleopEnabled()) {
-                                    needsToGetBack.value = true;
-                                  }
-                                  return ready;
-                                }),
-                            superstructure
-                                .runGoal(algaeIntakeState)
-                                .alongWith(
-                                    Commands.waitUntil(
-                                            () ->
-                                                superstructure.getState() == algaeIntakeState.get())
-                                        .andThen(
-                                            () ->
-                                                superstructure.setReefDangerState(
-                                                    disableReefAutoAlign.getAsBoolean()
-                                                        ? Optional.empty()
-                                                        : Optional.of(algaeIntakeState.get()))))),
+                    // Check if need wait until pre ready or already ready
                     Commands.waitUntil(
-                            () -> superstructure.hasAlgae() && algaeObjective.get().isPresent())
-                        .andThen(
-                            Commands.runOnce(
-                                () -> {
-                                  algaeIntaked.value = algaeObjective.get().get();
-                                }))))
+                        () -> {
+                          boolean ready =
+                              readyForSuperstructure(
+                                          drivePoseSupplier.get(),
+                                          AllianceFlipUtil.apply(goal.get()),
+                                          false)
+                                      && algaeObjective.get().isPresent()
+                                  || disableReefAutoAlign.getAsBoolean();
+                          Logger.recordOutput("ReefIntake/AllowReady", ready);
+                          // Get back!
+                          if (ready && DriverStation.isTeleopEnabled()) {
+                            needsToGetBack.value = true;
+                          }
+                          return ready;
+                        }),
+                    isSuper
+                        ? Commands.waitUntil(
+                                () ->
+                                    outOfDistanceToReef(
+                                        drivePoseSupplier.get(), Units.inchesToMeters(8)))
+                            .andThen(superstructure.runGoal(algaeIntakeState))
+                        : superstructure.runGoal(algaeIntakeState),
+                    Commands.waitUntil(
+                        () -> superstructure.hasAlgae() && algaeObjective.get().isPresent()))
+                .andThen(
+                    Commands.runOnce(
+                        () -> {
+                          algaeIntaked.value = algaeObjective.get().get();
+                        })))
         .until(() -> complete.value)
         .finallyDo(
             () -> {
@@ -481,29 +493,6 @@ public class AutoScoreCommands {
             })
         .deadlineFor(
             Commands.run(() -> Logger.recordOutput("ReefIntake/Complete", complete.value)));
-  }
-
-  public static Command reefIntake(
-      Drive drive,
-      Superstructure superstructure,
-      Supplier<Optional<AlgaeObjective>> algaeObjective,
-      DoubleSupplier driverX,
-      DoubleSupplier driverY,
-      DoubleSupplier driverOmega,
-      Command joystickDrive,
-      BooleanSupplier robotRelative,
-      BooleanSupplier disableReefAutoAlign) {
-    return reefIntake(
-        drive,
-        superstructure,
-        algaeObjective,
-        driverX,
-        driverY,
-        driverOmega,
-        joystickDrive,
-        robotRelative,
-        disableReefAutoAlign,
-        false);
   }
 
   public static Command iceCreamIntake(
@@ -637,32 +626,34 @@ public class AutoScoreCommands {
       BooleanSupplier disableReefAutoAlign,
       BooleanSupplier manualEject) {
 
-    return reefIntake(
+    return autoScore(
             drive,
             superstructure,
-            () ->
-                coralObjective.get().map(objective -> new AlgaeObjective(objective.branchId() / 2)),
+            reefLevel,
+            coralObjective,
             driverX,
             driverY,
             driverOmega,
             joystickDriveCommandFactory.get(),
+            controllerRumbleCommandFactory.get(),
             robotRelative,
             disableReefAutoAlign,
-            true)
+            manualEject)
         .andThen(
-            autoScore(
+            reefIntake(
                 drive,
                 superstructure,
-                reefLevel,
-                coralObjective,
+                () ->
+                    coralObjective
+                        .get()
+                        .map(objective -> new AlgaeObjective(objective.branchId() / 2)),
                 driverX,
                 driverY,
                 driverOmega,
                 joystickDriveCommandFactory.get(),
-                controllerRumbleCommandFactory.get(),
                 robotRelative,
                 disableReefAutoAlign,
-                manualEject))
+                true))
         .beforeStarting(
             () -> {
               // Leds.getInstance().autoScoringReef = true;

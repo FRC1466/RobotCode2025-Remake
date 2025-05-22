@@ -28,6 +28,17 @@ import java.util.Optional;
 import java.util.function.BooleanSupplier;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * The AutoBuilder class is responsible for constructing and managing autonomous routines for the
+ * robot. It provides methods to create various autonomous sequences including multi-piece scoring,
+ * one-piece scoring, and a simple taxi movement.
+ *
+ * <p>The class uses logged tunable parameters to adjust timing values dynamically, and manages the
+ * robot's drive train and superstructure systems to execute complex autonomous patterns.
+ *
+ * <p>Each autonomous routine handles robot positioning, coral piece collection, and scoring at
+ * specified reef levels and positions.
+ */
 @RequiredArgsConstructor
 public class AutoBuilder {
   private static final LoggedTunableNumber scoreCancelSecs =

@@ -27,10 +27,10 @@ import edu.wpi.first.wpilibj.DutyCycleEncoder;
 import frc.robot.util.PhoenixUtil;
 
 public class PivotIOTalonFX implements PivotIO {
-  private static final double reduction = 18.69; // Motor to mechanism gear ratio
-  private static final Rotation2d encoderOffset = Rotation2d.fromRadians(-2.82); // From constants
-  private static final int motorId = 14; // Using armPort from constants
-  private static final int dutyCyclePort = 0; // Using dutyCyclePort from constants
+  private static final double reduction = 18.69;
+  private static final Rotation2d encoderOffset = Rotation2d.fromRadians(-2.82);
+  private static final int motorId = 14;
+  private static final int dutyCyclePort = 0;
 
   // Hardware
   private final TalonFX talon;
@@ -61,7 +61,7 @@ public class PivotIOTalonFX implements PivotIO {
   private final Debouncer motorConnectedDebouncer = new Debouncer(0.5);
   private final Debouncer encoderConnectedDebouncer = new Debouncer(0.5);
 
-  private final boolean encoderInverted = true; // From constants
+  private final boolean encoderInverted = true;
 
   public PivotIOTalonFX() {
     talon = new TalonFX(motorId);

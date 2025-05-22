@@ -297,6 +297,61 @@ public class RobotContainer {
                 controllerRumbleCommand().withTimeout(0.1),
                 Commands.waitSeconds(0.1),
                 controllerRumbleCommand().withTimeout(0.1)));
+    // Super auto score (double press right trigger)
+    Container<Boolean> superAutoScoreExecutionTracker = new Container<>(false);
+    Container<ReefLevel> lockedSelectedCoralScoreLevelForSuper =
+        new Container<>(
+            selectedCoralScoreLevel.value); // Initialize with current, will be updated onTrue
+    Container<FieldConstants.CoralObjective> lockedClosestCoralObjectiveForSuper =
+        new Container<>(null);
+
+    Trigger superAutoScoreCoralAvailable =
+        new Trigger(() -> drive.getClosestCoralObjective() != null);
+    Trigger canExecuteSuperAutoScore =
+        superAutoScoreCoralAvailable.and(() -> !superstructure.hasAlgae());
+
+    controller
+        .rightTrigger()
+        .doublePress()
+        .and(canExecuteSuperAutoScore)
+        .onTrue(
+            Commands.runOnce(
+                () -> {
+                  lockedSelectedCoralScoreLevelForSuper.value = selectedCoralScoreLevel.value;
+                  lockedClosestCoralObjectiveForSuper.value = drive.getClosestCoralObjective();
+                }))
+        .whileTrue(
+            AutoScoreCommands.superAutoScore(
+                    drive,
+                    superstructure,
+                    () -> lockedSelectedCoralScoreLevelForSuper.value,
+                    () -> Optional.ofNullable(lockedClosestCoralObjectiveForSuper.value),
+                    driverX,
+                    driverY,
+                    driverOmega,
+                    joystickDriveCommandFactory,
+                    RobotContainer::controllerRumbleCommand,
+                    () -> false,
+                    disableReefAutoAlign::getAsBoolean,
+                    controller.b().doublePress()::getAsBoolean)
+                .deadlineFor(
+                    Commands.startEnd(
+                        () -> superAutoScoreExecutionTracker.value = true,
+                        () -> superAutoScoreExecutionTracker.value = false))
+                .withName("Super Auto Score"));
+
+    controller
+        .rightTrigger()
+        .doublePress()
+        .and(canExecuteSuperAutoScore.negate())
+        .and(() -> !superAutoScoreExecutionTracker.value)
+        .onTrue(
+            Commands.sequence(
+                    controllerRumbleCommand().withTimeout(0.1),
+                    Commands.waitSeconds(0.1),
+                    controllerRumbleCommand().withTimeout(0.1))
+                .withName("Super Auto Score Unavailable Rumble"));
+
     // Coral intake
     controller
         .leftTrigger()
@@ -379,7 +434,8 @@ public class RobotContainer {
                     driverOmega,
                     joystickDriveCommandFactory.get(),
                     () -> false,
-                    disableReefAutoAlign)
+                    disableReefAutoAlign,
+                    false)
                 .withName("Algae Reef Intake"));
 
     // Algae pre-processor

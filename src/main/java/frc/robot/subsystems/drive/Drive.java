@@ -8,7 +8,6 @@
 package frc.robot.subsystems.drive;
 
 import static edu.wpi.first.units.Units.*;
-import static frc.robot.subsystems.vision.VisionConstants.aprilTagLayout;
 
 import com.ctre.phoenix6.CANBus;
 import com.pathplanner.lib.auto.AutoBuilder;
@@ -24,7 +23,6 @@ import edu.wpi.first.hal.HAL;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Twist2d;
@@ -54,38 +52,12 @@ import frc.robot.generated.TunerConstants;
 import frc.robot.util.AllianceFlipUtil;
 import frc.robot.util.LocalADStarAK;
 import frc.robot.util.LoggedTracer;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
 public class Drive extends SubsystemBase {
-  // Map from blue alliance tag Pose2d to their index (0-5) (Pose, index)
-  private static final Map<Pose2d, Integer> blueTagIndex;
-  // List of blue alliance tag Pose2d, ordered by index. Is usable by Pose2d.nearest() method to
-  // reduce clutter
-  private static final List<Pose2d> blueTagPoses2d;
-
-  static {
-    // Initialize the map with tag poses and their indices
-    LinkedHashMap<Pose2d, Integer> map = new LinkedHashMap<>(6);
-    for (int i = 0; i < 6; i++) {
-      int tagId = 17 + i; // Blue alliance tag IDs are 17-22
-      Optional<Pose3d> opt = aprilTagLayout.getTagPose(tagId);
-      if (opt.isPresent()) {
-        Pose2d p2 = opt.get().toPose2d();
-        map.put(p2, i); // Map Pose2d to its index
-      }
-    }
-    blueTagIndex = Collections.unmodifiableMap(map);
-    blueTagPoses2d = List.copyOf(map.keySet());
-  }
-
   // TunerConstants doesn't include these constants, so they are declared locally
   static final double ODOMETRY_FREQUENCY =
       new CANBus(TunerConstants.DrivetrainConstants.CANBusName).isNetworkFD() ? 250.0 : 100.0;
@@ -371,7 +343,7 @@ public class Drive extends SubsystemBase {
   /** Returns the current odometry pose on the blue side. */
   @AutoLogOutput(key = "Odometry/FlippedRobot")
   public Pose2d getFlippedPose() {
-    return AllianceFlipUtil.FlipX(poseEstimator.getEstimatedPosition());
+    return AllianceFlipUtil.apply(poseEstimator.getEstimatedPosition());
   }
 
   /** Returns the current odometry rotation. */
@@ -411,23 +383,6 @@ public class Drive extends SubsystemBase {
       new Translation2d(TunerConstants.BackLeft.LocationX, TunerConstants.BackLeft.LocationY),
       new Translation2d(TunerConstants.BackRight.LocationX, TunerConstants.BackRight.LocationY)
     };
-  }
-
-  public int getClosestTag() {
-    // Only flip robot pose if on red alliance, comparing to blue tag poses
-    Pose2d robot = this.getPose();
-    // Compute the nearest pose from the list defined earlier
-    if (AllianceFlipUtil.shouldFlip()) {
-      robot = AllianceFlipUtil.FlipX(this.getPose());
-    }
-    Pose2d nearest = robot.nearest(blueTagPoses2d);
-    // Calculate index of the pose to get the closest tag
-    int idx = blueTagIndex.get(nearest);
-    if (AllianceFlipUtil.shouldFlip()) {
-      return idx; // Flip the index for red alliance
-    } else {
-      return idx;
-    }
   }
 
   public CoralObjective getClosestCoralObjective() {
