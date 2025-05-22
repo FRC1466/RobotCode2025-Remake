@@ -49,5 +49,5 @@ public class SuperstructureConstants {
   public static final LoggedTunableNumber elevatorCrossMemberDangerHeight =
       new LoggedTunableNumber("Superstructure/ElevatorCrossMemberDangerHeight", 0.2);
   public static final LoggedTunableNumber elevatorL4ClearHeight =
-      new LoggedTunableNumber("Superstructure/ElevatorL4ClearHeight", 1.65);
+      new LoggedTunableNumber("Superstructure/ElevatorL4ClearHeight", 1.55);
 }

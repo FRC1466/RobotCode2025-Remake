@@ -84,9 +84,9 @@ public class Manipulator {
   public static final LoggedTunableNumber homingVelocityThresh =
       new LoggedTunableNumber("Manipulator/HomingVelocityThreshold", 0.1);
   public static final LoggedTunableNumber simIntakingTime =
-      new LoggedTunableNumber("Manipulator/SimIntakingTime", 0.5);
+      new LoggedTunableNumber("Manipulator/SimIntakingTime", 1);
   public static final LoggedTunableNumber simIntakingTimeAlgae =
-      new LoggedTunableNumber("Manipulator/SimIntakingTimeAlgae", 0.5);
+      new LoggedTunableNumber("Manipulator/SimIntakingTimeAlgae", 1);
 
   public static final LoggedTunableNumber[] IDLE = {
     new LoggedTunableNumber("Manipulator/Mailbox/IDLE", 0),
