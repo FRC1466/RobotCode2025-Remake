@@ -194,7 +194,7 @@ public class AutoBuilder {
               return new Pose2d(
                   robot
                       .getTranslation()
-                      .plus(new Translation2d(AllianceFlipUtil.shouldFlip() ? -0.1 : 0.1, 0.0)),
+                      .plus(new Translation2d(AllianceFlipUtil.shouldFlip() ? 0.1 : -0.1, 0.0)),
                   robot.getRotation());
             })
         .withTimeout(pushSecs)
