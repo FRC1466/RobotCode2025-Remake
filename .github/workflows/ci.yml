@@ -77,15 +77,15 @@ jobs:
           uses: actions/deploy-pages@v4
           with:
             artifact_name: 'javadoc'
-  
-    build:
-      name: Build
-      runs-on: ubuntu-latest
-      container: wpilib/roborio-cross-ubuntu:2024-22.04
-      steps:
-        - name: Checkout repository
-          uses: actions/checkout@v4
-        - name: Grant execute permission
-          run: chmod +x gradlew
-        - name: Build robot code
-          run: ./gradlew build
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    container: wpilib/roborio-cross-ubuntu:2024-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Grant execute permission
+        run: chmod +x gradlew
+      - name: Build robot code
+        run: ./gradlew build
