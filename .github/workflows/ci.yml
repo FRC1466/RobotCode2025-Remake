@@ -124,4 +124,4 @@ jobs:
       - name: Grant execute permission to Gradle wrapper
         run: chmod +x ./gradlew
       - name: Run full build
-        run: ./gradlew build -x spotlessCheck -x checkstyleMain -x checkstyleTest -x test
+        run: ./gradlew build -x spotlessCheck -x checkstyleTest -x test
