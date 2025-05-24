@@ -2,7 +2,7 @@
 
 ![Last Commit](https://img.shields.io/github/last-commit/GrumpyBud/AdvantageKitVisionSwerveAlign)
 ![Stable Branch -- Main](https://img.shields.io/badge/Stable%20Branch-Main-blue?labelColor=grey)
-![Experimental Branch -- ElevatorTesting](https://img.shields.io/badge/Stable%20Branch-ElevatorTesting-red?labelColor=grey)
+![Experimental Branch -- ElevatorTesting](https://img.shields.io/badge/Experimental%20Branch-ElevatorTesting-red?labelColor=grey)
 
 Welcome to Team 1466 Webb Robotics' robot code for the 2025 *REEFSCAPE* game. This repository is a full reset of our previous code ([2025](https://github.com/FRC1466/robot-code-2025)) built from the ground up to reflect the changes of our software team. With an increased focus on quality, this codebase introduces numerous new features and improvements aimed at making our robot as competitive and reliable as possible.
 
