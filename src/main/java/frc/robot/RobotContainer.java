@@ -83,6 +83,8 @@ public class RobotContainer {
   private Vision vision;
   private final Superstructure superstructure;
 
+  private Command blankAuto = Commands.none();
+
   // Controllers
   private static final CommandXboxController controller = new CommandXboxController(0);
   private final Trigger disableReefAutoAlign = new Trigger(() -> false);
@@ -91,6 +93,7 @@ public class RobotContainer {
 
   private final Alert driverDisconnected =
       new Alert("Driver controller disconnected (port 0).", AlertType.kWarning);
+  private final Alert noAuto = new Alert("Please select an auto routine.", AlertType.kWarning);
   private final LoggedNetworkNumber endgameAlert1 =
       new LoggedNetworkNumber("/SmartDashboard/Endgame Alert #1", 30.0);
   private final LoggedNetworkNumber endgameAlert2 =
@@ -209,7 +212,7 @@ public class RobotContainer {
     MirrorUtil.setMirror(mirror::get);
 
     var autoBuilder = new AutoBuilder(drive, superstructure, push::get);
-    autoChooser.addDefaultOption("None", Commands.none());
+    autoChooser.addDefaultOption("None", blankAuto);
     autoChooser.addOption("Default Auto", autoBuilder.DefaultAuto());
     autoChooser.addOption("The One Piece is real!", autoBuilder.TheOnePiece());
     autoChooser.addOption("Taxi", autoBuilder.Taxi());
@@ -565,6 +568,12 @@ public class RobotContainer {
   public void updateAlerts() {
     // Controller disconnected alerts
     driverDisconnected.set(!DriverStation.isJoystickConnected(controller.getHID().getPort()));
+
+    // Auto alert
+    noAuto.set(
+        DriverStation.isAutonomous()
+            && !DriverStation.isEnabled()
+            && autoChooser.get() == blankAuto);
   }
 
   /**
