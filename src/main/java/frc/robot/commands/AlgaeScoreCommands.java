@@ -7,6 +7,7 @@
 
 package frc.robot.commands;
 
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.Timer;
@@ -60,7 +61,7 @@ public class AlgaeScoreCommands {
       new LoggedTunableNumber("AlgaeScoreCommands/ProcessLineupClear", 0.3);
   private static final LoggedTunableNumber processEjectDegOffset =
       new LoggedTunableNumber("AlgaeScoreCommands/ProcessEjectDegreeOffset", 1.0);
-  private static final LoggedTunableNumber throwLineupDistance =
+  public static final LoggedTunableNumber throwLineupDistance =
       new LoggedTunableNumber("AlgaeScoreCommands/ThrowLineupDistance", 1.5);
   private static final LoggedTunableNumber throwDriveDistance =
       new LoggedTunableNumber("AlgaeScoreCommands/ThrowDriveDistance", 0.6);
@@ -160,7 +161,11 @@ public class AlgaeScoreCommands {
                 new Pose2d(
                     AllianceFlipUtil.applyX(
                         FieldConstants.fieldLength / 2.0 - throwLineupDistance.get()),
-                    drive.getPose().getY(),
+                    AllianceFlipUtil.applyY(
+                        MathUtil.clamp(
+                            drive.getPose().getY(),
+                            FieldConstants.fieldWidth / 2.0 + Drive.robotWidth,
+                            FieldConstants.fieldWidth - Drive.robotWidth)),
                     AllianceFlipUtil.apply(Rotation2d.k180deg)),
             drive::getPose,
             () ->

@@ -69,6 +69,7 @@ import java.util.function.Supplier;
 import lombok.experimental.ExtensionMethod;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
+import org.littletonrobotics.junction.networktables.LoggedNetworkString;
 
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
@@ -98,6 +99,9 @@ public class RobotContainer {
       new LoggedNetworkNumber("/SmartDashboard/Endgame Alert #1", 30.0);
   private final LoggedNetworkNumber endgameAlert2 =
       new LoggedNetworkNumber("/SmartDashboard/Endgame Alert #2", 15.0);
+
+  private final LoggedNetworkString pathfindingTargetChooser =
+      new LoggedNetworkString("Pathfinding Target");
 
   // Dashboard inputs
   private final LoggedDashboardChooser<Command> autoChooser;
@@ -210,12 +214,26 @@ public class RobotContainer {
     push.addDefaultOption("No", false);
     push.addOption("Yes", true);
     MirrorUtil.setMirror(mirror::get);
+    pathfindingTargetChooser.setDefault("");
 
     var autoBuilder = new AutoBuilder(drive, superstructure, push::get);
     autoChooser.addDefaultOption("None", blankAuto);
     autoChooser.addOption("Default Auto", autoBuilder.DefaultAuto());
     autoChooser.addOption("The One Piece is real!", autoBuilder.TheOnePiece());
     autoChooser.addOption("Taxi", autoBuilder.Taxi());
+    autoChooser.addOption(
+        "Use AutoPathing",
+        Commands.runOnce(
+            () -> {
+              String currentPathingTarget = pathfindingTargetChooser.get();
+              if (!currentPathingTarget.isEmpty()) {
+                Command autoCommand =
+                    autoBuilder
+                        .SuperDuperSecretAuto(currentPathingTarget)
+                        .until(() -> !DriverStation.isAutonomous());
+                autoCommand.schedule();
+              }
+            }));
 
     /* // Set up SysId routines
     autoChooser.addOption(
