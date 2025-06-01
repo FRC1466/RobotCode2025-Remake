@@ -214,6 +214,7 @@ public class RobotContainer {
     var autoBuilder = new AutoBuilder(drive, superstructure, push::get);
     autoChooser.addDefaultOption("None", blankAuto);
     autoChooser.addOption("Default Auto", autoBuilder.DefaultAuto());
+    autoChooser.addOption("Algae Auto", autoBuilder.AlgaeAutonomous());
     autoChooser.addOption("The One Piece is real!", autoBuilder.TheOnePiece());
     autoChooser.addOption("Taxi", autoBuilder.Taxi());
 

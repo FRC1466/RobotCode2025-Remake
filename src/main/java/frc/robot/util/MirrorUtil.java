@@ -10,6 +10,7 @@ package frc.robot.util;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import frc.robot.FieldConstants;
+import frc.robot.FieldConstants.AlgaeObjective;
 import frc.robot.FieldConstants.CoralObjective;
 import java.util.function.BooleanSupplier;
 import lombok.Getter;
@@ -27,6 +28,17 @@ public class MirrorUtil {
     int flippedBranchId = 11 - shiftedBranchId;
     flippedBranchId = (++flippedBranchId == 12) ? 0 : flippedBranchId;
     return new CoralObjective(flippedBranchId, coralObjective.reefLevel());
+  }
+
+  public static AlgaeObjective apply(AlgaeObjective algaeObjective) {
+    if (!mirror.getAsBoolean()) return algaeObjective;
+    int shiftedBranchId = algaeObjective.id() - 1;
+    if (shiftedBranchId == -1) {
+      shiftedBranchId = 5;
+    }
+    int flippedBranchId = 5 - shiftedBranchId;
+    flippedBranchId = (++flippedBranchId == 6) ? 0 : flippedBranchId;
+    return new AlgaeObjective(flippedBranchId, flippedBranchId % 2 == 1);
   }
 
   public static Pose2d apply(Pose2d pose) {

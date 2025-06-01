@@ -7,6 +7,7 @@
 
 package frc.robot.commands;
 
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.Timer;
@@ -160,7 +161,14 @@ public class AlgaeScoreCommands {
                 new Pose2d(
                     AllianceFlipUtil.applyX(
                         FieldConstants.fieldLength / 2.0 - throwLineupDistance.get()),
-                    drive.getPose().getY(),
+                    MathUtil.clamp(
+                        drive.getPose().getY(),
+                        AllianceFlipUtil.shouldFlip()
+                            ? FieldConstants.fieldWidth - Drive.robotWidth / 2.0
+                            : FieldConstants.fieldWidth / 2.0 + Drive.robotWidth / 2.0,
+                        AllianceFlipUtil.shouldFlip()
+                            ? FieldConstants.fieldWidth / 2.0 + Drive.robotWidth / 2.0
+                            : FieldConstants.fieldWidth - Drive.robotWidth / 2.0),
                     AllianceFlipUtil.apply(Rotation2d.k180deg)),
             drive::getPose,
             () ->
