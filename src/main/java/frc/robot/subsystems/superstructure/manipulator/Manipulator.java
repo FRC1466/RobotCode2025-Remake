@@ -138,8 +138,8 @@ public class Manipulator {
         kG.initDefault(0.0);
       }
       default -> {
-        kP.initDefault(.18);
-        kD.initDefault(.02);
+        kP.initDefault(50);
+        kD.initDefault(3);
         kS.initDefault(0);
         kG.initDefault(0);
       }

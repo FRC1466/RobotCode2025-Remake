@@ -711,7 +711,7 @@ public class Superstructure extends SubsystemBase {
     return Commands.runOnce(() -> elevator.setGoal(elevatorHeight));
   }
 
-  private Command runManipulatorPivot(Supplier<Rotation2d> pivotAngle) {
+  public Command runManipulatorPivot(Supplier<Rotation2d> pivotAngle) {
     return Commands.runOnce(() -> manipulator.setGoal(pivotAngle));
   }
 

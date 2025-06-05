@@ -532,6 +532,23 @@ public class RobotContainer {
             .withName("Reset Gyro")
             .ignoringDisable(true));
 
+    controller
+        .b()
+        .onTrue(
+            superstructure.runManipulatorPivot(
+                () -> SuperstructureState.ALGAE_STOW.getValue().getPose().pivotAngle().get()));
+
+    controller
+        .rightBumper()
+        .onTrue(
+            superstructure.runElevator(
+                () ->
+                    SuperstructureState.L3_CORAL
+                        .getValue()
+                        .getPose()
+                        .elevatorHeight()
+                        .getAsDouble()));
+
     // Endgame alerts
     new Trigger(
             () ->
