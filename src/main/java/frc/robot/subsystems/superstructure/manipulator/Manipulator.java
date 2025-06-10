@@ -10,6 +10,7 @@ package frc.robot.subsystems.superstructure.manipulator;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
+import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -72,6 +73,8 @@ public class Manipulator {
 
   private static final LoggedTunableNumber algaeCurrentThresh =
       new LoggedTunableNumber("Dispenser/AlgaeCurrentThreshold", 10.0);
+  public static final LoggedTunableNumber throwInterpolationValue =
+      new LoggedTunableNumber("Dispenser/AlgaeCurrentThreshold", 0.6);
   private static final LoggedTunableNumber coralProxThreshold =
       new LoggedTunableNumber("Dispenser/CoralProxThresh", 0.06);
 
@@ -218,6 +221,7 @@ public class Manipulator {
   private static final double algaeDebounceTime = 0.6;
   private Debouncer coralDebouncer = new Debouncer(coralDebounceTime, DebounceType.kRising);
   private Debouncer algaeDebouncer = new Debouncer(algaeDebounceTime, DebounceType.kBoth);
+  private final SlewRateLimiter algaeCurrentFilter = new SlewRateLimiter(50);
 
   @Setter @Getter @AutoLogOutput private double coralThresholdOffset = 0.0;
 
@@ -400,9 +404,13 @@ public class Manipulator {
     // Check algae & coral states
     if (Constants.getRobot() != Constants.RobotType.SIMBOT) {
       if (mailboxGoal == MailboxGoal.ALGAEGRAB || DriverStation.isDisabled()) {
-        hasAlgae =
-            algaeDebouncer.calculate(
-                mailboxInputs.data.torqueCurrentAmps() >= algaeCurrentThresh.get());
+        double limitedTorqueCurrent =
+            algaeCurrentFilter.calculate(mailboxInputs.data.torqueCurrentAmps());
+        hasAlgae = algaeDebouncer.calculate(limitedTorqueCurrent >= algaeCurrentThresh.get());
+
+        // TODO: Optional: Log both raw and limited values for tuning
+        Logger.recordOutput("Manipulator/TorqueCurrentRaw", mailboxInputs.data.torqueCurrentAmps());
+        Logger.recordOutput("Manipulator/TorqueCurrentLimited", limitedTorqueCurrent);
       } else {
         algaeDebouncer.calculate(hasAlgae);
       }
@@ -497,9 +505,14 @@ public class Manipulator {
     return goal.getAsDouble();
   }
 
-  @AutoLogOutput(key = "Manipulator/MeasuredAngle")
+  @AutoLogOutput(key = "Manipulator/MeasuredExternalAngle")
   public Rotation2d getPivotAngle() {
     return pivotInputs.data.encoderAbsolutePosition();
+  }
+
+  @AutoLogOutput(key = "Manipulator/MeasuredInternalAngle")
+  public Rotation2d getPivotAngleInternal() {
+    return pivotInputs.data.internalPosition();
   }
 
   public void resetHasCoral(boolean value) {

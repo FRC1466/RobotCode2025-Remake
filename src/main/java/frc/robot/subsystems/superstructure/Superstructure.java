@@ -194,6 +194,42 @@ public class Superstructure extends SubsystemBase {
             .build());
 
     graph.addEdge(
+        SuperstructureState.PRE_THROW,
+        SuperstructureState.THROW,
+        EdgeCommand.builder()
+            .command(
+                runSuperstructurePose(SuperstructureState.THROW.getValue().getPose())
+                    .andThen(
+                        Commands.waitUntil(
+                            () -> {
+                              double interpolationFactor = 0.6;
+                              double preThrowPivotAngleRad =
+                                  SuperstructureState.PRE_THROW
+                                      .getValue()
+                                      .getPose()
+                                      .pivotAngle()
+                                      .get()
+                                      .getRadians();
+                              double throwPivotAngleRad =
+                                  SuperstructureState.THROW
+                                      .getValue()
+                                      .getPose()
+                                      .pivotAngle()
+                                      .get()
+                                      .getRadians();
+                              double releaseThresholdAngleRad =
+                                  MathUtil.interpolate(
+                                      throwPivotAngleRad,
+                                      preThrowPivotAngleRad,
+                                      interpolationFactor);
+                              return Math.abs(manipulator.getPivotAngle().getRadians())
+                                  <= Math.abs(releaseThresholdAngleRad);
+                            }),
+                        runSuperstructureExtras(SuperstructureState.THROW),
+                        Commands.waitUntil(this::mechanismsAtGoal)))
+            .build());
+
+    graph.addEdge(
         SuperstructureState.CHARACTERIZATION,
         SuperstructureState.STOWTRAVEL,
         EdgeCommand.builder()
