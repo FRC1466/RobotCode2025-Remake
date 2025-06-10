@@ -22,7 +22,7 @@ public class CoralSensorIOColorSensor implements CoralSensorIO {
     boolean valid = colorSensor.isConnected();
     var measurement = colorSensor.getProximity();
     if (measurement > 120) {
-      measurement = 10;
+      measurement = 5;
     } else {
       measurement = 100;
     }

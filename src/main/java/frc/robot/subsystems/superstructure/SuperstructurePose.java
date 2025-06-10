@@ -19,7 +19,7 @@ public record SuperstructurePose(DoubleSupplier elevatorHeight, Supplier<Rotatio
   private static final LoggedTunableNumber StowHeight =
       new LoggedTunableNumber("Superstructure/Stow/Height", 0.00254);
   private static final LoggedTunableNumber StowTravelAngle =
-      new LoggedTunableNumber("Superstructure/Stow/TravelSafeAngle", .505);
+      new LoggedTunableNumber("Superstructure/Stow/TravelSafeAngle", .7);
   private static final LoggedTunableNumber StowRestAngle =
       new LoggedTunableNumber("Superstructure/Stow/RestAngle", 0);
 

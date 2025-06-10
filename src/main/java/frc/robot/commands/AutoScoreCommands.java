@@ -17,7 +17,6 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.ScheduleCommand;
-import frc.robot.Constants;
 import frc.robot.FieldConstants;
 import frc.robot.FieldConstants.AlgaeObjective;
 import frc.robot.FieldConstants.CoralObjective;
@@ -138,7 +137,7 @@ public class AutoScoreCommands {
   private static final LoggedTunableNumber l3ScoreDistance =
       new LoggedTunableNumber("AutoScore/L3ScoreDistance", 0);
   private static final LoggedTunableNumber l4ScoreDistance =
-      new LoggedTunableNumber("AutoScore/L4ScoreDistance", 0.1);
+      new LoggedTunableNumber("AutoScore/L4ScoreDistance", 0.4);
 
   private AutoScoreCommands() {}
 
@@ -285,9 +284,7 @@ public class AutoScoreCommands {
                                   .toTwist2d(lookaheadEject[reefLevel.get().ordinal()].get()));
 
                       boolean ready =
-                          ((Constants.getRobot() == Constants.RobotType.SIMBOT
-                                      || DriverStation.isAutonomous())
-                                  && checkEjectTolerances(
+                          (checkEjectTolerances(
                                       flippedRobot,
                                       objective,
                                       reefLevel.get(),

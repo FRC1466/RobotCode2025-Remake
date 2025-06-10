@@ -214,7 +214,7 @@ public class Manipulator {
 
   @Getter private boolean doNotStopIntaking = false;
 
-  private static final double coralDebounceTime = 0.1;
+  private static final double coralDebounceTime = 0.04;
   private static final double algaeDebounceTime = 0.6;
   private Debouncer coralDebouncer = new Debouncer(coralDebounceTime, DebounceType.kRising);
   private Debouncer algaeDebouncer = new Debouncer(algaeDebounceTime, DebounceType.kBoth);
@@ -406,14 +406,10 @@ public class Manipulator {
       } else {
         algaeDebouncer.calculate(hasAlgae);
       }
-      if (tunnelVolts > 0.0 && !(isIntaking && hasCoral)) {
-        hasCoral =
-            coralDebouncer.calculate(
-                coralSensorInputs.data.valid()
-                    && coralSensorInputs.data.distanceMeters() < coralProxThreshold.get());
-      } else {
-        coralDebouncer.calculate(hasCoral);
-      }
+      hasCoral =
+          coralDebouncer.calculate(
+              coralSensorInputs.data.valid()
+                  && coralSensorInputs.data.distanceMeters() < coralProxThreshold.get());
     } else {
       boolean algaeButtonPressed = DriverStation.getStickButtonPressed(2, 1);
       boolean coralButtonPressed = DriverStation.getStickButtonPressed(2, 2);
@@ -441,36 +437,37 @@ public class Manipulator {
                     AutoScoreCommands.getIceCreamIntakePose(new FieldConstants.IceCreamObjective(3))
                         .transformBy(
                             new Transform2d(new Translation2d(0.6, 0), new Rotation2d())))));
-    Logger.recordOutput("Error", algaeIceCreamIntakingError);
     var intakingError =
         flippedRobot.relativeTo(
             flippedRobot.nearest(
                 List.of(
                     FieldConstants.CoralStation.leftCenterFace,
                     FieldConstants.CoralStation.rightCenterFace)));
-    if (isIntaking
-        && intakingError.getX() <= Units.inchesToMeters(48.0)
-        && Math.abs(intakingError.getY()) <= Units.inchesToMeters(48.0)) {
-      hasCoral = simIntakingTimer.hasElapsed(simIntakingTime.get());
-    } else {
-      simIntakingTimer.restart();
-    }
-    if (!isIntaking
-        && (mailboxGoal != MailboxGoal.IDLE && mailboxGoal != MailboxGoal.CORALL4GRIP)) {
-      hasCoral = false;
-    }
+    if (Constants.getRobot() == Constants.RobotType.SIMBOT) {
+      if (isIntaking
+          && intakingError.getX() <= Units.inchesToMeters(48.0)
+          && Math.abs(intakingError.getY()) <= Units.inchesToMeters(48.0)) {
+        hasCoral = simIntakingTimer.hasElapsed(simIntakingTime.get());
+      } else {
+        simIntakingTimer.restart();
+      }
+      if (!isIntaking
+          && (mailboxGoal != MailboxGoal.IDLE && mailboxGoal != MailboxGoal.CORALL4GRIP)) {
+        hasCoral = false;
+      }
 
-    if (isIntakingAlgae
-        && ((Math.abs(algaeIntakingError.getX()) <= Units.inchesToMeters(24.0)
-                && Math.abs(algaeIntakingError.getY()) <= Units.inchesToMeters(24.0))
-            || (Math.abs(algaeIceCreamIntakingError.getX()) <= Units.inchesToMeters(12.0)
-                && Math.abs(algaeIceCreamIntakingError.getY()) <= Units.inchesToMeters(12.0)))) {
-      hasAlgae = simIntakingTimerAlgae.hasElapsed(simIntakingTimeAlgae.get());
-    } else {
-      simIntakingTimerAlgae.restart();
-    }
-    if (!isIntakingAlgae && (mailboxGoal != MailboxGoal.ALGAEHOLD)) {
-      hasAlgae = false;
+      if (isIntakingAlgae
+          && ((Math.abs(algaeIntakingError.getX()) <= Units.inchesToMeters(24.0)
+                  && Math.abs(algaeIntakingError.getY()) <= Units.inchesToMeters(24.0))
+              || (Math.abs(algaeIceCreamIntakingError.getX()) <= Units.inchesToMeters(12.0)
+                  && Math.abs(algaeIceCreamIntakingError.getY()) <= Units.inchesToMeters(12.0)))) {
+        hasAlgae = simIntakingTimerAlgae.hasElapsed(simIntakingTimeAlgae.get());
+      } else {
+        simIntakingTimerAlgae.restart();
+      }
+      if (!isIntakingAlgae && (mailboxGoal != MailboxGoal.ALGAEHOLD)) {
+        hasAlgae = false;
+      }
     }
 
     // Update coral grabbed LEDs
