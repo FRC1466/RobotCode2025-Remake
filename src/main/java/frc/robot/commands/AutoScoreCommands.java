@@ -133,11 +133,11 @@ public class AutoScoreCommands {
   };
 
   private static final LoggedTunableNumber l2ScoreDistance =
-      new LoggedTunableNumber("AutoScore/L2ScoreDistance", 0);
+      new LoggedTunableNumber("AutoScore/L2ScoreDistance", 0.1);
   private static final LoggedTunableNumber l3ScoreDistance =
-      new LoggedTunableNumber("AutoScore/L3ScoreDistance", 0);
+      new LoggedTunableNumber("AutoScore/L3ScoreDistance", 0.1);
   private static final LoggedTunableNumber l4ScoreDistance =
-      new LoggedTunableNumber("AutoScore/L4ScoreDistance", 0.4);
+      new LoggedTunableNumber("AutoScore/L4ScoreDistance", 0.12);
 
   private AutoScoreCommands() {}
 
@@ -162,7 +162,8 @@ public class AutoScoreCommands {
           if (reefLevel.get() == ReefLevel.L1) {
             return AllianceFlipUtil.apply(getL1Pose(objective));
           }
-          Pose2d goalPose = getCoralScorePose(objective);
+          Pose2d goalPose =
+              getCoralScorePose(new CoralObjective(objective.branchId(), reefLevel.get()));
           Pose2d currentRobotPose = drivePoseSupplier.get();
           final double clearDistance =
               hasAlgae ? minDistanceReefClearAlgaeL4.get() : minDistanceReefClearL4.get();
@@ -238,7 +239,6 @@ public class AutoScoreCommands {
               Logger.recordOutput("AutoScore/ReefLevel", reefLevel.get().toString());
 
               // Clear logs
-              Logger.recordOutput("AutoScore/AllowReady", false);
               Logger.recordOutput("AutoScore/AllowEject", false);
             })
         .andThen(
@@ -258,7 +258,6 @@ public class AutoScoreCommands {
 
                   // Get back!
                   if (ready
-                      && (reefLevel.get() == ReefLevel.L4 || superstructure.hasAlgae())
                       && !disableReefAutoAlign.getAsBoolean()
                       && DriverStation.isTeleopEnabled()) {
                     needsToGetBack.value = true;
@@ -766,7 +765,7 @@ public class AutoScoreCommands {
           && Math.abs(error.getRotation().getDegrees()) <= l1ThetaEject.get();
     }
 
-    Pose2d targetScorePose = getCoralScorePose(objective);
+    Pose2d targetScorePose = getCoralScorePose(new CoralObjective(objective.branchId(), level));
     var errorInGoalFrame = flippedRobot.relativeTo(targetScorePose);
     double xError = errorInGoalFrame.getX();
     double yError = Math.abs(errorInGoalFrame.getY());
