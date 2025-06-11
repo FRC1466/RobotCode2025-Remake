@@ -244,9 +244,9 @@ public class RobotContainer {
    * edu.wpi.first.wpilibj2.command.button.JoystickButton}.
    */
   private void configureButtonBindings() {
-    DoubleSupplier driverX = () -> -controller.getLeftY();
-    DoubleSupplier driverY = () -> -controller.getLeftX();
-    DoubleSupplier driverOmega = () -> -controller.getRightX();
+    DoubleSupplier driverX = () -> -Math.pow(controller.getLeftY(), 3);
+    DoubleSupplier driverY = () -> -Math.pow(controller.getLeftX(), 3);
+    DoubleSupplier driverOmega = () -> -Math.pow(controller.getRightX(), 3);
 
     Supplier<Command> joystickDriveCommandFactory =
         () -> DriveCommands.joystickDrive(drive, driverX, driverY, driverOmega);
