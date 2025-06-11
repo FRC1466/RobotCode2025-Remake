@@ -104,9 +104,9 @@ public class AutoScoreCommands {
   private static final LoggedTunableNumber l1ThetaEject =
       new LoggedTunableNumber("AutoScore/L1ThetaToleranceEject", 5.0);
   private static final LoggedTunableNumber l4EjectDelay =
-      new LoggedTunableNumber("AutoScore/L4EjectDelay", 0.05);
+      new LoggedTunableNumber("AutoScore/L4EjectDelay", 0.5);
   private static final LoggedTunableNumber l4EjectDelayAuto =
-      new LoggedTunableNumber("AutoScore/L4EjectDelayAuto", 0.05);
+      new LoggedTunableNumber("AutoScore/L4EjectDelayAuto", 0.5);
   private static final LoggedTunableNumber l2ReefIntakeDistance =
       new LoggedTunableNumber("AutoScore/L2ReefIntakeDistance", 0);
   private static final LoggedTunableNumber l3ReefIntakeDistance =
@@ -296,17 +296,16 @@ public class AutoScoreCommands {
                                   && superstructure.atGoal()
                                   && !disableReefAutoAlign.getAsBoolean()
                               || manualEject.getAsBoolean());
-                      if (reefLevel.get() == ReefLevel.L4) {
-                        if (!ready) {
-                          l4EjectTimer.restart();
-                        }
-                        ready =
-                            ready
-                                && l4EjectTimer.hasElapsed(
-                                    DriverStation.isAutonomous()
-                                        ? l4EjectDelayAuto.get()
-                                        : l4EjectDelay.get());
+                      if (!ready) {
+                        l4EjectTimer.restart();
                       }
+                      ready =
+                          ready
+                              && l4EjectTimer.hasElapsed(
+                                  DriverStation.isAutonomous()
+                                      ? l4EjectDelayAuto.get()
+                                      : l4EjectDelay.get());
+
                       Logger.recordOutput("AutoScore/AllowEject", ready);
                       return ready;
                     },

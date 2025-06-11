@@ -63,12 +63,12 @@ public record SuperstructurePose(DoubleSupplier elevatorHeight, Supplier<Rotatio
   private static final LoggedTunableNumber l2Height =
       new LoggedTunableNumber("Superstructure/ReefScore/L2/Height", 0.3556);
   private static final LoggedTunableNumber l2Angle =
-      new LoggedTunableNumber("Superstructure/ReefScore/L2/Angle", .505);
+      new LoggedTunableNumber("Superstructure/ReefScore/L2/Angle", .7);
 
   private static final LoggedTunableNumber l3Height =
       new LoggedTunableNumber("Superstructure/ReefScore/L3/Height", 0.7620);
   private static final LoggedTunableNumber l3Angle =
-      new LoggedTunableNumber("Superstructure/ReefScore/L3/Angle", .505);
+      new LoggedTunableNumber("Superstructure/ReefScore/L3/Angle", .7);
 
   private static final LoggedTunableNumber l4Height =
       new LoggedTunableNumber("Superstructure/ReefScore/L4/Height", 1.6002);
@@ -78,21 +78,21 @@ public record SuperstructurePose(DoubleSupplier elevatorHeight, Supplier<Rotatio
   @Getter
   @RequiredArgsConstructor
   public enum CoralDispenserPose {
-    L1(ReefLevel.L1, l1Height, l1Angle),
-    L2(ReefLevel.L2, l2Height, l2Angle),
-    L3(ReefLevel.L3, l3Height, l3Angle),
-    L4(ReefLevel.L4, l4Height, l4Angle);
+    L1(ReefLevel.L1, l1Height.get(), l1Angle.get()),
+    L2(ReefLevel.L2, l2Height.get(), l2Angle.get()),
+    L3(ReefLevel.L3, l3Height.get(), l3Angle.get()),
+    L4(ReefLevel.L4, l4Height.get(), l4Angle.get());
 
     private final ReefLevel reefLevel;
-    private final LoggedTunableNumber heightSupplier;
-    private final LoggedTunableNumber angleSupplier;
+    private final double heightSupplier;
+    private final double angleSupplier;
 
     public double getElevatorHeight() {
-      return heightSupplier.get();
+      return heightSupplier;
     }
 
     public double getManipulatorAngleRad() {
-      return angleSupplier.get();
+      return angleSupplier;
     }
   }
 

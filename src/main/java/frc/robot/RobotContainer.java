@@ -246,7 +246,7 @@ public class RobotContainer {
   private void configureButtonBindings() {
     DoubleSupplier driverX = () -> -Math.pow(controller.getLeftY(), 3);
     DoubleSupplier driverY = () -> -Math.pow(controller.getLeftX(), 3);
-    DoubleSupplier driverOmega = () -> -Math.pow(controller.getRightX(), 3);
+    DoubleSupplier driverOmega = () -> -controller.getRightX();
 
     Supplier<Command> joystickDriveCommandFactory =
         () -> DriveCommands.joystickDrive(drive, driverX, driverY, driverOmega);
