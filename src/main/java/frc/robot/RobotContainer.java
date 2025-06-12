@@ -88,7 +88,7 @@ public class RobotContainer {
   // Controllers
   private static final CommandXboxController controller = new CommandXboxController(0);
   private final Trigger disableReefAutoAlign = new Trigger(() -> false);
-  private final Trigger disableCoralStationAutoAlign = new Trigger(() -> false);
+  private final Trigger disableCoralStationAutoAlign = new Trigger(() -> true);
   private final Trigger disableAlgaeScoreAutoAlign = new Trigger(() -> false);
 
   private final Alert driverDisconnected =
@@ -244,8 +244,8 @@ public class RobotContainer {
    * edu.wpi.first.wpilibj2.command.button.JoystickButton}.
    */
   private void configureButtonBindings() {
-    DoubleSupplier driverX = () -> -Math.pow(controller.getLeftY(), 3);
-    DoubleSupplier driverY = () -> -Math.pow(controller.getLeftX(), 3);
+    DoubleSupplier driverX = () -> -controller.getLeftY();
+    DoubleSupplier driverY = () -> -controller.getLeftX();
     DoubleSupplier driverOmega = () -> -controller.getRightX();
 
     Supplier<Command> joystickDriveCommandFactory =

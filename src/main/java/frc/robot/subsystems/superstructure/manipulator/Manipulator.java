@@ -108,7 +108,7 @@ public class Manipulator {
     new LoggedTunableNumber("Manipulator/Funnel/ALGAENET", 0),
   };
   public static final LoggedTunableNumber[] CORALINTAKE = {
-    new LoggedTunableNumber("Manipulator/Mailbox/CORALINTAKE", -1.75),
+    new LoggedTunableNumber("Manipulator/Mailbox/CORALINTAKE", -.75),
     new LoggedTunableNumber("Manipulator/Funnel/CORALINTAKE", -4),
   };
   public static final LoggedTunableNumber[] CORALL4GRIP = {
@@ -219,7 +219,7 @@ public class Manipulator {
 
   private static final double coralDebounceTime = 0.04;
   private static final double algaeDebounceTime = 0.6;
-  private Debouncer coralDebouncer = new Debouncer(coralDebounceTime, DebounceType.kRising);
+  private Debouncer coralDebouncer = new Debouncer(coralDebounceTime, DebounceType.kFalling);
   private Debouncer algaeDebouncer = new Debouncer(algaeDebounceTime, DebounceType.kBoth);
   private final SlewRateLimiter algaeCurrentFilter = new SlewRateLimiter(50);
 
@@ -459,10 +459,6 @@ public class Manipulator {
       } else {
         simIntakingTimer.restart();
       }
-      if (!isIntaking
-          && (mailboxGoal != MailboxGoal.IDLE && mailboxGoal != MailboxGoal.CORALL4GRIP)) {
-        hasCoral = false;
-      }
 
       if (isIntakingAlgae
           && ((Math.abs(algaeIntakingError.getX()) <= Units.inchesToMeters(24.0)
@@ -473,9 +469,14 @@ public class Manipulator {
       } else {
         simIntakingTimerAlgae.restart();
       }
-      if (!isIntakingAlgae && (mailboxGoal != MailboxGoal.ALGAEHOLD)) {
-        hasAlgae = false;
-      }
+    }
+
+    if (!isIntaking
+        && (mailboxGoal != MailboxGoal.IDLE && mailboxGoal != MailboxGoal.CORALL4GRIP)) {
+      hasCoral = false;
+    }
+    if (!isIntakingAlgae && (mailboxGoal != MailboxGoal.ALGAEHOLD)) {
+      hasAlgae = false;
     }
 
     // Update coral grabbed LEDs

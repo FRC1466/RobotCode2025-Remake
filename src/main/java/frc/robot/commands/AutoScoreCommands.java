@@ -137,7 +137,7 @@ public class AutoScoreCommands {
   private static final LoggedTunableNumber l3ScoreDistance =
       new LoggedTunableNumber("AutoScore/L3ScoreDistance", 0.1);
   private static final LoggedTunableNumber l4ScoreDistance =
-      new LoggedTunableNumber("AutoScore/L4ScoreDistance", 0.12);
+      new LoggedTunableNumber("AutoScore/L4ScoreDistance", 0.15);
 
   private AutoScoreCommands() {}
 
