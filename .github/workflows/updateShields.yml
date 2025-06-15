@@ -2,39 +2,48 @@ name: Generate Latest PR Badge
 
 on:
   schedule:
-    - cron: "0 * * * *"  # every hour
+    - cron: "0 * * * *"    # every hour on the hour
   workflow_dispatch:
 
 permissions:
-  contents: write  # needed to push changes
+  contents: write         # allow pushing the updated JSON
 
 jobs:
   badge:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0    # needed if you ever want full history
 
       - name: Fetch latest PR info
+        # GitHub CLI is preinstalled on ubuntu-latest
         run: |
-          pr=$(gh pr list --limit 1 --json number,title --jq '.[] | "#\(.number): \(.title)"')
-          echo "Latest PR: $pr"
+          # Grab the number and title of the single most-recent PR
+          pr=$(gh pr list --limit 1 --json number,title --jq -r '.[] | "#" + (.number|tostring) + ": " + .title')
+          echo "Latest PR is: $pr"
+
+          # Prepare output directory
           mkdir -p img
-          echo '{
+
+          # Emit valid shields.io JSON
+          cat <<EOF > img/latest-pr.json
+          {
             "schemaVersion": 1,
             "label": "latest PR",
-            "message": "'"$pr"'",
+            "message": "${pr}",
             "color": "blue"
-          }' > img/latest-pr.json
+          }
+          EOF
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Commit badge to img/ folder
+      - name: Commit and push badge JSON
         run: |
-          git config --global user.name 'github-actions'
-          git config --global user.email 'github-actions@users.noreply.github.com'
-          git pull
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add img/latest-pr.json
-          git commit -m "Update latest PR badge" || echo "No changes"
+          git diff --quiet --exit-code || git commit -m "chore: update latest PR badge"
           git push
