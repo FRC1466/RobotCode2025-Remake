@@ -1,0 +1,32 @@
+name: Generate Latest PR Badge
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"  # every 15 minutes
+  workflow_dispatch:
+
+jobs:
+  badge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Fetch latest PR info
+        run: |
+          pr=$(gh pr list --limit 1 --json number,title --jq '.[] | "#\(.number): \(.title)"')
+          echo "Latest PR: $pr"
+          echo '{
+            "schemaVersion": 1,
+            "label": "latest PR",
+            "message": "'"$pr"'",
+            "color": "blue"
+          }' > badge.json
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload badge artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: badge
+          path: badge.json
