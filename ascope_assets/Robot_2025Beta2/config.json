@@ -10,47 +10,83 @@
       "degrees": 90
     }
   ],
-  "position": [0, 0, -0.005],
+  "position": [
+    0,
+    0,
+    -0.005
+  ],
   "cameras": [
     {
       "name": "camera_FrontLeft",
-      "position": [0.267, 0.292, 0.2],
-      "resolution": [1280, 800],
+      "position": [
+        0.267,
+        0.292,
+        0.2
+      ],
+      "resolution": [
+        1280,
+        800
+      ],
       "fov": 70
     },
     {
       "name": "camera_FrontRight",
-      "position": [0.267, -0.292, 0.2],
-      "resolution": [1280, 800],
+      "position": [
+        0.267,
+        -0.292,
+        0.2
+      ],
+      "resolution": [
+        1280,
+        800
+      ],
       "fov": 70
     },
     {
       "name": "camera_BackLeft",
-      "position": [-0.267, 0.292, 0.2],
+      "position": [
+        -0.267,
+        0.292,
+        0.2
+      ],
       "rotations": [
         {
           "axis": "z",
           "degrees": 180
         }
       ],
-      "resolution": [1280, 800],
+      "resolution": [
+        1280,
+        800
+      ],
       "fov": 70
     },
     {
       "name": "camera_BackRight",
-      "position": [-0.267, -0.292, 0.2],
+      "position": [
+        -0.267,
+        -0.292,
+        0.2
+      ],
       "rotations": [
         {
           "axis": "z",
           "degrees": 180
         }
       ],
-      "resolution": [1280, 800],
+      "resolution": [
+        1280,
+        800
+      ],
       "fov": 70
     },
     {
       "name": "camera_testing",
-      "position": [0.267, 0.292, 0.2],
+      "position": [
+        0.267,
+        0.292,
+        0.2
+      ],
       "rotations": [
         {
           "axis": "x",
@@ -65,7 +101,10 @@
           "degrees": -40
         }
       ],
-      "resolution": [1280, 800],
+      "resolution": [
+        1280,
+        800
+      ],
       "fov": 70
     }
   ],
@@ -81,7 +120,11 @@
           "degrees": 90
         }
       ],
-      "zeroedPosition": [0, 0, -0.005]
+      "zeroedPosition": [
+        0,
+        0,
+        -0.005
+      ]
     },
     {
       "zeroedRotations": [
@@ -94,7 +137,11 @@
           "degrees": 90
         }
       ],
-      "zeroedPosition": [0, 0, -0.005]
+      "zeroedPosition": [
+        0,
+        0,
+        -0.005
+      ]
     },
     {
       "zeroedRotations": [
@@ -107,7 +154,11 @@
           "degrees": 90
         }
       ],
-      "zeroedPosition": [-0.28, -0.006, -0.37]
+      "zeroedPosition": [
+        -0.28,
+        -0.006,
+        -0.37
+      ]
     }
   ]
 }

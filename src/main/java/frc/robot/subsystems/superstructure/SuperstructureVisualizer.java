@@ -9,8 +9,10 @@ package frc.robot.subsystems.superstructure;
 
 import static frc.robot.subsystems.superstructure.SuperstructureConstants.*;
 
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.util.Color;
@@ -18,134 +20,158 @@ import edu.wpi.first.wpilibj.util.Color8Bit;
 import frc.robot.Constants;
 import frc.robot.Constants.Mode;
 import frc.robot.util.EqualsUtil;
-import frc.robot.util.LoggedTunableNumber;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.mechanism.LoggedMechanism2d;
 import org.littletonrobotics.junction.mechanism.LoggedMechanismLigament2d;
 import org.littletonrobotics.junction.mechanism.LoggedMechanismRoot2d;
 
 public class SuperstructureVisualizer {
+  private static final double minElevatorVizLengthMeters = Units.inchesToMeters(1.0);
+  private static final double elevatorMechanismWidthMeters = Units.inchesToMeters(28.0);
+  private static final double elevatorMechanismHeightMeters = Units.feetToMeters(7.0);
+  private static final double elevatorLigamentDefaultLengthMeters = Units.inchesToMeters(26.0);
+  private static final double elevatorLigamentLineWidth = 4.0;
+  private static final double angleMechanismSize = 1.0;
+  private static final double angleLigamentLength = 0.4;
+  private static final double angleLigamentLineWidth = 3.0;
+
   private final String name;
-  private final LoggedMechanism2d mechanism =
-      new LoggedMechanism2d(
-          Units.inchesToMeters(28.0), Units.feetToMeters(7.0), new Color8Bit(Color.kDarkGray));
-  private final LoggedMechanismLigament2d elevatorMechanism;
-
-  private final LoggedTunableNumber angleOffset =
-      new LoggedTunableNumber("Superstructure/Visualizer/AngleOffset", 10);
-
-  private final LoggedTunableNumber angleMultiplier =
-      new LoggedTunableNumber("Superstructure/Visualizer/AngleMultiplier", -1);
-
-  // Tunable numbers for 3D mechanism visualization
-  private final LoggedTunableNumber comp1MaxHeight =
-      new LoggedTunableNumber("Superstructure/Visualizer/Comp1MaxHeight", 0.925);
-  private final LoggedTunableNumber comp2HeightMultiplier =
-      new LoggedTunableNumber("Superstructure/Visualizer/Comp2HeightMultiplier", 0.5);
-  private final LoggedTunableNumber comp3XOffset =
-      new LoggedTunableNumber("Superstructure/Visualizer/Comp3XOffset", 0.28);
-  private final LoggedTunableNumber comp3ZOffset =
-      new LoggedTunableNumber("Superstructure/Visualizer/Comp3ZOffset", 0.365);
-  private final LoggedTunableNumber comp3YOffset =
-      new LoggedTunableNumber("Superstructure/Visualizer/Comp3YOffset", 0);
-  private final LoggedTunableNumber comp3YRotOffset =
-      new LoggedTunableNumber("Superstructure/Visualizer/Comp3YRotOffset", -28.934369);
-  private final LoggedTunableNumber armAngleMultiplier =
-      new LoggedTunableNumber("Superstructure/Visualizer/ArmAngleMultiplier", 1);
-
-  // New angle visualization mechanism
-  private final LoggedMechanism2d angleMechanism =
-      new LoggedMechanism2d(1.0, 1.0, new Color8Bit(Color.kDarkGray));
+  private final LoggedMechanism2d elevatorMechanism2d;
+  private final LoggedMechanismLigament2d elevatorLigament;
+  private final LoggedMechanism2d angleMechanism2d;
   private final LoggedMechanismLigament2d angleLigament;
 
   public SuperstructureVisualizer(String name) {
     this.name = name;
 
-    LoggedMechanismRoot2d root =
-        mechanism.getRoot(
-            name + " Root", superstructureOrigin2d.getX(), superstructureOrigin2d.getY());
-    elevatorMechanism =
-        root.append(
+    this.elevatorMechanism2d =
+        new LoggedMechanism2d(
+            elevatorMechanismWidthMeters,
+            elevatorMechanismHeightMeters,
+            new Color8Bit(Color.kDarkGray));
+    LoggedMechanismRoot2d elevatorRoot =
+        elevatorMechanism2d.getRoot(
+            name + "Root", superstructureOrigin2d.getX(), superstructureOrigin2d.getY());
+    this.elevatorLigament =
+        elevatorRoot.append(
             new LoggedMechanismLigament2d(
-                name + " Elevator",
-                Units.inchesToMeters(26.0),
+                name + "Elevator",
+                elevatorLigamentDefaultLengthMeters,
                 elevatorAngle.getDegrees(),
-                4.0,
+                elevatorLigamentLineWidth,
                 new Color8Bit(Color.kFirstBlue)));
 
-    // Initialize the angle mechanism
-    LoggedMechanismRoot2d angleRoot = angleMechanism.getRoot(name + " Angle Root", 0.5, 0.5);
-    angleLigament =
+    this.angleMechanism2d =
+        new LoggedMechanism2d(
+            angleMechanismSize, angleMechanismSize, new Color8Bit(Color.kDarkGray));
+    LoggedMechanismRoot2d angleRoot =
+        angleMechanism2d.getRoot(
+            name + "AngleRoot", angleMechanismSize / 2, angleMechanismSize / 2);
+    this.angleLigament =
         angleRoot.append(
             new LoggedMechanismLigament2d(
-                name + " Angle",
-                0.4, // Fixed length for visualization
-                0.0, // Initial angle (will be updated)
-                3.0, // Line width
+                name + "Angle",
+                angleLigamentLength,
+                0.0,
+                angleLigamentLineWidth,
                 new Color8Bit(Color.kFirstRed)));
   }
 
-  public void update(double elevatorHeightMeters) {
+  public void update(
+      double elevatorHeightMeters,
+      double armAngleRadians,
+      boolean hasCoral,
+      boolean hasAlgae,
+      Pose2d robotPose) {
     if (Constants.getMode() != Mode.REAL) {
-      elevatorMechanism.setLength(
-          EqualsUtil.epsilonEquals(elevatorHeightMeters, 0.0)
-              ? Units.inchesToMeters(1.0)
-              : elevatorHeightMeters);
-      Logger.recordOutput("Mechanism2d/" + name, mechanism);
+      updateElevator2dVisuals(elevatorHeightMeters);
+      updateAngle2dVisuals(armAngleRadians);
     }
+    update3dVisuals(elevatorHeightMeters, armAngleRadians, hasAlgae, hasCoral, robotPose);
   }
 
-  /**
-   * Updates the angle visualization.
-   *
-   * @param angleRadians The angle in radians to visualize
-   */
-  public void updateAngle(double angleRadians) {
-    if (Constants.getMode() != Mode.REAL) {
-      // Convert radians to degrees for the mechanism visualization
-      angleLigament.setAngle(
-          (Units.radiansToDegrees(angleRadians) + angleOffset.getAsDouble())
-              * Math.signum(angleMultiplier.getAsDouble()));
-      Logger.recordOutput("Mechanism2d/" + name + " Angle", angleMechanism);
-    }
+  private void updateElevator2dVisuals(double elevatorHeightMeters) {
+    elevatorLigament.setLength(
+        EqualsUtil.epsilonEquals(elevatorHeightMeters, 0.0)
+            ? minElevatorVizLengthMeters
+            : elevatorHeightMeters);
+    Logger.recordOutput("Mechanism2d/" + name + "Elevator", elevatorMechanism2d);
   }
 
-  /**
-   * Updates both the elevator height and angle visualization, and logs 3D component poses.
-   *
-   * @param elevatorHeightMeters The height of the elevator in meters
-   * @param angleRadians The angle in radians to visualize
-   */
-  public void update(double elevatorHeightMeters, double angleRadians) {
-    update(elevatorHeightMeters);
-    updateAngle(angleRadians);
+  private void updateAngle2dVisuals(double armAngleRadians) {
+    double angleDegrees = Units.radiansToDegrees(armAngleRadians);
+    angleLigament.setAngle((angleDegrees + 10.0) * -1.0);
+    Logger.recordOutput("Mechanism2d/" + name + "Angle", angleMechanism2d);
+  }
 
-    // 3D component visualization using tunable numbers
-    double totalMaxHeight = comp1MaxHeight.getAsDouble() + comp2HeightMultiplier.getAsDouble();
-    double heightRatio = elevatorHeightMeters / totalMaxHeight;
+  private void update3dVisuals(
+      double elevatorHeightMeters,
+      double armAngleRadians,
+      boolean hasAlgae,
+      boolean hasCoral,
+      Pose2d robotPose) {
+    double totalVisualMaxHeight = 0.925 + 0.5;
+    double heightRatio =
+        totalVisualMaxHeight == 0 ? 0 : elevatorHeightMeters / totalVisualMaxHeight;
 
-    double comp1Height =
-        Math.min(heightRatio * comp1MaxHeight.getAsDouble(), comp1MaxHeight.getAsDouble());
-    double comp2Height = comp1Height + (heightRatio * comp2HeightMultiplier.getAsDouble());
+    double comp1VisualHeight = Math.min(heightRatio * 0.925, 0.925);
+    double comp2VisualHeight = comp1VisualHeight + (heightRatio * 0.5);
 
-    double armAngleDegrees =
-        armAngleMultiplier.getAsDouble() * Units.radiansToDegrees(angleRadians);
+    double armVisualAngleDegrees = 1.0 * Units.radiansToDegrees(armAngleRadians);
 
-    Pose3d component1Pose = new Pose3d(new Translation3d(0, 0, comp1Height), new Rotation3d());
-    Pose3d component2Pose = new Pose3d(new Translation3d(0, 0, comp2Height), new Rotation3d());
+    Pose3d component1Pose =
+        new Pose3d(new Translation3d(0, 0, comp1VisualHeight), new Rotation3d());
+    Pose3d component2Pose =
+        new Pose3d(new Translation3d(0, 0, comp2VisualHeight), new Rotation3d());
     Pose3d component3Pose =
         new Pose3d(
-            new Translation3d(
-                comp3XOffset.getAsDouble(),
-                comp3YOffset.getAsDouble(),
-                comp2Height + comp3ZOffset.getAsDouble()),
-            new Rotation3d(
-                0,
-                Units.degreesToRadians(armAngleDegrees)
-                    + Units.degreesToRadians(comp3YRotOffset.getAsDouble()),
-                0));
+            new Translation3d(0.28, 0.0, comp2VisualHeight + 0.365),
+            new Rotation3d(0, Units.degreesToRadians(armVisualAngleDegrees + -28.934369), 0));
 
-    Pose3d[] componentPoses = new Pose3d[] {component1Pose, component2Pose, component3Pose};
-    Logger.recordOutput("Mechanism3d/" + name + "/Components", componentPoses);
+    Logger.recordOutput(
+        "Mechanism3d/" + name + "/Components", component1Pose, component2Pose, component3Pose);
+
+    // Handle algae visualization
+    if (hasAlgae) {
+      Logger.recordOutput(
+          "Mechanism3d/" + name + "/Algae",
+          new Translation3d[] {
+            new Pose3d(robotPose)
+                .transformBy(new Transform3d(Pose3d.kZero, component3Pose))
+                .transformBy(
+                    new Transform3d(
+                        -0.22,
+                        0.0,
+                        0.13,
+                        new Rotation3d(
+                            Units.degreesToRadians(0.0),
+                            Units.degreesToRadians(0.0),
+                            Units.degreesToRadians(0.0))))
+                .getTranslation()
+          });
+    } else {
+      Logger.recordOutput("Mechanism3d/" + name + "/Algae", new Translation3d[] {});
+    }
+
+    // Handle coral visualization
+    if (hasCoral) {
+      Logger.recordOutput(
+          "Mechanism3d/" + name + "/Coral",
+          new Pose3d[] {
+            new Pose3d(robotPose)
+                .transformBy(new Transform3d(Pose3d.kZero, component3Pose))
+                .transformBy(
+                    new Transform3d(
+                        0.0,
+                        0.0,
+                        0.3,
+                        new Rotation3d(
+                            Units.degreesToRadians(0.0),
+                            Units.degreesToRadians(40.107),
+                            Units.degreesToRadians(0.0))))
+          });
+    } else {
+      Logger.recordOutput("Mechanism3d/" + name + "/Coral", new Pose3d[] {});
+    }
   }
 }

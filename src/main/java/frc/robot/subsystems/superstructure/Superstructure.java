@@ -58,6 +58,7 @@ public class Superstructure extends SubsystemBase {
 
   private final Elevator elevator;
   private final Manipulator manipulator;
+  private final Drive drive;
 
   private final Graph<SuperstructureState, EdgeCommand> graph =
       new DefaultDirectedGraph<>(EdgeCommand.class);
@@ -95,6 +96,7 @@ public class Superstructure extends SubsystemBase {
   public Superstructure(Elevator elevator, Manipulator manipulator, Drive drive) {
     this.elevator = elevator;
     this.manipulator = manipulator;
+    this.drive = drive;
 
     this.measuredVisualizer = new SuperstructureVisualizer("Measured");
     this.setpointVisualizer = new SuperstructureVisualizer("Setpoint");
@@ -474,9 +476,23 @@ public class Superstructure extends SubsystemBase {
 
     // Update visualizer
     measuredVisualizer.update(
-        elevator.getPositionMeters(), manipulator.getPivotAngle().getRadians());
-    setpointVisualizer.update(elevator.getSetpoint().position, manipulator.getSetpoint().position);
-    goalVisualizer.update(elevator.getGoalMeters(), manipulator.getGoal());
+        elevator.getPositionMeters(),
+        manipulator.getPivotAngle().getRadians(),
+        hasCoral(),
+        hasAlgae(),
+        drive.getPose());
+    setpointVisualizer.update(
+        elevator.getPositionMeters(),
+        manipulator.getPivotAngle().getRadians(),
+        hasCoral(),
+        hasAlgae(),
+        drive.getPose());
+    goalVisualizer.update(
+        elevator.getPositionMeters(),
+        manipulator.getPivotAngle().getRadians(),
+        hasCoral(),
+        hasAlgae(),
+        drive.getPose());
 
     // Record cycle time
     LoggedTracer.record("Superstructure");
