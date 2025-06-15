@@ -2,11 +2,11 @@ name: Generate Latest PR Badge
 
 on:
   schedule:
-    - cron: "0 * * * *"    # every hour on the hour
+    - cron: "0 * * * *"    # every hour
   workflow_dispatch:
 
 permissions:
-  contents: write         # allow pushing the updated JSON
+  contents: write
 
 jobs:
   badge:
@@ -16,19 +16,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0    # needed if you ever want full history
+          fetch-depth: 0
 
       - name: Fetch latest PR info
-        # GitHub CLI is preinstalled on ubuntu-latest
         run: |
-          # Grab the number and title of the single most-recent PR
-          pr=$(gh pr list --limit 1 --json number,title --jq -r '.[] | "#" + (.number|tostring) + ": " + .title')
+          pr=$(gh pr list --limit 1 --state open --json number,title \
+               --template '#{{.number}}: {{.title}}')
           echo "Latest PR is: $pr"
 
-          # Prepare output directory
           mkdir -p img
-
-          # Emit valid shields.io JSON
           cat <<EOF > img/latest-pr.json
           {
             "schemaVersion": 1,
