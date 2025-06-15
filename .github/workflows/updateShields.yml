@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: read
 
 jobs:
   badge:
@@ -14,32 +15,70 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Fetch latest PR info
+      - name: Fetch latest PR info and generate badge
         run: |
-          pr=$(gh pr list --limit 1 --state open --json number,title \
-               --template '#{{.number}}: {{.title}}')
-          echo "Latest PR is: $pr"
+          # Check if there are any open PRs
+          pr_count=$(gh pr list --state open --json number | jq length)
+          
+          if [ "$pr_count" -eq 0 ]; then
+            echo "No open PRs found"
+            pr_message="No open PRs"
+            pr_color="lightgrey"
+          else
+            # Get the latest PR info
+            pr_data=$(gh pr list --limit 1 --state open --json number,title)
+            pr_number=$(echo "$pr_data" | jq -r '.[0].number')
+            pr_title=$(echo "$pr_data" | jq -r '.[0].title')
+            
+            # Escape special characters for JSON
+            pr_title_escaped=$(echo "$pr_title" | sed 's/"/\\"/g' | sed 's/\\/\\\\/g')
+            pr_message="#${pr_number}: ${pr_title_escaped}"
+            pr_color="blue"
+            
+            echo "Latest PR: $pr_message"
+          fi
 
+          # Create the img directory if it doesn't exist
           mkdir -p img
-          cat <<EOF > img/latest-pr.json
-          {
-            "schemaVersion": 1,
-            "label": "latest PR",
-            "message": "${pr}",
-            "color": "blue"
-          }
-          EOF
+
+          # Generate the badge JSON with proper escaping
+          cat > img/latest-pr.json << EOF
+{
+  "schemaVersion": 1,
+  "label": "latest PR",
+  "message": "${pr_message}",
+  "color": "${pr_color}"
+}
+EOF
+
+          echo "Generated badge JSON:"
+          cat img/latest-pr.json
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Commit and push badge JSON
+      - name: Check for changes
+        id: changes
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add img/latest-pr.json
-          git diff --quiet --exit-code || git commit -m "chore: update latest PR badge"
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "Changes detected"
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push badge JSON
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore: update latest PR badge [skip ci]"
           git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
