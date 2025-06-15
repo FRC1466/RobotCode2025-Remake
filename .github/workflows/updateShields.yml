@@ -2,8 +2,11 @@ name: Generate Latest PR Badge
 
 on:
   schedule:
-    - cron: "0 * * * *"  # every hour on the hour
+    - cron: "0 * * * *"  # every hour
   workflow_dispatch:
+
+permissions:
+  contents: write  # needed to push changes
 
 jobs:
   badge:
@@ -27,9 +30,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload badge.json to img/
-        uses: actions/upload-artifact@v4
-        with:
-          name: img
-          path: img/latest-pr.json
-          if-no-files-found: error
+      - name: Commit badge to img/ folder
+        run: |
+          git config --global user.name 'github-actions'
+          git config --global user.email 'github-actions@users.noreply.github.com'
+          git pull
+          git add img/latest-pr.json
+          git commit -m "Update latest PR badge" || echo "No changes"
+          git push
