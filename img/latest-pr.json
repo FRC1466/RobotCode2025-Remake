@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "label": "latest PR",
-  "message": "No open PRs",
-  "color": "lightgrey"
+  "label": "latest closed PR",
+  "message": "#6: Elevator testing",
+  "color": "green"
 }
