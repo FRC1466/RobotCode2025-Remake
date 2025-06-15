@@ -47,14 +47,14 @@ jobs:
           mkdir -p img
 
           # Generate the badge JSON with proper escaping
-          cat > img/latest-pr.json << EOF
-{
-  "schemaVersion": 1,
-  "label": "latest PR",
-  "message": "${pr_message}",
-  "color": "${pr_color}"
-}
-EOF
+          cat > img/latest-pr.json <<EOF
+          {
+            "schemaVersion": 1,
+            "label": "latest PR",
+            "message": "${pr_message}",
+            "color": "${pr_color}"
+          }
+          EOF
 
           echo "Generated badge JSON:"
           cat img/latest-pr.json
