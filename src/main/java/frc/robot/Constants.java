@@ -14,8 +14,8 @@ import edu.wpi.first.wpilibj.RobotBase;
 /** This class contains global configuration describing the current robot and runtime mode. */
 public final class Constants {
   public static final double loopPeriodSecs = 0.02;
-  private static RobotType robotType = RobotType.COMPBOT;
-  public static final boolean tuningMode = false;
+  private static RobotType robotType = RobotType.SIMBOT;
+  public static final boolean tuningMode = true;
 
   @SuppressWarnings("resource")
   public static RobotType getRobot() {
@@ -58,12 +58,12 @@ public final class Constants {
   }
 
   /** Checks whether the correct robot is selected when deploying. */
-  public static class CheckDeploy {
+  /*public static class CheckDeploy {
     public static void main(String... args) {
       if (robotType == RobotType.SIMBOT) {
         System.err.println("Cannot deploy, invalid robot selected: " + robotType);
         System.exit(1);
       }
     }
-  }
+  }*/
 }

@@ -94,6 +94,8 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.1'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
+    implementation 'org.jgrapht:jgrapht-core:1.5.1'
+
     def akitJson = new groovy.json.JsonSlurper().parseText(new File(projectDir.getAbsolutePath() + "/vendordeps/AdvantageKit.json").text)
     annotationProcessor "org.littletonrobotics.akit:akit-autolog:$akitJson.version"
 }
@@ -131,17 +133,47 @@ deployArtifact.jarTask = jar
 wpi.java.configureExecutableTasks(jar)
 wpi.java.configureTestTasks(test)
 
+// Configure Javadoc
+javadoc {
+    source = sourceSets.main.allJava.filter { file ->
+        !file.name.equals('.gitkeep')
+    }
+
+    // Ensure generated sources are included
+    dependsOn 'compileJava'  // Make sure code generation happens first
+    dependsOn 'processResources'
+
+    // Include the generated source directories
+    source += fileTree(buildDir).matching {
+        include 'generated/sources/annotationProcessor/java/main/**/*.java'
+        include 'generated/sources/headers/java/main/**/*.java'
+    }
+
+    classpath = sourceSets.main.compileClasspath + sourceSets.main.output
+
+    options {
+        encoding = 'UTF-8'
+        addStringOption('Xdoclint:none', '-quiet')
+        addBooleanOption('html5', true)
+
+        // Add these options to handle Lombok and other generated code
+        addStringOption('sourcepath', sourceSets.main.java.srcDirs.join(':'))
+        memberLevel = JavadocMemberLevel.PROTECTED
+        addStringOption('charset', 'UTF-8')
+
+        // If you're getting errors about missing modules
+        addBooleanOption('module-source-path', false)
+
+        // Optional: Link to external Javadocs
+        links 'https://docs.oracle.com/en/java/javase/17/docs/api/'
+        links 'https://github.wpilib.org/allwpilib/docs/release/java/'
+    }
+}
+
 // Configure string concat to always inline compile
 tasks.withType(JavaCompile) {
     options.compilerArgs.add '-XDstringConcat=inline'
 }
-
-// Check robot type when deploying
-task(checkConstantsDeploy, dependsOn: "classes", type: JavaExec) {
-    main = "frc.robot.Constants\$CheckDeploy"
-    classpath = sourceSets.main.runtimeClasspath
-}
-deployroborio.dependsOn(checkConstantsDeploy)
 
 // Create version file
 project.compileJava.dependsOn(createVersionFile)

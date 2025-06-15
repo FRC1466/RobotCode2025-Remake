@@ -18,7 +18,7 @@ import edu.wpi.first.math.util.Units;
 import frc.robot.FieldConstants;
 import frc.robot.FieldConstants.Reef;
 import frc.robot.subsystems.drive.Drive;
-import frc.robot.util.FlipField;
+import frc.robot.util.AllianceFlipUtil;
 import frc.robot.util.GeomUtil;
 import frc.robot.util.LoggedTunableNumber;
 import java.util.ArrayList;
@@ -35,7 +35,7 @@ public class DriveToStation extends DriveToPose {
   private static final LoggedTunableNumber horizontalMaxOffset =
       new LoggedTunableNumber(
           "DriveToStation/HorizontalMaxOffset",
-          FieldConstants.CoralStation.stationLength / 2 - Units.inchesToMeters(22));
+          FieldConstants.CoralStation.stationLength / 2 - Units.inchesToMeters(25));
   private static final LoggedTunableNumber autoOffset =
       new LoggedTunableNumber(
           "DriveToStation/AutoOffset",
@@ -56,7 +56,7 @@ public class DriveToStation extends DriveToPose {
         () ->
             DriveCommands.getLinearVelocityFromJoysticks(
                     driverX.getAsDouble(), driverY.getAsDouble())
-                .times(FlipField.shouldFlip() ? -1.0 : 1.0),
+                .times(AllianceFlipUtil.shouldFlip() ? -1.0 : 1.0),
         () ->
             Math.copySign(
                 Math.pow(MathUtil.applyDeadband(driverOmega.getAsDouble(), DEADBAND), 2.0),
@@ -69,7 +69,7 @@ public class DriveToStation extends DriveToPose {
     super(
         drive,
         () -> {
-          Pose2d robot = FlipField.apply(drive.getPose());
+          Pose2d robot = AllianceFlipUtil.apply(drive.getPose());
           List<Pose2d> finalPoses = new ArrayList<>();
           for (Pose2d stationCenter :
               new Pose2d[] {
@@ -90,8 +90,8 @@ public class DriveToStation extends DriveToPose {
 
             finalPoses.add(stationCenter.transformBy(offset));
           }
-          Pose2d intakePose = FlipField.apply(robot.nearest(finalPoses));
-          robot = FlipField.apply(robot);
+          Pose2d intakePose = AllianceFlipUtil.apply(robot.nearest(finalPoses));
+          robot = AllianceFlipUtil.apply(robot);
           Pose2d goal;
           if (withinDistanceToReef(robot, 0.35)) {
             final double yError = intakePose.relativeTo(robot).getY();
@@ -110,9 +110,10 @@ public class DriveToStation extends DriveToPose {
             goal = intakePose;
           }
 
-          Logger.recordOutput("DriveToStation/LeftClosestPose", FlipField.apply(finalPoses.get(0)));
           Logger.recordOutput(
-              "DriveToStation/RightClosestPose", FlipField.apply(finalPoses.get(1)));
+              "DriveToStation/LeftClosestPose", AllianceFlipUtil.apply(finalPoses.get(0)));
+          Logger.recordOutput(
+              "DriveToStation/RightClosestPose", AllianceFlipUtil.apply(finalPoses.get(1)));
           return goal;
         },
         drive::getPose,
@@ -124,8 +125,8 @@ public class DriveToStation extends DriveToPose {
 
   public static boolean withinDistanceToReef(Pose2d robot, double distance) {
     final double distanceToReefCenter =
-        FlipField.apply(robot).getTranslation().getDistance(Reef.center);
-    Logger.recordOutput("AutoScore/DistanceToReefCenter", distanceToReefCenter);
+        AllianceFlipUtil.apply(robot).getTranslation().getDistance(Reef.center);
+    Logger.recordOutput("DriveToScore/DistanceToReefCenter", distanceToReefCenter);
     return distanceToReefCenter <= reefRadius + Drive.DRIVE_BASE_LENGTH / 2.0 + distance;
   }
 }

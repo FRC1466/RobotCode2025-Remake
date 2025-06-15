@@ -33,6 +33,7 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.system.plant.DCMotor;
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -42,7 +43,13 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.Constants;
 import frc.robot.Constants.Mode;
+import frc.robot.FieldConstants;
+import frc.robot.FieldConstants.CoralObjective;
+import frc.robot.FieldConstants.IceCreamObjective;
+import frc.robot.FieldConstants.Reef;
+import frc.robot.FieldConstants.ReefLevel;
 import frc.robot.generated.TunerConstants;
+import frc.robot.util.AllianceFlipUtil;
 import frc.robot.util.LocalADStarAK;
 import frc.robot.util.LoggedTracer;
 import java.util.concurrent.locks.Lock;
@@ -58,6 +65,11 @@ public class Drive extends SubsystemBase {
       Math.abs(TunerConstants.FrontLeft.LocationX - TunerConstants.BackLeft.LocationX);
   public static final double DRIVE_BASE_WIDTH =
       Math.abs(TunerConstants.FrontLeft.LocationY - TunerConstants.FrontRight.LocationY);
+
+  /** Includes bumpers! */
+  public static final double robotWidth =
+      Units.inchesToMeters(28.0) + 2 * Units.inchesToMeters(2.0);
+
   public static final double DRIVE_BASE_RADIUS =
       Math.max(
           Math.max(
@@ -93,9 +105,10 @@ public class Drive extends SubsystemBase {
   private final Alert gyroDisconnectedAlert =
       new Alert("Disconnected gyro, using kinematics as fallback.", AlertType.kError);
 
-  private SwerveDriveKinematics kinematics = new SwerveDriveKinematics(getModuleTranslations());
-  private Rotation2d rawGyroRotation = new Rotation2d();
-  private SwerveModulePosition[] lastModulePositions = // For delta tracking
+  private static SwerveDriveKinematics kinematics =
+      new SwerveDriveKinematics(getModuleTranslations());
+  private static Rotation2d rawGyroRotation = new Rotation2d();
+  private static SwerveModulePosition[] lastModulePositions = // For delta tracking
       new SwerveModulePosition[] {
         new SwerveModulePosition(),
         new SwerveModulePosition(),
@@ -327,6 +340,12 @@ public class Drive extends SubsystemBase {
     return poseEstimator.getEstimatedPosition();
   }
 
+  /** Returns the current odometry pose on the blue side. */
+  @AutoLogOutput(key = "Odometry/FlippedRobot")
+  public Pose2d getFlippedPose() {
+    return AllianceFlipUtil.apply(poseEstimator.getEstimatedPosition());
+  }
+
   /** Returns the current odometry rotation. */
   public Rotation2d getRotation() {
     return getPose().getRotation();
@@ -364,5 +383,41 @@ public class Drive extends SubsystemBase {
       new Translation2d(TunerConstants.BackLeft.LocationX, TunerConstants.BackLeft.LocationY),
       new Translation2d(TunerConstants.BackRight.LocationX, TunerConstants.BackRight.LocationY)
     };
+  }
+
+  public CoralObjective getClosestCoralObjective() {
+    Pose2d robotPose = AllianceFlipUtil.apply(getPose());
+    CoralObjective closest = null;
+    double minDist = Double.POSITIVE_INFINITY;
+    for (int branchId = 0; branchId < Reef.branchPositions.size(); branchId++) {
+      for (ReefLevel level : ReefLevel.values()) {
+        var poseMap = Reef.branchPositions.get(branchId);
+        if (!poseMap.containsKey(level)) continue;
+        Pose2d branchPose = poseMap.get(level).toPose2d();
+        double dist = robotPose.getTranslation().getDistance(branchPose.getTranslation());
+        if (dist < minDist) {
+          minDist = dist;
+          closest = new CoralObjective(branchId, level);
+        }
+      }
+    }
+    return closest;
+  }
+
+  public IceCreamObjective getClosestIceCream() {
+    Pose2d robotPose = AllianceFlipUtil.apply(getPose());
+    IceCreamObjective closest = null;
+    double minDist = Double.POSITIVE_INFINITY;
+    for (int iceCreamID = 1;
+        iceCreamID < FieldConstants.iceCreamPositions.size() + 1;
+        iceCreamID++) {
+      Pose2d iceCreamPose = FieldConstants.iceCreamPositions.get(new IceCreamObjective(iceCreamID));
+      double dist = robotPose.getTranslation().getDistance(iceCreamPose.getTranslation());
+      if (dist < minDist) {
+        minDist = dist;
+        closest = new IceCreamObjective(iceCreamID);
+      }
+    }
+    return closest;
   }
 }
