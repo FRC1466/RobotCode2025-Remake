@@ -22,25 +22,25 @@ jobs:
 
       - name: Fetch latest PR info and generate badge
         run: |
-          # Check if there are any open PRs
-          pr_count=$(gh pr list --state open --json number | jq length)
+          # Check if there are any closed PRs
+          pr_count=$(gh pr list --state closed --json number | jq length)
           
           if [ "$pr_count" -eq 0 ]; then
-            echo "No open PRs found"
-            pr_message="No open PRs"
+            echo "No closed PRs found"
+            pr_message="No closed PRs"
             pr_color="lightgrey"
           else
-            # Get the latest PR info
-            pr_data=$(gh pr list --limit 1 --state open --json number,title)
+            # Get the latest closed PR info
+            pr_data=$(gh pr list --limit 1 --state closed --json number,title)
             pr_number=$(echo "$pr_data" | jq -r '.[0].number')
             pr_title=$(echo "$pr_data" | jq -r '.[0].title')
             
             # Escape special characters for JSON
             pr_title_escaped=$(echo "$pr_title" | sed 's/"/\\"/g' | sed 's/\\/\\\\/g')
             pr_message="#${pr_number}: ${pr_title_escaped}"
-            pr_color="blue"
+            pr_color="green"
             
-            echo "Latest PR: $pr_message"
+            echo "Latest closed PR: $pr_message"
           fi
 
           # Create the img directory if it doesn't exist
@@ -50,7 +50,7 @@ jobs:
           cat > img/latest-pr.json <<EOF
           {
             "schemaVersion": 1,
-            "label": "latest PR",
+            "label": "latest closed PR",
             "message": "${pr_message}",
             "color": "${pr_color}"
           }
