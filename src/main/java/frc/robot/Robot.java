@@ -32,6 +32,7 @@ import frc.robot.util.DummyLogReceiver;
 import frc.robot.util.LoggedTracer;
 import frc.robot.util.NTClientLogger;
 import frc.robot.util.PhoenixUtil;
+import frc.robot.util.VirtualSubsystem;
 import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
@@ -228,6 +229,9 @@ public class Robot extends LoggedRobot {
     LoggedTracer.reset();
     PhoenixUtil.refreshAll();
     LoggedTracer.record("PhoenixRefresh");
+
+    // Run virtual subsystems
+    VirtualSubsystem.periodicAll();
 
     CommandScheduler.getInstance().run();
     LoggedTracer.record("Commands");
