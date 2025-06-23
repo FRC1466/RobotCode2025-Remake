@@ -24,7 +24,7 @@ import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.*;
 import frc.robot.util.PhoenixUtil;
-
+@SuppressWarnings("unused")
 public class ElevatorIOTalonFX implements ElevatorIO {
   // Hardware
   private final TalonFX talon;
@@ -49,11 +49,8 @@ public class ElevatorIOTalonFX implements ElevatorIO {
   private final Debouncer followerConnectedDebouncer = new Debouncer(0.5);
 
   private final VoltageOut torqueCurrentRequest = new VoltageOut(0.0).withUpdateFreqHz(0.0);
-
-  @SuppressWarnings("unused")
   private final PositionTorqueCurrentFOC positionTorqueCurrentRequest =
       new PositionTorqueCurrentFOC(0.0).withUpdateFreqHz(0.0);
-
   private final VoltageOut voltageRequest = new VoltageOut(0.0).withUpdateFreqHz(0.0);
   private final PositionVoltage positionVoltageRequest =
       new PositionVoltage(0.0).withUpdateFreqHz(0.0);
