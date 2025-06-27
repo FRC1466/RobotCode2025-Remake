@@ -204,7 +204,7 @@ public class Superstructure extends SubsystemBase {
                     .andThen(
                         Commands.waitUntil(
                             () -> {
-                              double interpolationFactor = 0.6;
+                              double interpolationFactor = 0.9;
                               double preThrowPivotAngleRad =
                                   SuperstructureState.PRE_THROW
                                       .getValue()

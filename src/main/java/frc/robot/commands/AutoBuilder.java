@@ -44,7 +44,7 @@ public class AutoBuilder {
   private static final LoggedTunableNumber scoreCancelSecs =
       new LoggedTunableNumber("AutoBuilder/ScoreCancelSeconds", 6);
   private static final LoggedTunableNumber intakeTimeSecs =
-      new LoggedTunableNumber("AutoBuilder/IntakeTimeSecs", 1);
+      new LoggedTunableNumber("AutoBuilder/IntakeTimeSecs", 5);
 
   private final Drive drive;
   private final Superstructure superstructure;

@@ -88,7 +88,7 @@ public class RobotContainer {
   // Controllers
   private static final CommandXboxController controller = new CommandXboxController(0);
   private final Trigger disableReefAutoAlign = new Trigger(() -> false);
-  private final Trigger disableCoralStationAutoAlign = new Trigger(() -> true);
+  private final Trigger disableCoralStationAutoAlign = new Trigger(() -> false);
   private final Trigger disableAlgaeScoreAutoAlign = new Trigger(() -> false);
 
   private final Alert driverDisconnected =
