@@ -5,7 +5,7 @@ Brief summary of what you changed or added.
 
 ## Related Issues
 Link any related issues:
-Closes issue #___  
+Closes issue #___
 Related to issue #___
 
 ---

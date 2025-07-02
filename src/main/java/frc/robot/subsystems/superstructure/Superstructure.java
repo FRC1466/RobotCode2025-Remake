@@ -90,7 +90,6 @@ public class Superstructure extends SubsystemBase {
 
   @Setter private Optional<SuperstructureState> reefDangerState = Optional.empty();
 
-  @AutoLogOutput @Getter private boolean requestFunnelOuttake = false;
   @AutoLogOutput private boolean forceFastConstraints = false;
 
   public Superstructure(Elevator elevator, Manipulator manipulator, Drive drive) {
@@ -122,17 +121,13 @@ public class Superstructure extends SubsystemBase {
                     .andThen(
                         runManipulatorPivot(
                             () ->
-                                Rotation2d.fromRadians(
-                                    MathUtil.clamp(
-                                        manipulator.getPivotAngle().getRadians(),
-                                        pivotMinSafeAngleRad.get(),
-                                        pivotMaxSafeAngleRad.get()))),
+                                SuperstructureState.STOWTRAVEL
+                                    .getValue()
+                                    .getPose()
+                                    .pivotAngle()
+                                    .get()),
                         Commands.parallel(
-                                Commands.waitSeconds(0.2).andThen(elevator.homingSequence()))
-                            .deadlineFor(
-                                Commands.startEnd(
-                                    () -> requestFunnelOuttake = true,
-                                    () -> requestFunnelOuttake = false)),
+                            Commands.waitSeconds(0.2).andThen(elevator.homingSequence())),
                         runSuperstructurePose(SuperstructureState.STOWTRAVEL.getValue().getPose()),
                         Commands.waitUntil(this::mechanismsAtGoal)))
             .build());
@@ -142,12 +137,19 @@ public class Superstructure extends SubsystemBase {
         SuperstructureState.STOWTRAVEL,
         EdgeCommand.builder()
             .command(
-                Commands.runOnce(elevator::setHome)
-                    .onlyIf(() -> Constants.getRobot() != RobotType.SIMBOT)
+                runSuperstructureExtras(SuperstructureState.STOWTRAVEL)
                     .andThen(
-                        runSuperstructurePose(SuperstructurePose.Preset.STOWTRAVEL.getPose()),
-                        Commands.waitUntil(this::mechanismsAtGoal),
-                        runSuperstructureExtras(SuperstructureState.STOWTRAVEL)))
+                        runManipulatorPivot(
+                            () ->
+                                SuperstructureState.STOWTRAVEL
+                                    .getValue()
+                                    .getPose()
+                                    .pivotAngle()
+                                    .get()),
+                        Commands.parallel(
+                            Commands.waitSeconds(0.2).andThen(elevator.homingSequence())),
+                        runSuperstructurePose(SuperstructureState.STOWTRAVEL.getValue().getPose()),
+                        Commands.waitUntil(this::mechanismsAtGoal)))
             .build());
 
     graph.addEdge(
@@ -238,6 +240,9 @@ public class Superstructure extends SubsystemBase {
             .command(Commands.idle(this).until(() -> !characterizationModeOn.get()))
             .build());
 
+    final Set<SuperstructureState> dangerStates =
+        Set.of(SuperstructureState.CORAL_INTAKE, SuperstructureState.STOWREST);
+
     final Set<SuperstructureState> freeNoAlgaeStates =
         Set.of(
             SuperstructureState.STOWREST,
@@ -263,6 +268,32 @@ public class Superstructure extends SubsystemBase {
             SuperstructureState.ALGAE_L2_INTAKE,
             SuperstructureState.ALGAE_L3_INTAKE,
             SuperstructureState.ALGAE_ICE_CREAM_INTAKE);
+
+    // Add edges from states in which arm could get crushed
+    for (var from : dangerStates) {
+      for (var state : SuperstructureState.values()) {
+        if (from == state) continue;
+        if (dangerStates.contains(state)) continue;
+        graph.addEdge(
+            from,
+            state,
+            EdgeCommand.builder()
+                .command(
+                    runManipulatorPivot(
+                            () ->
+                                Rotation2d.fromRadians(
+                                    MathUtil.clamp(
+                                        state.getValue().getPose().pivotAngle().get().getRadians(),
+                                        pivotMinSafeAngleRad.get(),
+                                        pivotMaxSafeAngleRad.get())))
+                        .andThen(
+                            Commands.waitUntil(manipulator::isAtGoal),
+                            runGoal(state),
+                            Commands.waitUntil(this::mechanismsAtGoal)))
+                .algaeEdgeType(AlgaeEdge.NONE)
+                .build());
+      }
+    }
 
     // Add all free edges
     for (var from : freeNoAlgaeStates) {
