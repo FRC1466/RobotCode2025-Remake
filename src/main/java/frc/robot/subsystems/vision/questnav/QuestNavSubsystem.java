@@ -7,24 +7,15 @@
 
 package frc.robot.subsystems.vision.questnav;
 
-import static frc.robot.subsystems.vision.questnav.OculusConstants.*;
+import static frc.robot.subsystems.vision.questnav.QuestNavConstants.*;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
-import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Transform2d;
-import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.numbers.N1;
-import edu.wpi.first.math.numbers.N3;
-import edu.wpi.first.wpilibj.Alert;
-import edu.wpi.first.wpilibj.Alert.AlertType;
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.subsystems.drive.Drive;
-import frc.robot.subsystems.vision.questnav.OculusConstants.PoseResetStrategy;
-import frc.robot.util.LoggedTunableNumber;
+import frc.robot.subsystems.vision.classical.Vision.VisionConsumer;
+import frc.robot.subsystems.vision.questnav.io.QuestNavIO;
+import frc.robot.subsystems.vision.questnav.io.QuestNavIOInputsAutoLogged;
 import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
@@ -42,49 +33,28 @@ import org.littletonrobotics.junction.Logger;
  * tracking is lost
  */
 public class QuestNavSubsystem extends SubsystemBase {
-  final Alert oculusDisconnected = new Alert("Oculus headset disconnected.", AlertType.kWarning);
-  final Alert oculusBatteryLow = new Alert("Oculus headset battery low.", AlertType.kWarning);
-  final Alert oculusBatteryCritical =
-      new Alert("Oculus headset battery critical!", AlertType.kError);
-  final Alert oculusTrackingLost = new Alert("Oculus headset tracking lost.", AlertType.kWarning);
-  final Alert oculusPoseDiscrepency =
-      new Alert("Oculus pose and robot pose are significantly different.", AlertType.kWarning);
-
-  private LoggedTunableNumber oculusPoseDiscrepencyMeters =
-      new LoggedTunableNumber("Oculus/PoseDiscrepencyMeters", 0.5);
-
   /** Hardware communication interface */
   private final QuestNavIO io;
 
-  /** Consumer for pose updates from the Oculus */
-  private final OculusConsumer oculusConsumer;
-
-  /** Instance of Drive subsystem for reading pose */
-  private final Drive drive;
+  /** Consumer for pose updates from the QuestNav */
+  private final VisionConsumer visionConsumer;
 
   /** Logged inputs from Quest hardware */
   private final QuestNavIOInputsAutoLogged inputs = new QuestNavIOInputsAutoLogged();
 
-  /** Transform offset applied when using ROBOT_SIDE reset strategy */
-  private Transform2d offsetTransform = new Transform2d();
-
-  /** Timestamp for the last pose discrepancy check */
-  private double lastDiscrepancyCheckTime = 0.0;
-
   /**
-   * Creates a new OculusSubsystem.
+   * Creates a new QuestNavSubsystem.
    *
    * <p>Initializes communication with Quest hardware and prepares logging systems. The subsystem
    * starts in an uninitialized state requiring pose calibration.
    *
-   * @param oculusConsumer Consumer that receives pose updates from the headset
+   * @param questNavConsumer Consumer that receives pose updates from the headset
    * @param io Interface for Quest hardware communication
    */
-  public QuestNavSubsystem(OculusConsumer oculusConsumer, QuestNavIO io, Drive drive) {
+  public QuestNavSubsystem(VisionConsumer questNavConsumer, QuestNavIO io) {
     this.io = io;
-    this.oculusConsumer = oculusConsumer;
-    this.drive = drive;
-    Logger.recordOutput("Oculus/status", "Initialized");
+    this.visionConsumer = questNavConsumer;
+    Logger.recordOutput("QuestNav/status", "Initialized");
   }
 
   /**
@@ -97,48 +67,17 @@ public class QuestNavSubsystem extends SubsystemBase {
   @Override
   public void periodic() {
     io.updateInputs(inputs);
-    Logger.processInputs("Oculus", inputs);
+    Logger.processInputs("QuestNav", inputs);
 
     // Add to Kalman filter
     processPose();
 
     // Notify if we are disconnected
-    if (!inputs.connected) {
-      oculusDisconnected.set(true);
-    } else {
-      oculusDisconnected.set(false);
-    }
-
-    // Notify for battery levels
-    if (inputs.batteryPercent < BATTERY_CRITICAL_PERCENT) {
-      oculusBatteryCritical.set(true);
-      oculusBatteryLow.set(false);
-    } else if (inputs.batteryPercent < BATTERY_LOW_PERCENT) {
-      oculusBatteryCritical.set(false);
-      oculusBatteryLow.set(true);
-    } else {
-      oculusBatteryCritical.set(false);
-      oculusBatteryLow.set(false);
-    }
-
-    // Notify for tracking status
-    if (!inputs.isTracking) {
-      oculusTrackingLost.set(true);
-    } else {
-      oculusTrackingLost.set(false);
-      // Check for pose discrepancy every 5 seconds
-      if (inputs.timestamp - lastDiscrepancyCheckTime >= 1.5) {
-        lastDiscrepancyCheckTime = inputs.timestamp;
-
-        double discrepancy =
-            drive.getPose().getTranslation().getDistance(getPose().getTranslation());
-        if (discrepancy > oculusPoseDiscrepencyMeters.getAsDouble()) {
-          oculusPoseDiscrepency.set(true);
-        } else {
-          oculusPoseDiscrepency.set(false);
-        }
-      }
-    }
+    Logger.recordOutput("QuestNav/Connected", inputs.connected);
+    Logger.recordOutput("QuestNav/BatteryPercent", inputs.batteryPercent);
+    Logger.recordOutput("QuestNav/CurrentlyTracking", inputs.currentlyTracking);
+    Logger.recordOutput("QuestNav/TrackingLostCounter", inputs.trackingLostCounter);
+    Logger.recordOutput("QuestNav/Timestamp", inputs.timestamp);
   }
 
   /**
@@ -174,9 +113,9 @@ public class QuestNavSubsystem extends SubsystemBase {
    *
    * @return Field-relative robot pose
    */
-  @AutoLogOutput(key = "Oculus/Pose")
+  @AutoLogOutput(key = "QuestNav/Pose")
   public Pose2d getPose() {
-    return getOculusPose().transformBy(ROBOT_TO_OCULUS.inverse()).plus(offsetTransform);
+    return getQuestNavPose().transformBy(ROBOT_TO_QUESTNAV.inverse());
   }
 
   /**
@@ -186,79 +125,15 @@ public class QuestNavSubsystem extends SubsystemBase {
    * @param pose The new reference pose
    */
   public void resetPose(Pose2d pose) {
-    if (DriverStation.isEnabled()) {
-      Logger.recordOutput(
-          "Oculus/Log",
-          "resetPose() called while the robot is enabled. This shouldn't happen! Ignoring.");
-      return;
-    }
-    // Transform the pose to the Oculus coordinate system w/ offset
-    Pose2d oculusSidePose = pose.plus(ROBOT_TO_OCULUS);
+    // Transform the pose to the QuestNav coordinate system w/ offset
+    Pose2d questNavSidePose = pose.plus(ROBOT_TO_QUESTNAV);
 
-    if (POSE_RESET_STRATEGY.equals(PoseResetStrategy.ROBOT_SIDE)) {
-      // Reset the pose on the Oculus side
-      io.resetPose(Pose2d.kZero);
-      // Set the offset transform to the new pose
-      updateTransform(oculusSidePose);
-    } else {
-      updateTransform(Pose2d.kZero);
-      io.resetPose(oculusSidePose);
-    }
-    Logger.recordOutput(
-        "Oculus/Log",
-        String.format("Resetting pose to WPILib: %s, Oculus: %s", pose, oculusSidePose));
-  }
-
-  /**
-   * Resets the pose tracking system to a specified position. Must be called only when the robot is
-   * disabled to avoid interrupting tracking during a match.
-   *
-   * @param pose The new reference pose
-   * @param overrideEnabledCheck Overrides the enabled check to allow for resetting while enabled.
-   */
-  public void resetPose(Pose2d pose, boolean overrideEnabledCheck) {
-    if (!overrideEnabledCheck && DriverStation.isEnabled()) {
-      Logger.recordOutput(
-          "Oculus/Log",
-          "resetPose() called while the robot is enabled. This shouldn't happen! Ignoring.");
-      return;
-    }
+    // Send the request
+    io.setPose(questNavSidePose);
 
     Logger.recordOutput(
-        "Oculus/Log",
-        "resetPose() called while the robot is enabled. Enabled check overridden! Make sure this is what you want to happen!");
-    // Transform the pose to the Oculus coordinate system w/ offset
-    Pose2d oculusSidePose = pose.plus(ROBOT_TO_OCULUS);
-
-    if (POSE_RESET_STRATEGY.equals(PoseResetStrategy.ROBOT_SIDE)) {
-      // Reset the pose on the Oculus side
-      io.resetPose(Pose2d.kZero);
-      // Set the offset transform to the new pose
-      updateTransform(oculusSidePose);
-    } else {
-      updateTransform(Pose2d.kZero);
-      io.resetPose(oculusSidePose);
-    }
-    Logger.recordOutput(
-        "Oculus/Log",
-        String.format("Resetting pose to WPILib: %s, Oculus: %s", pose, oculusSidePose));
-  }
-
-  /**
-   * Updates the transform offset used in ROBOT_SIDE pose reset strategy. Has no effect if using a
-   * different pose reset strategy.
-   *
-   * @param pose The new reference pose for calculating offset
-   */
-  public void updateTransform(Pose2d pose) {
-    if (!POSE_RESET_STRATEGY.equals(PoseResetStrategy.ROBOT_SIDE)) {
-      Logger.recordOutput(
-          "Oculus/Log", "updateTransform() called when not using ROBOT_SIDE. Ignoring.");
-      return;
-    }
-    // Update the offset transform to the new pose
-    Logger.recordOutput("Oculus/Log", "Updating offset transform to: " + pose);
-    offsetTransform = new Transform2d(pose.getTranslation(), pose.getRotation());
+        "QuestNav/Log",
+        String.format("Resetting pose to WPILib: %s, QuestNav: %s", pose, questNavSidePose));
   }
 
   private final AprilTagFieldLayout aprilTagFieldLayout =
@@ -269,7 +144,7 @@ public class QuestNavSubsystem extends SubsystemBase {
    * tracking. This enables integration with pose estimation systems.
    */
   private void processPose() {
-    if (inputs.connected && inputs.isTracking) {
+    if (inputs.connected && inputs.currentlyTracking) {
       Pose2d pose = getPose();
       double timestamp = getTimestamp();
 
@@ -280,64 +155,17 @@ public class QuestNavSubsystem extends SubsystemBase {
           || pose.getY() > aprilTagFieldLayout.getFieldWidth()) {
         return;
       }
-
-      // Call the consumer with the new pose
-      if (inputs.SimReal) {
-        oculusConsumer.accept(pose, timestamp, OCULUS_STD_DEVS_SIM);
-      } else {
-        oculusConsumer.accept(pose, timestamp, OCULUS_STD_DEVS);
-      }
+        visionConsumer.accept(pose, timestamp, QUESTNAV_STD_DEVS);
     }
   }
 
   /**
-   * Converts the raw Oculus yaw to a Rotation2d object. Applies necessary coordinate system
-   * transformations.
-   *
-   * @return Rotation2d representing the headset's yaw
-   */
-  private Rotation2d getOculusYaw() {
-    return Rotation2d.fromDegrees(-inputs.eulerAngles[1]);
-  }
-
-  /**
-   * Converts the raw Oculus position to a Translation2d object. Maps Unity coordinate system to FRC
-   * coordinate system.
-   *
-   * @return Translation2d representing the headset's position
-   */
-  private Translation2d getOculusTranslation() {
-    float[] oculusPosition = inputs.position;
-    return new Translation2d(oculusPosition[2], -oculusPosition[0]);
-  }
-
-  /**
-   * Combines Oculus position and orientation into a unified Pose2d.
+   * Combines QuestNav position and orientation into a unified Pose2d.
    *
    * @return Raw Pose2d from the headset's perspective
    */
-  @AutoLogOutput(key = "Oculus/RawPose")
-  private Pose2d getOculusPose() {
-    return new Pose2d(getOculusTranslation(), getOculusYaw());
-  }
-
-  /**
-   * Functional interface for components that consume Oculus vision measurements.
-   *
-   * <p>Typically implemented by subsystems that handle pose estimation/odometry.
-   */
-  @FunctionalInterface
-  public static interface OculusConsumer {
-    /**
-     * Accepts a vision measurement from the Oculus subsystem.
-     *
-     * @param visionRobotPoseMeters Field-relative pose of the robot in meters
-     * @param timestampSeconds Timestamp when the measurement was taken, in seconds
-     * @param visionMeasurementStdDevs Standard deviations for the measurement (x, y, theta)
-     */
-    public void accept(
-        Pose2d visionRobotPoseMeters,
-        double timestampSeconds,
-        Matrix<N3, N1> visionMeasurementStdDevs);
+  @AutoLogOutput(key = "QuestNav/RawPose")
+  private Pose2d getQuestNavPose() {
+    return inputs.pose2d;
   }
 }

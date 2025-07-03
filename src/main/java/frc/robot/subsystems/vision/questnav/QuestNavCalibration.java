@@ -17,8 +17,8 @@ import frc.robot.subsystems.drive.Drive;
 import java.util.function.Supplier;
 import org.littletonrobotics.junction.Logger;
 
-public class OculusCalibration {
-  // -- Calculate Oculus Offset (copied from
+public class QuestNavCalibration {
+  // -- Calculate questNav Offset (copied from
   // https://github.com/FRC5010/Reefscape2025/blob/main/TigerShark2025/src/main/java/org/frc5010/common/sensors/camera/QuestNav.java#L65) --
 
   private Translation2d calculatedOffsetToRobot = Translation2d.kZero;
@@ -43,10 +43,10 @@ public class OculusCalibration {
    * is non-zero, you may have to swap the x/y and their signs.
    */
   public Command determineOffsetToRobotCenter(
-      Drive swerveDriveSubsystem, QuestNavSubsystem oculusSubsystem) {
+      Drive swerveDriveSubsystem, QuestNavSubsystem questNavSubsystem) {
     // First reset our pose to 0, 0
-    oculusSubsystem.resetPose(Pose2d.kZero, true);
-    Supplier<Pose2d> questPose = oculusSubsystem::getPose;
+    questNavSubsystem.resetPose(Pose2d.kZero);
+    Supplier<Pose2d> questPose = questNavSubsystem::getPose;
     return Commands.repeatingSequence(
             Commands.run(
                     () -> {
@@ -65,7 +65,7 @@ public class OculusCalibration {
                               .plus(offset.div(calculateOffsetCount + 1));
                       calculateOffsetCount++;
                       Logger.recordOutput(
-                          "OculusCalibration/CalculatedOffset", calculatedOffsetToRobot);
+                          "questNavCalibration/CalculatedOffset", calculatedOffsetToRobot);
                     })
                 .onlyIf(() -> questPose.get().getRotation().getDegrees() > 30))
         .finallyDo(
@@ -78,7 +78,7 @@ public class OculusCalibration {
                       .times((double) calculateOffsetCount / (calculateOffsetCount + 1))
                       .plus(offset.div(calculateOffsetCount + 1));
               calculateOffsetCount++;
-              Logger.recordOutput("OculusCalibration/CalculatedOffset", calculatedOffsetToRobot);
+              Logger.recordOutput("questNavCalibration/CalculatedOffset", calculatedOffsetToRobot);
             });
   }
 }

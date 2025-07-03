@@ -8,7 +8,7 @@
 package frc.robot;
 
 import static edu.wpi.first.wpilibj2.command.Commands.*;
-import static frc.robot.subsystems.vision.VisionConstants.*;
+import static frc.robot.subsystems.vision.classical.VisionConstants.*;
 
 import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -30,12 +30,11 @@ import frc.robot.subsystems.drive.ModuleIO;
 import frc.robot.subsystems.drive.ModuleIOSim;
 import frc.robot.subsystems.drive.ModuleIOTalonFX;
 import frc.robot.subsystems.drive.PathPlannerUtils;
-import frc.robot.subsystems.vision.Vision;
-import frc.robot.subsystems.vision.VisionIO;
-import frc.robot.subsystems.vision.questnav.OculusCalibration;
-import frc.robot.subsystems.vision.questnav.QuestNavIOReal;
-import frc.robot.subsystems.vision.questnav.QuestNavIOSimReal;
+import frc.robot.subsystems.vision.classical.Vision;
+import frc.robot.subsystems.vision.classical.VisionIO;
+import frc.robot.subsystems.vision.questnav.QuestNavCalibration;
 import frc.robot.subsystems.vision.questnav.QuestNavSubsystem;
+import frc.robot.subsystems.vision.questnav.io.QuestNavIOReal;
 import java.util.function.DoubleSupplier;
 import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
@@ -72,7 +71,7 @@ public class RobotContainer {
                   new ModuleIOTalonFX(TunerConstants.BackLeft),
                   new ModuleIOTalonFX(TunerConstants.BackRight));
           questNavSubsystem =
-              new QuestNavSubsystem(drive::addVisionMeasurement, new QuestNavIOReal(), drive);
+              new QuestNavSubsystem(drive::addVisionMeasurement, new QuestNavIOReal());
         }
         case DEVBOT -> {
           drive =
@@ -87,7 +86,7 @@ public class RobotContainer {
               drive::addVisionMeasurement,
               new VisionIOPhotonVision(camera0Name, robotToCamera0)); */
           questNavSubsystem =
-              new QuestNavSubsystem(drive::addVisionMeasurement, new QuestNavIOReal(), drive);
+              new QuestNavSubsystem(drive::addVisionMeasurement, new QuestNavIOReal());
         }
         case SIMBOT -> {
           drive =
@@ -97,8 +96,6 @@ public class RobotContainer {
                   new ModuleIOSim(TunerConstants.FrontRight),
                   new ModuleIOSim(TunerConstants.BackLeft),
                   new ModuleIOSim(TunerConstants.BackRight));
-          questNavSubsystem =
-              new QuestNavSubsystem(drive::addVisionMeasurement, new QuestNavIOSimReal(), drive);
         }
       }
     }
@@ -174,11 +171,11 @@ public class RobotContainer {
 
     drive.setDefaultCommand(DriveCommands.joystickDrive(drive, driverX, driverY, driverOmega));
 
-    OculusCalibration oculusCalibration = new OculusCalibration();
+    QuestNavCalibration questNavCalibration = new QuestNavCalibration();
 
     controller
         .a()
-        .whileTrue(oculusCalibration.determineOffsetToRobotCenter(drive, questNavSubsystem));
+        .whileTrue(questNavCalibration.determineOffsetToRobotCenter(drive, questNavSubsystem));
 
     controller
         .povLeft()

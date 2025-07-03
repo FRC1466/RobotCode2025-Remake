@@ -9,7 +9,7 @@ package frc.robot.commands;
 
 import static frc.robot.commands.DriveCommands.DEADBAND;
 import static frc.robot.commands.DriveToStation.withinDistanceToReef;
-import static frc.robot.subsystems.vision.VisionConstants.aprilTagLayout;
+import static frc.robot.subsystems.vision.classical.VisionConstants.aprilTagLayout;
 import static frc.robot.util.EqualsUtil.*;
 
 import edu.wpi.first.math.MathUtil;

@@ -98,7 +98,7 @@ public class QuestCommandRetryHandler {
     // Check if command succeeded
     if (currentResponse == expectedResponse) {
       isActive = false;
-      Logger.recordOutput("Oculus/Log", "Command succeeded on attempt " + currentAttempt);
+      Logger.recordOutput("questNav/Log", "Command succeeded on attempt " + currentAttempt);
 
       // Execute success callback if provided
       if (onSuccessCallback != null) {
@@ -113,7 +113,7 @@ public class QuestCommandRetryHandler {
       questMosi.set(clearCommand);
       clearSent = true;
       lastCommandTime = currentTime;
-      Logger.recordOutput("Oculus/Log", "Sent clear command");
+      Logger.recordOutput("questNav/Log", "Sent clear command");
       return;
     }
 
@@ -124,14 +124,14 @@ public class QuestCommandRetryHandler {
       lastCommandTime = currentTime;
       currentAttempt++;
       Logger.recordOutput(
-          "Oculus/Log", "Sent command, attempt " + currentAttempt + " of " + maxAttempts);
+          "questNav/Log", "Sent command, attempt " + currentAttempt + " of " + maxAttempts);
       return;
     }
 
     // If we've reached max attempts, mark as failed
     if (currentAttempt >= maxAttempts && commandSent) {
       isActive = false;
-      Logger.recordOutput("Oculus/Log", "Command failed after " + maxAttempts + " attempts");
+      Logger.recordOutput("questNav/Log", "Command failed after " + maxAttempts + " attempts");
 
       // Execute failure callback if provided
       if (onFailureCallback != null) {
@@ -147,7 +147,7 @@ public class QuestCommandRetryHandler {
       commandSent = false;
       // Next attempt will start on next update call
       Logger.recordOutput(
-          "Oculus/Log", "Preparing retry " + (currentAttempt + 1) + " of " + maxAttempts);
+          "questNav/Log", "Preparing retry " + (currentAttempt + 1) + " of " + maxAttempts);
     }
   }
 
