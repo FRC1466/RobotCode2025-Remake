@@ -46,7 +46,7 @@ public class QuestNavIOReal implements QuestNavIO {
   public void setPose(Pose2d questNavTargetPose) {
     questNav.setPose(questNavTargetPose);
     Logger.recordOutput(
-        "questNav/Log",
+        "QuestNav/Log",
         String.format(
             "Pose reset requested to: (%.2f, %.2f, %.2f°)",
             questNavTargetPose.getX(),
