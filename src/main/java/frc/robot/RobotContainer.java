@@ -32,7 +32,7 @@ import frc.robot.subsystems.drive.ModuleIOTalonFX;
 import frc.robot.subsystems.drive.PathPlannerUtils;
 import frc.robot.subsystems.vision.Vision;
 import frc.robot.subsystems.vision.VisionIO;
-import frc.robot.subsystems.vision.VisionIOPhotonVision;
+import frc.robot.subsystems.vision.questnav.OculusCalibration;
 import frc.robot.subsystems.vision.questnav.QuestNavIOReal;
 import frc.robot.subsystems.vision.questnav.QuestNavIOSimReal;
 import frc.robot.subsystems.vision.questnav.QuestNavSubsystem;
@@ -71,11 +71,8 @@ public class RobotContainer {
                   new ModuleIOTalonFX(TunerConstants.FrontRight),
                   new ModuleIOTalonFX(TunerConstants.BackLeft),
                   new ModuleIOTalonFX(TunerConstants.BackRight));
-          vision =
-              new Vision(
-                  drive::addVisionMeasurement,
-                  new VisionIOPhotonVision(camera0Name, robotToCamera0),
-                  new VisionIOPhotonVision(camera1Name, robotToCamera1));
+          questNavSubsystem =
+              new QuestNavSubsystem(drive::addVisionMeasurement, new QuestNavIOReal(), drive);
         }
         case DEVBOT -> {
           drive =
@@ -177,15 +174,11 @@ public class RobotContainer {
 
     drive.setDefaultCommand(DriveCommands.joystickDrive(drive, driverX, driverY, driverOmega));
 
-    // Lock to 0° when A button is held
+    OculusCalibration oculusCalibration = new OculusCalibration();
+
     controller
         .a()
-        .whileTrue(
-            DriveCommands.joystickDriveAtAngle(
-                drive,
-                () -> -controller.getLeftY(),
-                () -> -controller.getLeftX(),
-                () -> new Rotation2d()));
+        .whileTrue(oculusCalibration.determineOffsetToRobotCenter(drive, questNavSubsystem));
 
     controller
         .povLeft()

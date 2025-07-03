@@ -54,7 +54,7 @@ public class OculusConstants {
    * Y: Positive is left - Rotation: Positive is counter-clockwise
    */
   public static final Transform2d ROBOT_TO_OCULUS =
-      new Transform2d(0, 0, Rotation2d.fromDegrees(0));
+      new Transform2d(-.321, 0.005, Rotation2d.fromDegrees(180));
 
   /** Timeout threshold for considering Quest disconnected (seconds) */
   public static final Time OCULUS_CONNECTION_TIMEOUT = Milliseconds.of(350);
