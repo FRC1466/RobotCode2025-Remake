@@ -164,7 +164,12 @@ public class ElevatorIOTalonFX implements ElevatorIO {
   @Override
   public void setBrakeMode(boolean enabled) {
     new Thread(
-            () -> talon.setNeutralMode(enabled ? NeutralModeValue.Brake : NeutralModeValue.Coast))
+            () -> {
+              config.MotorOutput.NeutralMode =
+                  enabled ? NeutralModeValue.Brake : NeutralModeValue.Coast;
+              PhoenixUtil.tryUntilOk(5, () -> talon.getConfigurator().apply(config));
+              PhoenixUtil.tryUntilOk(5, () -> followerTalon.getConfigurator().apply(config));
+            })
         .start();
   }
 }

@@ -10,6 +10,7 @@ package frc.robot.commands;
 import static frc.robot.FieldConstants.fieldWidth;
 import static frc.robot.FieldConstants.startingLineX;
 
+import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform2d;
@@ -42,15 +43,17 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class AutoBuilder {
   private static final LoggedTunableNumber scoreCancelSecs =
-      new LoggedTunableNumber("AutoBuilder/ScoreCancelSeconds", 6);
+      new LoggedTunableNumber("AutoBuilder/ScoreCancelSeconds", 20);
   private static final LoggedTunableNumber intakeTimeSecs =
-      new LoggedTunableNumber("AutoBuilder/IntakeTimeSecs", 5);
+      new LoggedTunableNumber("AutoBuilder/IntakeTimeSecs", 20);
 
   private final Drive drive;
   private final Superstructure superstructure;
   private final BooleanSupplier push;
 
   private final double pushSecs = 0.5;
+
+  private Debouncer coralDebouncer = new Debouncer(0.1, Debouncer.DebounceType.kBoth);
 
   public Command DefaultAuto() {
     return Autonomous(ReefLevel.L4, ReefLevel.L3, ReefLevel.L3, ReefLevel.L3, 9, 10, 11, 1);
@@ -104,7 +107,7 @@ public class AutoBuilder {
                                   Units.inchesToMeters(5.0), Rotation2d.fromDegrees(5.0))) {
                                 intakeTimer.restart();
                               }
-                              return superstructure.hasCoral()
+                              return coralDebouncer.calculate(superstructure.hasCoral())
                                   || intakeTimer.hasElapsed(intakeTimeSecs.get());
                             }),
                     // Score

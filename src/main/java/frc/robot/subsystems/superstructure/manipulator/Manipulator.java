@@ -37,6 +37,7 @@ import frc.robot.util.AllianceFlipUtil;
 import frc.robot.util.EqualsUtil;
 import frc.robot.util.LoggedTracer;
 import frc.robot.util.LoggedTunableNumber;
+import frc.robot.util.OverridePublisher;
 import java.util.List;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
@@ -176,7 +177,7 @@ public class Manipulator {
   private final Drive drive;
 
   // Overrides
-  private BooleanSupplier coastOverride = () -> false;
+  private OverridePublisher coastOverride = new OverridePublisher("ManipulatorCoastOverride");
   private BooleanSupplier disabledOverride = () -> false;
 
   @AutoLogOutput(key = "Manipulator/PivotBrakeModeEnabled")
@@ -514,7 +515,7 @@ public class Manipulator {
     algaeDebouncer.calculate(value);
   }
 
-  public void setOverrides(BooleanSupplier coastOverride, BooleanSupplier disabledOverride) {
+  public void setOverrides(OverridePublisher coastOverride, BooleanSupplier disabledOverride) {
     this.coastOverride = coastOverride;
     this.disabledOverride = disabledOverride;
   }

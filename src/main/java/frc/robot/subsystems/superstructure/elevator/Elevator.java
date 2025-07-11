@@ -24,6 +24,7 @@ import frc.robot.subsystems.superstructure.SuperstructureConstants;
 import frc.robot.util.EqualsUtil;
 import frc.robot.util.LoggedTracer;
 import frc.robot.util.LoggedTunableNumber;
+import frc.robot.util.OverridePublisher;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
@@ -112,7 +113,8 @@ public class Elevator {
       new Alert("Elevator leader motor disconnected!", Alert.AlertType.kWarning);
   private final Alert followerDisconnectedAlert =
       new Alert("Elevator follower motor disconnected!", Alert.AlertType.kWarning);
-  private BooleanSupplier coastOverride = () -> false;
+
+  private OverridePublisher coastOverride = new OverridePublisher("ElevatorCoastOverride");
   private BooleanSupplier disabledOverride = () -> false;
 
   @AutoLogOutput private boolean brakeModeEnabled = true;
@@ -269,7 +271,7 @@ public class Elevator {
     this.goal = goal;
   }
 
-  public void setOverrides(BooleanSupplier coastOverride, BooleanSupplier disabledOverride) {
+  public void setOverrides(OverridePublisher coastOverride, BooleanSupplier disabledOverride) {
     this.coastOverride = coastOverride;
     this.disabledOverride = disabledOverride;
   }
@@ -277,7 +279,7 @@ public class Elevator {
   private void setBrakeMode(boolean enabled) {
     if (brakeModeEnabled == enabled) return;
     brakeModeEnabled = enabled;
-    io.setBrakeMode(brakeModeEnabled);
+    io.setBrakeMode(enabled);
   }
 
   public Command upStaticCharacterization() {
