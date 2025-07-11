@@ -8,6 +8,7 @@
 package frc.robot.subsystems.superstructure;
 
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.wpilibj.Timer;
 import frc.robot.FieldConstants.ReefLevel;
 import frc.robot.util.LoggedTunableNumber;
 import java.util.function.DoubleSupplier;
@@ -25,8 +26,19 @@ public record SuperstructurePose(DoubleSupplier elevatorHeight, Supplier<Rotatio
 
   private static final LoggedTunableNumber intakeHeight =
       new LoggedTunableNumber("Superstructure/Intake/Height", 0.00254);
-  private static final LoggedTunableNumber intakeAngle =
-      new LoggedTunableNumber("Superstructure/Intake/Angle", 0);
+  private static final LoggedTunableNumber intakeAngleAmplitude =
+      new LoggedTunableNumber("Superstructure/Intake/AmplitudeDegrees", .6);
+  private static final LoggedTunableNumber intakeAnglePeriodSec =
+      new LoggedTunableNumber("Superstructure/Intake/PeriodSec", .4);
+
+  private static final DoubleSupplier intakeAngle =
+      () -> {
+        double amplitudeRad = intakeAngleAmplitude.get();
+        double period = intakeAnglePeriodSec.get();
+        double time = Timer.getFPGATimestamp();
+        double phase = (time % period) / period;
+        return amplitudeRad * Math.sin(2 * Math.PI * phase);
+      };
 
   private static final LoggedTunableNumber IceCreamIntakeHeight =
       new LoggedTunableNumber("Superstructure/AlgaeIntake/IceCream/Height", 0.2);
@@ -71,7 +83,7 @@ public record SuperstructurePose(DoubleSupplier elevatorHeight, Supplier<Rotatio
       new LoggedTunableNumber("Superstructure/ReefScore/L3/Angle", .7);
 
   private static final LoggedTunableNumber l4Height =
-      new LoggedTunableNumber("Superstructure/ReefScore/L4/Height", 1.6002);
+      new LoggedTunableNumber("Superstructure/ReefScore/L4/Height", 1.67);
   private static final LoggedTunableNumber l4Angle =
       new LoggedTunableNumber("Superstructure/ReefScore/L4/Angle", 1.15);
 
