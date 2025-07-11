@@ -120,7 +120,7 @@ public class AutoScoreCommands {
   private static final LoggedTunableNumber l1AlignOffsetTheta =
       new LoggedTunableNumber("AutoScore/L1AlignOffsetTheta", 180.0);
   private static final LoggedTunableNumber[] ejectTimeSeconds = {
-    new LoggedTunableNumber("AutoScore/EjectTimeSeconds/L1", 0.5),
+    new LoggedTunableNumber("AutoScore/EjectTimeSeconds/L1", 3),
     new LoggedTunableNumber("AutoScore/EjectTimeSeconds/L2", 0.3),
     new LoggedTunableNumber("AutoScore/EjectTimeSeconds/L3", 0.3),
     new LoggedTunableNumber("AutoScore/EjectTimeSeconds/L4", 0.3)
