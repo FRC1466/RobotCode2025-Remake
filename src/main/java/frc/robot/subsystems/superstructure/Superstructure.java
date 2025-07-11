@@ -27,6 +27,7 @@ import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.superstructure.SuperstructureStateData.Height;
 import frc.robot.subsystems.superstructure.elevator.Elevator;
 import frc.robot.subsystems.superstructure.manipulator.Manipulator;
+import frc.robot.subsystems.superstructure.manipulator.Manipulator.MailboxGoal;
 import frc.robot.util.AllianceFlipUtil;
 import frc.robot.util.LoggedTracer;
 import java.util.*;
@@ -89,8 +90,6 @@ public class Superstructure extends SubsystemBase {
   private SuperstructureVisualizer goalVisualizer;
 
   @Setter private Optional<SuperstructureState> reefDangerState = Optional.empty();
-
-  @AutoLogOutput private boolean forceFastConstraints = false;
 
   public Superstructure(Elevator elevator, Manipulator manipulator, Drive drive) {
     this.elevator = elevator;
@@ -476,10 +475,6 @@ public class Superstructure extends SubsystemBase {
             || state == SuperstructureState.ALGAE_ICE_CREAM_INTAKE
             || next == SuperstructureState.ALGAE_ICE_CREAM_INTAKE);
 
-    // Force fast constraints
-    elevator.setForceFastConstraints(forceFastConstraints);
-    manipulator.setForceFastConstraints(forceFastConstraints);
-
     // E Stop Manipulator and Elevator if Necessary
     isEStopped =
         (isEStopped || elevator.isShouldEStop() || manipulator.isShouldEStop())
@@ -608,8 +603,8 @@ public class Superstructure extends SubsystemBase {
 
   public Command forceEjectManipulator() {
     return startEnd(
-        () -> manipulator.setForceEjectForward(true),
-        () -> manipulator.setForceEjectForward(false));
+        () -> manipulator.setMailboxGoal(MailboxGoal.CORALEJECT),
+        () -> manipulator.setMailboxGoal(MailboxGoal.IDLE));
   }
 
   public void setAutoStart() {
@@ -703,63 +698,37 @@ public class Superstructure extends SubsystemBase {
   }
 
   private Command getEdgeCommand(SuperstructureState from, SuperstructureState to) {
-    if (from == SuperstructureState.ALGAE_STOW && (to == SuperstructureState.PRE_PROCESS)) {
-      return runElevator(to.getValue().getPose().elevatorHeight())
-          .andThen(
-              Commands.waitUntil(elevator::isAtGoal),
-              runSuperstructurePose(to.getValue().getPose()),
-              Commands.waitUntil(this::mechanismsAtGoal));
-    } else if ((from == SuperstructureState.PRE_PROCESS) && to == SuperstructureState.ALGAE_STOW) {
-      return runManipulatorPivot(to.getValue().getPose().pivotAngle())
-          .andThen(
-              Commands.waitUntil(manipulator::isAtGoal),
-              runSuperstructurePose(to.getValue().getPose()),
-              Commands.waitUntil(this::mechanismsAtGoal))
-          .deadlineFor(
-              Commands.startEnd(
-                  () -> manipulator.forceSlowConstraints(true),
-                  () -> manipulator.forceSlowConstraints(false)));
-    }
-
     boolean passesThroughCrossMember =
         from.getValue().getHeight().equals(Height.BOTTOM)
             != to.getValue().getHeight().equals(Height.BOTTOM);
     if (passesThroughCrossMember) {
-      boolean isGoingDown = to.getValue().getHeight().lowerThan(from.getValue().getHeight());
-      SuperstructurePose safeSuperstructureSetpoint =
-          new SuperstructurePose(
-              () -> {
-                // Attempt to reach nearest safe point on elevator
-                var currentAngle = from.getValue().getPose().pivotAngle().get();
-                if (currentAngle.getRadians() <= pivotMaxSafeAngleRad.get()
-                    && currentAngle.getRadians() >= pivotMinSafeAngleRad.get()) {
-                  return to.getValue().getPose().elevatorHeight().getAsDouble();
-                }
-                return isGoingDown
-                    ? from.getValue().getHeight().getPosition() + 0.1
-                    : to.getValue().getHeight().getPosition() - 0.1;
-              },
-              () ->
-                  Rotation2d.fromRadians(
-                      MathUtil.clamp(
-                          to.getValue().getPose().pivotAngle().get().getRadians(),
-                          pivotMinSafeAngleRad.get(),
-                          pivotMaxSafeAngleRad.get())));
-      return runSuperstructurePose(safeSuperstructureSetpoint)
-          .andThen(
-              Commands.waitUntil(manipulator::isAtGoal),
-              runElevator(to.getValue().getPose().elevatorHeight()),
-              Commands.waitUntil(
-                  () ->
-                      (isGoingDown
-                              ? elevator.getPositionMeters()
-                                  <= to.getValue().getHeight().getPosition()
-                              : elevator.getPositionMeters()
-                                  >= to.getValue().getHeight().getPosition())
-                          || elevator.isAtGoal()),
-              runSuperstructurePose(to.getValue().getPose()),
-              Commands.waitUntil(this::mechanismsAtGoal))
-          .deadlineFor(runSuperstructureExtras(to));
+      if (to.getValue().getPose().elevatorHeight().getAsDouble() > 0.05) {
+        return runManipulatorPivot(
+                () ->
+                    Rotation2d.fromRadians(
+                        MathUtil.clamp(
+                            to.getValue().getPose().pivotAngle().get().getRadians(),
+                            pivotMinSafeAngleRad.get(),
+                            pivotMaxSafeAngleRad.get())))
+            .andThen(
+                Commands.waitUntil(manipulator::isAtGoal),
+                runSuperstructurePose(to.getValue().getPose()),
+                Commands.waitUntil(this::mechanismsAtGoal))
+            .andThen(runSuperstructureExtras(to));
+      } else {
+        return runManipulatorPivot(
+                () ->
+                    Rotation2d.fromRadians(
+                        MathUtil.clamp(
+                            to.getValue().getPose().pivotAngle().get().getRadians(),
+                            pivotMinSafeAngleRad.get(),
+                            pivotMaxSafeAngleRad.get())))
+            .andThen(
+                Commands.waitUntil(manipulator::isAtGoal),
+                runSuperstructurePose(to.getValue().getPose()),
+                Commands.waitUntil(this::mechanismsAtGoal))
+            .deadlineFor(runSuperstructureExtras(to));
+      }
     } else {
       return runSuperstructurePose(to.getValue().getPose())
           .andThen(Commands.waitUntil(this::mechanismsAtGoal))

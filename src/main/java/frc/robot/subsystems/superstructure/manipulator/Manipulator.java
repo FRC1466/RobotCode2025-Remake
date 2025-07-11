@@ -180,7 +180,7 @@ public class Manipulator {
   private BooleanSupplier disabledOverride = () -> false;
 
   @AutoLogOutput(key = "Manipulator/PivotBrakeModeEnabled")
-  private boolean brakeModeEnabled = true; // Is equal to coastOverride
+  private boolean brakeModeEnabled = true;
 
   private TrapezoidProfile profile;
   private TrapezoidProfile slowProfile;
@@ -191,18 +191,11 @@ public class Manipulator {
   @Setter private boolean isEStopped = false;
   @Setter private boolean isIntaking = false;
   @Setter private boolean isIntakingAlgae = false;
-  @Setter private boolean forceFastConstraints = false;
-  @Setter private boolean forceEjectForward = false;
-
-  @Accessors(fluent = true)
-  @Setter
-  private boolean forceSlowConstraints = false;
 
   @Getter
   @AutoLogOutput(key = "Manipulator/Profile/AtGoal")
   private boolean atGoal = false;
 
-  @Setter private double tunnelVolts = 0.0;
   @AutoLogOutput @Setter private MailboxGoal mailboxGoal = MailboxGoal.IDLE;
 
   @AutoLogOutput
@@ -215,15 +208,12 @@ public class Manipulator {
   @Getter()
   private boolean hasAlgae = false;
 
-  @Getter private boolean doNotStopIntaking = false;
-
   private static final double coralDebounceTime = 0.04;
   private static final double algaeDebounceTime = 0.6;
   private Debouncer coralDebouncer = new Debouncer(coralDebounceTime, DebounceType.kFalling);
   private Debouncer algaeDebouncer = new Debouncer(algaeDebounceTime, DebounceType.kBoth);
+  private Debouncer toleranceDebouncer = new Debouncer(0.25, DebounceType.kRising);
   private final SlewRateLimiter algaeCurrentFilter = new SlewRateLimiter(50);
-
-  @Setter @Getter @AutoLogOutput private double coralThresholdOffset = 0.0;
 
   // Disconnected alerts
   private final Alert pivotMotorDisconnectedAlert =
@@ -316,6 +306,11 @@ public class Manipulator {
             && DriverStation.isEnabled();
     Logger.recordOutput("Manipulator/RunningProfile", shouldRunProfile);
 
+    // Check if out of tolerance
+    boolean outOfTolerance =
+        Math.abs(pivotInputs.data.internalPosition().getRadians() - setpoint.position)
+            > tolerance.get();
+    shouldEStop = toleranceDebouncer.calculate(outOfTolerance && shouldRunProfile);
     if (shouldRunProfile) {
       // Clamp goal
       var goalState =
@@ -323,7 +318,7 @@ public class Manipulator {
               MathUtil.clamp(goal.getAsDouble(), minAngle.getRadians(), maxAngle.getRadians()),
               0.0);
       setpoint =
-          (forceSlowConstraints ? slowProfile : profile)
+          (hasAlgae ? slowProfile : profile)
               .calculate(Constants.loopPeriodSecs, setpoint, goalState);
       pivotIO.runPosition(
           Rotation2d.fromRadians(setpoint.position),
@@ -407,10 +402,7 @@ public class Manipulator {
         double limitedTorqueCurrent =
             algaeCurrentFilter.calculate(mailboxInputs.data.torqueCurrentAmps());
         hasAlgae = algaeDebouncer.calculate(limitedTorqueCurrent >= algaeCurrentThresh.get());
-
-        // TODO: Optional: Log both raw and limited values for tuning
-        Logger.recordOutput("Manipulator/TorqueCurrentRaw", mailboxInputs.data.torqueCurrentAmps());
-        Logger.recordOutput("Manipulator/TorqueCurrentLimited", limitedTorqueCurrent);
+        Logger.recordOutput("Manipulator/TorqueCurrentFiltered", limitedTorqueCurrent);
       } else {
         algaeDebouncer.calculate(hasAlgae);
       }
@@ -479,15 +471,9 @@ public class Manipulator {
       hasAlgae = false;
     }
 
-    // Update coral grabbed LEDs
-    // Leds.getInstance().coralGrabbed = isIntaking && hasCoral;
-
     // Display hasCoral & hasAlgae
     SmartDashboard.putBoolean("Has Coral?", hasCoral);
     SmartDashboard.putBoolean("Has Algae?", hasAlgae);
-
-    // Display coral threshold offset
-    SmartDashboard.putString("Coral Threshold Offset", String.format("%.1f", coralThresholdOffset));
 
     // Log state
     Logger.recordOutput("Manipulator/CoastOverride", coastOverride.getAsBoolean());

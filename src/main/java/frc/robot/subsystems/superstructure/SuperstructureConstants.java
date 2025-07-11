@@ -43,7 +43,7 @@ public class SuperstructureConstants {
 
   // Min and max safe angles for passing through cross members
   public static final LoggedTunableNumber pivotMinSafeAngleRad =
-      new LoggedTunableNumber("Superstructure/PivotMinSafeAngleRadians", .45);
+      new LoggedTunableNumber("Superstructure/PivotMinSafeAngleRadians", .68);
   public static final LoggedTunableNumber pivotMaxSafeAngleRad =
       new LoggedTunableNumber("Superstructure/PivotMaxSafeAngleRadians", Math.PI - .2);
   public static final LoggedTunableNumber elevatorCrossMemberDangerHeight =
