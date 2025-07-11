@@ -62,11 +62,11 @@ public class AutoScoreCommands {
   public static final LoggedTunableNumber minDistanceReefClearL4 =
       new LoggedTunableNumber("AutoScore/MinDistanceReefClear", Units.inchesToMeters(6.0));
   public static final LoggedTunableNumber minDistanceReefClearAlgaeL4 =
-      new LoggedTunableNumber("AutoScore/MinDistanceReefClearAlgae", 0.8);
+      new LoggedTunableNumber("AutoScore/MinDistanceReefClearAlgae", 1);
   public static final LoggedTunableNumber minAngleReefClear =
       new LoggedTunableNumber("AutoScore/MinAngleReefClear", 30.0);
   public static final LoggedTunableNumber algaeBackupTime =
-      new LoggedTunableNumber("AutoScore/AlgaeBackupTime", 0.5);
+      new LoggedTunableNumber("AutoScore/AlgaeBackupTime", 0.75);
   private static final LoggedTunableNumber distanceSuperstructureReady =
       new LoggedTunableNumber("AutoScore/DistanceSuperstructureReady", 2.0);
   private static final LoggedTunableNumber distanceSuperstructureReadyAuto =
