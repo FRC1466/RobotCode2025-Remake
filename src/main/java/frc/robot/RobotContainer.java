@@ -62,6 +62,7 @@ import frc.robot.util.AllianceFlipUtil;
 import frc.robot.util.Container;
 import frc.robot.util.DoublePressTracker;
 import frc.robot.util.MirrorUtil;
+import frc.robot.util.OverridePublisher;
 import frc.robot.util.TriggerUtil;
 import java.util.Optional;
 import java.util.function.DoubleSupplier;
@@ -87,9 +88,24 @@ public class RobotContainer {
 
   // Controllers
   private static final CommandXboxController controller = new CommandXboxController(0);
-  private final Trigger disableReefAutoAlign = new Trigger(() -> false);
-  private final Trigger disableCoralStationAutoAlign = new Trigger(() -> false);
-  private final Trigger disableAlgaeScoreAutoAlign = new Trigger(() -> false);
+
+  // Override controls for disabling auto-alignment features
+
+  /** Disables auto-align when driving to coral station for intake */
+  private final OverridePublisher disableCoralStationAutoAlign =
+      new OverridePublisher("Disable Coral Station Auto Align");
+
+  /** Disables auto-align for reef operations (coral scoring and algae intake) */
+  private final OverridePublisher disableReefAutoAlign =
+      new OverridePublisher("Disable Reef Auto Align");
+
+  /** Disables auto-align for ice cream algae intake (typically used for testing) */
+  private final OverridePublisher disableIceCreamAutoAlign =
+      new OverridePublisher("Disable Ice Cream Auto Align");
+
+  /** Disables auto-align for algae scoring operations (processing and net throwing) */
+  private final OverridePublisher disableAlgaeScoreAutoAlign =
+      new OverridePublisher("Disable Algae Score Auto Align");
 
   private final Alert driverDisconnected =
       new Alert("Driver controller disconnected (port 0).", AlertType.kWarning);
@@ -284,7 +300,6 @@ public class RobotContainer {
                     driverOmega,
                     joystickDriveCommandFactory.get(),
                     controllerRumbleCommand(),
-                    () -> false,
                     disableReefAutoAlign::getAsBoolean,
                     controller.b().doublePress()::getAsBoolean)
                 .deadlineFor(
@@ -334,7 +349,6 @@ public class RobotContainer {
                     driverOmega,
                     joystickDriveCommandFactory,
                     RobotContainer::controllerRumbleCommand,
-                    () -> false,
                     disableReefAutoAlign::getAsBoolean,
                     controller.b().doublePress()::getAsBoolean)
                 .deadlineFor(
@@ -414,8 +428,7 @@ public class RobotContainer {
                     driverY,
                     driverOmega,
                     joystickDriveCommandFactory.get(),
-                    () -> false,
-                    () -> false,
+                    disableIceCreamAutoAlign,
                     controller.a())
                 .withName("Algae Ice Cream Intake"));
 
@@ -436,7 +449,6 @@ public class RobotContainer {
                     driverY,
                     driverOmega,
                     joystickDriveCommandFactory.get(),
-                    () -> false,
                     disableReefAutoAlign,
                     false)
                 .withName("Algae Reef Intake"));

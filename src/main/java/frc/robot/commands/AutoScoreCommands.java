@@ -151,7 +151,6 @@ public class AutoScoreCommands {
       DoubleSupplier driverOmega,
       Command joystickDrive,
       Command controllerRumble,
-      BooleanSupplier robotRelative,
       BooleanSupplier disableReefAutoAlign,
       BooleanSupplier manualEject) {
     Supplier<Pose2d> drivePoseSupplier = () -> drive.getPose();
@@ -352,7 +351,6 @@ public class AutoScoreCommands {
         Commands.none(),
         Commands.none(),
         () -> false,
-        () -> false,
         () -> false);
   }
 
@@ -364,7 +362,6 @@ public class AutoScoreCommands {
       DoubleSupplier driverY,
       DoubleSupplier driverOmega,
       Command joystickDrive,
-      BooleanSupplier robotRelative,
       BooleanSupplier disableReefAutoAlign,
       Boolean isSuper) {
     Supplier<Pose2d> drivePoseSupplier = () -> drive.getPose();
@@ -498,7 +495,6 @@ public class AutoScoreCommands {
       DoubleSupplier driverY,
       DoubleSupplier driverOmega,
       Command joystickDrive,
-      BooleanSupplier robotRelative,
       BooleanSupplier disableIceCreamAutoAlign,
       BooleanSupplier intake) {
 
@@ -617,7 +613,6 @@ public class AutoScoreCommands {
       DoubleSupplier driverOmega,
       Supplier<Command> joystickDriveCommandFactory,
       Supplier<Command> controllerRumbleCommandFactory,
-      BooleanSupplier robotRelative,
       BooleanSupplier disableReefAutoAlign,
       BooleanSupplier manualEject) {
 
@@ -631,7 +626,6 @@ public class AutoScoreCommands {
             driverOmega,
             joystickDriveCommandFactory.get(),
             controllerRumbleCommandFactory.get(),
-            robotRelative,
             disableReefAutoAlign,
             manualEject)
         .andThen(
@@ -646,7 +640,6 @@ public class AutoScoreCommands {
                 driverY,
                 driverOmega,
                 joystickDriveCommandFactory.get(),
-                robotRelative,
                 disableReefAutoAlign,
                 true))
         .beforeStarting(
