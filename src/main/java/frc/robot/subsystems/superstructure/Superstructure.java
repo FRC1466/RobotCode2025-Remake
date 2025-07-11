@@ -287,8 +287,9 @@ public class Superstructure extends SubsystemBase {
                                         pivotMaxSafeAngleRad.get())))
                         .andThen(
                             Commands.waitUntil(manipulator::isAtGoal),
-                            runGoal(state),
-                            Commands.waitUntil(this::mechanismsAtGoal)))
+                            runSuperstructurePose(state.getValue().getPose()),
+                            Commands.waitUntil(this::mechanismsAtGoal),
+                            runSuperstructureExtras(state)))
                 .algaeEdgeType(AlgaeEdge.NONE)
                 .build());
       }

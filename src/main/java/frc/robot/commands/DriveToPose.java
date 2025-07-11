@@ -100,23 +100,23 @@ public class DriveToPose extends Command {
     thetakP.initDefault(5.0);
     thetakD.initDefault(0.5);
 
-    driveMaxVelocity.initDefault(3);
-    driveMaxVelocityTop.initDefault(2.5);
-    driveMaxAcceleration.initDefault(3);
-    driveMaxAccelerationTop.initDefault(1.5);
-    driveMaxVelocityAuto.initDefault(3);
-    driveMaxVelocityAutoTop.initDefault(3);
-    driveMaxAccelerationAuto.initDefault(2.5);
-    driveMaxAccelerationAutoTop.initDefault(2.0);
+    driveMaxVelocity.initDefault(3.6);
+    driveMaxVelocityTop.initDefault(3.6);
+    driveMaxAcceleration.initDefault(3.15);
+    driveMaxAccelerationTop.initDefault(1.35);
+    driveMaxVelocityAuto.initDefault(3.6);
+    driveMaxVelocityAutoTop.initDefault(1.8);
+    driveMaxAccelerationAuto.initDefault(3.15);
+    driveMaxAccelerationAutoTop.initDefault(1.35);
 
-    thetaMaxVelocity.initDefault(Units.degreesToRadians(360.0));
-    thetaMaxVelocityTop.initDefault(Units.degreesToRadians(200.0));
-    thetaMaxAcceleration.initDefault(8.0);
-    thetaMaxAccelerationTop.initDefault(6.0);
-    thetaMaxVelocityAuto.initDefault(Units.degreesToRadians(360.0));
-    thetaMaxVelocityAutoTop.initDefault(Units.degreesToRadians(200.0));
-    thetaMaxAccelerationAuto.initDefault(8.0);
-    thetaMaxAccelerationAutoTop.initDefault(6.0);
+    thetaMaxVelocity.initDefault(Units.degreesToRadians(450.0));
+    thetaMaxVelocityTop.initDefault(Units.degreesToRadians(108.0));
+    thetaMaxAcceleration.initDefault(7.2);
+    thetaMaxAccelerationTop.initDefault(5.4);
+    thetaMaxVelocityAuto.initDefault(Units.degreesToRadians(450.0));
+    thetaMaxVelocityAutoTop.initDefault(Units.degreesToRadians(108.0));
+    thetaMaxAccelerationAuto.initDefault(7.2);
+    thetaMaxAccelerationAutoTop.initDefault(5.4);
 
     driveTolerance.initDefault(0.01);
     thetaTolerance.initDefault(Units.degreesToRadians(1.0));
@@ -127,7 +127,7 @@ public class DriveToPose extends Command {
 
     setpointMinVelocity.initDefault(-0.5);
     minDistanceVelocityCorrection.initDefault(0.01);
-    minLinearErrorReset.initDefault(0.5);
+    minLinearErrorReset.initDefault(0.3);
     minThetaErrorReset.initDefault(Units.degreesToRadians(15.0));
     minLinearFFSReset.initDefault(0.2);
     minThetaFFSReset.initDefault(0.1);
