@@ -8,6 +8,8 @@
 package frc.robot.subsystems.superstructure;
 
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj.Timer;
 import frc.robot.FieldConstants.ReefLevel;
 import frc.robot.util.LoggedTunableNumber;
 import java.util.function.DoubleSupplier;
@@ -25,8 +27,19 @@ public record SuperstructurePose(DoubleSupplier elevatorHeight, Supplier<Rotatio
 
   private static final LoggedTunableNumber intakeHeight =
       new LoggedTunableNumber("Superstructure/Intake/Height", 0.00254);
-  private static final LoggedTunableNumber intakeAngle =
-      new LoggedTunableNumber("Superstructure/Intake/Angle", 0);
+  private static final LoggedTunableNumber intakeAngleAmplitude =
+      new LoggedTunableNumber("Superstructure/Intake/AmplitudeDegrees", Units.degreesToRadians(5));
+  private static final LoggedTunableNumber intakeAnglePeriodSec =
+      new LoggedTunableNumber("Superstructure/Intake/PeriodSec", 2);
+
+  private static final DoubleSupplier intakeAngle =
+      () -> {
+        double amplitudeRad = intakeAngleAmplitude.get();
+        double period = intakeAnglePeriodSec.get();
+        double time = Timer.getFPGATimestamp();
+        double phase = (time % period) / period;
+        return amplitudeRad * Math.sin(2 * Math.PI * phase);
+      };
 
   private static final LoggedTunableNumber IceCreamIntakeHeight =
       new LoggedTunableNumber("Superstructure/AlgaeIntake/IceCream/Height", 0.2);
