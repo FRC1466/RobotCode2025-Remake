@@ -51,14 +51,14 @@ public record SuperstructurePose(DoubleSupplier elevatorHeight, Supplier<Rotatio
       new LoggedTunableNumber("Superstructure/AlgaeScore/Net/AnglePostThrow", 0);
 
   private static final LoggedTunableNumber ProcessorHeight =
-      new LoggedTunableNumber("Superstructure/AlgaeScore/Processor/Height", 0.11430);
+      new LoggedTunableNumber("Superstructure/AlgaeScore/Processor/Height", 0.2);
   private static final LoggedTunableNumber ProcessorAngle =
       new LoggedTunableNumber("Superstructure/AlgaeScore/Processor/Angle", Math.PI - .3);
 
   private static final LoggedTunableNumber l1Height =
-      new LoggedTunableNumber("Superstructure/ReefScore/L1/Height", 0.3556);
+      new LoggedTunableNumber("Superstructure/ReefScore/L1/Height", 0.5);
   private static final LoggedTunableNumber l1Angle =
-      new LoggedTunableNumber("Superstructure/ReefScore/L1/Angle", Math.PI - .3);
+      new LoggedTunableNumber("Superstructure/ReefScore/L1/Angle", Math.PI - .67);
 
   private static final LoggedTunableNumber l2Height =
       new LoggedTunableNumber("Superstructure/ReefScore/L2/Height", 0.3556);

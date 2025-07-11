@@ -197,6 +197,31 @@ public class Superstructure extends SubsystemBase {
             .build());
 
     graph.addEdge(
+        SuperstructureState.STOWTRAVEL,
+        SuperstructureState.L1_CORAL,
+        EdgeCommand.builder()
+            .command(
+                runElevator(
+                        () ->
+                            SuperstructureState.L1_CORAL
+                                .getValue()
+                                .getPose()
+                                .elevatorHeight()
+                                .getAsDouble())
+                    .andThen(
+                        Commands.waitUntil(elevator::isAtGoal),
+                        runManipulatorPivot(
+                            () ->
+                                SuperstructureState.L1_CORAL
+                                    .getValue()
+                                    .getPose()
+                                    .pivotAngle()
+                                    .get()),
+                        Commands.waitUntil(this::mechanismsAtGoal),
+                        runSuperstructureExtras(SuperstructureState.L1_CORAL)))
+            .build());
+
+    graph.addEdge(
         SuperstructureState.PRE_THROW,
         SuperstructureState.THROW,
         EdgeCommand.builder()
@@ -273,6 +298,7 @@ public class Superstructure extends SubsystemBase {
       for (var state : SuperstructureState.values()) {
         if (from == state) continue;
         if (dangerStates.contains(state)) continue;
+        if (state == SuperstructureState.L1_CORAL) continue;
         graph.addEdge(
             from,
             state,
@@ -716,25 +742,11 @@ public class Superstructure extends SubsystemBase {
                 runSuperstructurePose(to.getValue().getPose()),
                 Commands.waitUntil(this::mechanismsAtGoal))
             .andThen(runSuperstructureExtras(to));
-      } else {
-        return runManipulatorPivot(
-                () ->
-                    Rotation2d.fromRadians(
-                        MathUtil.clamp(
-                            to.getValue().getPose().pivotAngle().get().getRadians(),
-                            pivotMinSafeAngleRad.get(),
-                            pivotMaxSafeAngleRad.get())))
-            .andThen(
-                Commands.waitUntil(manipulator::isAtGoal),
-                runSuperstructurePose(to.getValue().getPose()),
-                Commands.waitUntil(this::mechanismsAtGoal))
-            .deadlineFor(runSuperstructureExtras(to));
       }
-    } else {
-      return runSuperstructurePose(to.getValue().getPose())
-          .andThen(Commands.waitUntil(this::mechanismsAtGoal))
-          .deadlineFor(runSuperstructureExtras(to));
     }
+    return runSuperstructurePose(to.getValue().getPose())
+        .andThen(Commands.waitUntil(this::mechanismsAtGoal))
+        .deadlineFor(runSuperstructureExtras(to));
   }
 
   public Command runHomingSequence() {
