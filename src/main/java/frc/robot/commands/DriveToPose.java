@@ -127,7 +127,7 @@ public class DriveToPose extends Command {
 
     setpointMinVelocity.initDefault(-0.5);
     minDistanceVelocityCorrection.initDefault(0.01);
-    minLinearErrorReset.initDefault(0.3);
+    minLinearErrorReset.initDefault(0.7);
     minThetaErrorReset.initDefault(Units.degreesToRadians(15.0));
     minLinearFFSReset.initDefault(0.2);
     minThetaFFSReset.initDefault(0.1);

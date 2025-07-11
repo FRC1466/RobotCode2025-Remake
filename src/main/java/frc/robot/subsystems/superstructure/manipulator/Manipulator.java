@@ -79,7 +79,7 @@ public class Manipulator {
       new LoggedTunableNumber("Dispenser/CoralProxThresh", 0.06);
 
   public static final LoggedTunableNumber tolerance =
-      new LoggedTunableNumber("Manipulator/Tolerance", 0.4);
+      new LoggedTunableNumber("Manipulator/Tolerance", 1.5);
   public static final LoggedTunableNumber homingTimeSecs =
       new LoggedTunableNumber("Manipulator/HomingTimeSecs", 0.2);
   public static final LoggedTunableNumber homingVolts =
@@ -108,7 +108,7 @@ public class Manipulator {
     new LoggedTunableNumber("Manipulator/Funnel/ALGAENET", 0),
   };
   public static final LoggedTunableNumber[] CORALINTAKE = {
-    new LoggedTunableNumber("Manipulator/Mailbox/CORALINTAKE", -2),
+    new LoggedTunableNumber("Manipulator/Mailbox/CORALINTAKE", -1.5),
     new LoggedTunableNumber("Manipulator/Funnel/CORALINTAKE", -4),
   };
   public static final LoggedTunableNumber[] CORALL4GRIP = {
