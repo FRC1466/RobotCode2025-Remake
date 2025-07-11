@@ -108,7 +108,7 @@ public class Manipulator {
     new LoggedTunableNumber("Manipulator/Funnel/ALGAENET", 0),
   };
   public static final LoggedTunableNumber[] CORALINTAKE = {
-    new LoggedTunableNumber("Manipulator/Mailbox/CORALINTAKE", -2),
+    new LoggedTunableNumber("Manipulator/Mailbox/CORALINTAKE", -1.5),
     new LoggedTunableNumber("Manipulator/Funnel/CORALINTAKE", -4),
   };
   public static final LoggedTunableNumber[] CORALL4GRIP = {
