@@ -136,8 +136,10 @@ public class RobotContainer {
           vision =
               new Vision(
                   drive::addVisionMeasurement,
-                  new VisionIOPhotonVision(camera0Name, robotToCamera0),
-                  new VisionIOPhotonVision(camera1Name, robotToCamera1));
+                  compCameras.values().stream()
+                      .map(
+                          config -> new VisionIOPhotonVision(config.name(), config.robotToCamera()))
+                      .toArray(VisionIO[]::new));
           elevator = new Elevator(new ElevatorIOTalonFX());
           manipulator =
               new Manipulator(
@@ -158,7 +160,10 @@ public class RobotContainer {
           vision =
               new Vision(
                   drive::addVisionMeasurement,
-                  new VisionIOPhotonVision(camera0Name, robotToCamera0));
+                  devCameras.values().stream()
+                      .map(
+                          config -> new VisionIOPhotonVision(config.name(), config.robotToCamera()))
+                      .toArray(VisionIO[]::new));
         }
         case SIMBOT -> {
           drive =
@@ -171,8 +176,12 @@ public class RobotContainer {
           vision =
               new Vision(
                   drive::addVisionMeasurement,
-                  new VisionIOPhotonVisionSim(camera0Name, robotToCamera0, drive::getPose),
-                  new VisionIOPhotonVisionSim(camera1Name, robotToCamera1, drive::getPose));
+                  simCameras.values().stream()
+                      .map(
+                          config ->
+                              new VisionIOPhotonVisionSim(
+                                  config.name(), config.robotToCamera(), drive::getPose))
+                      .toArray(VisionIO[]::new));
           elevator = new Elevator(new ElevatorIOSim());
           manipulator =
               new Manipulator(
@@ -196,12 +205,10 @@ public class RobotContainer {
               new ModuleIO() {});
     }
     if (vision == null) {
-      switch (Constants.getRobot()) {
-        case COMPBOT ->
-            vision = new Vision(drive::addVisionMeasurement, new VisionIO() {}, new VisionIO() {});
-        case DEVBOT -> vision = new Vision(drive::addVisionMeasurement, new VisionIO() {});
-        default -> vision = new Vision(drive::addVisionMeasurement);
-      }
+      vision =
+          new Vision(
+              drive::addVisionMeasurement,
+              cameras.values().stream().map(config -> new VisionIO() {}).toArray(VisionIO[]::new));
     }
     if (elevator == null) {
       elevator = new Elevator(new ElevatorIO() {});
