@@ -376,6 +376,16 @@ public class RobotContainer {
                     controllerRumbleCommand().withTimeout(0.1))
                 .withName("Super Auto Score Unavailable Rumble"));
 
+    controller
+        .rightBumper()
+        .whileTrue(superstructure.backupCoral().withName("Manual Coral Backup"));
+
+    controller
+        .b()
+        .doublePress()
+        .and(controller.rightTrigger().negate())
+        .whileTrue(superstructure.ejectCoral().withName("Manual Coral Eject"));
+
     // Coral intake
     controller
         .leftTrigger()

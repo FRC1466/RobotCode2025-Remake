@@ -197,31 +197,6 @@ public class Superstructure extends SubsystemBase {
             .build());
 
     graph.addEdge(
-        SuperstructureState.STOWTRAVEL,
-        SuperstructureState.L1_CORAL,
-        EdgeCommand.builder()
-            .command(
-                runElevator(
-                        () ->
-                            SuperstructureState.L1_CORAL
-                                .getValue()
-                                .getPose()
-                                .elevatorHeight()
-                                .getAsDouble())
-                    .andThen(
-                        Commands.waitUntil(elevator::isAtGoal),
-                        runManipulatorPivot(
-                            () ->
-                                SuperstructureState.L1_CORAL
-                                    .getValue()
-                                    .getPose()
-                                    .pivotAngle()
-                                    .get()),
-                        Commands.waitUntil(this::mechanismsAtGoal),
-                        runSuperstructureExtras(SuperstructureState.L1_CORAL)))
-            .build());
-
-    graph.addEdge(
         SuperstructureState.PRE_THROW,
         SuperstructureState.THROW,
         EdgeCommand.builder()
@@ -580,6 +555,21 @@ public class Superstructure extends SubsystemBase {
     manipulator.resetHasAlgae(false);
   }
 
+  public Command ejectCoral() {
+    return startEnd(
+        () -> {
+          manipulator.setMailboxGoal(MailboxGoal.CORALEJECT);
+          manipulator.resetHasCoral(false);
+        },
+        () -> manipulator.setMailboxGoal(MailboxGoal.IDLE));
+  }
+
+  public Command backupCoral() {
+    return startEnd(
+        () -> manipulator.setMailboxGoal(MailboxGoal.CORALBACKUP),
+        () -> manipulator.setMailboxGoal(MailboxGoal.IDLE));
+  }
+
   private void setGoal(SuperstructureState goal) {
     // Don't do anything if goal is the same
     if (this.goal == goal) return;
@@ -729,7 +719,10 @@ public class Superstructure extends SubsystemBase {
         from.getValue().getHeight().equals(Height.BOTTOM)
             != to.getValue().getHeight().equals(Height.BOTTOM);
     if (passesThroughCrossMember) {
-      if (to.getValue().getPose().elevatorHeight().getAsDouble() > 0.05) {
+      boolean goingUp =
+          from.getValue().getPose().elevatorHeight().getAsDouble()
+              < to.getValue().getPose().elevatorHeight().getAsDouble();
+      if (goingUp) {
         return runManipulatorPivot(
                 () ->
                     Rotation2d.fromRadians(
@@ -739,6 +732,13 @@ public class Superstructure extends SubsystemBase {
                             pivotMaxSafeAngleRad.get())))
             .andThen(
                 Commands.waitUntil(manipulator::isAtGoal),
+                runSuperstructurePose(to.getValue().getPose()),
+                Commands.waitUntil(this::mechanismsAtGoal))
+            .andThen(runSuperstructureExtras(to));
+      } else {
+        return runElevator(to.getValue().getPose().elevatorHeight())
+            .andThen(
+                Commands.waitUntil(elevator::isAtGoal),
                 runSuperstructurePose(to.getValue().getPose()),
                 Commands.waitUntil(this::mechanismsAtGoal))
             .andThen(runSuperstructureExtras(to));
