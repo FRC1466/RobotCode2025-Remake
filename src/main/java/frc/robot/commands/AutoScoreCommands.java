@@ -106,7 +106,7 @@ public class AutoScoreCommands {
   private static final LoggedTunableNumber l4EjectDelay =
       new LoggedTunableNumber("AutoScore/L4EjectDelay", 0.5);
   private static final LoggedTunableNumber l4EjectDelayAuto =
-      new LoggedTunableNumber("AutoScore/L4EjectDelayAuto", 0.5);
+      new LoggedTunableNumber("AutoScore/L4EjectDelayAuto", 0.2);
   private static final LoggedTunableNumber l2ReefIntakeDistance =
       new LoggedTunableNumber("AutoScore/L2ReefIntakeDistance", 0);
   private static final LoggedTunableNumber l3ReefIntakeDistance =

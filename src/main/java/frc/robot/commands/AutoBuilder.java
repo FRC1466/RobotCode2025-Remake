@@ -101,14 +101,20 @@ public class AutoBuilder {
                     // Intake
                     driveToStation
                         .deadlineFor(IntakeCommands.intake(superstructure))
+                        .beforeStarting(intakeTimer::restart)
                         .until(
                             () -> {
                               if (!driveToStation.withinTolerance(
                                   Units.inchesToMeters(5.0), Rotation2d.fromDegrees(5.0))) {
                                 intakeTimer.restart();
                               }
-                              return coralDebouncer.calculate(superstructure.hasCoral())
-                                  || intakeTimer.hasElapsed(intakeTimeSecs.get());
+                              if (currentObjectiveIndex.value == 0) {
+                                return superstructure.hasCoral()
+                                    || intakeTimer.hasElapsed(intakeTimeSecs.get());
+                              } else {
+                                return (superstructure.hasCoral() && intakeTimer.hasElapsed(1))
+                                    || intakeTimer.hasElapsed(intakeTimeSecs.get());
+                              }
                             }),
                     // Score
                     AutoScoreCommands.autoScore(

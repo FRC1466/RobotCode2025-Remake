@@ -14,7 +14,6 @@ import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
-import com.ctre.phoenix6.controls.PositionTorqueCurrentFOC;
 import com.ctre.phoenix6.controls.PositionVoltage;
 import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.ParentDevice;
@@ -48,15 +47,9 @@ public class ElevatorIOTalonFX implements ElevatorIO {
   private final Debouncer connectedDebouncer = new Debouncer(0.5);
   private final Debouncer followerConnectedDebouncer = new Debouncer(0.5);
 
-  private final VoltageOut torqueCurrentRequest = new VoltageOut(0.0).withUpdateFreqHz(0.0);
-
-  @SuppressWarnings("unused")
-  private final PositionTorqueCurrentFOC positionTorqueCurrentRequest =
-      new PositionTorqueCurrentFOC(0.0).withUpdateFreqHz(0.0);
-
-  private final VoltageOut voltageRequest = new VoltageOut(0.0).withUpdateFreqHz(0.0);
   private final PositionVoltage positionVoltageRequest =
       new PositionVoltage(0.0).withUpdateFreqHz(0.0);
+  private final VoltageOut voltageRequest = new VoltageOut(0.0).withUpdateFreqHz(0.0);
 
   public ElevatorIOTalonFX() {
     talon = new TalonFX(17);
@@ -135,7 +128,7 @@ public class ElevatorIOTalonFX implements ElevatorIO {
 
   @Override
   public void runOpenLoop(double output) {
-    talon.setControl(torqueCurrentRequest.withOutput(output));
+    talon.setControl(voltageRequest.withOutput(output));
   }
 
   @Override

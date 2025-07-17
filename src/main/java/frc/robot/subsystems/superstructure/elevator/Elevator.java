@@ -71,9 +71,9 @@ public class Elevator {
   private static final LoggedTunableNumber algaeMaxAccelerationMetersPerSec2 =
       new LoggedTunableNumber("Elevator/AlgaeMaxAccelerationMetersPerSec2", 10.0);
   private static final LoggedTunableNumber homingVolts =
-      new LoggedTunableNumber("Elevator/HomingVolts", -4.0);
+      new LoggedTunableNumber("Elevator/HomingVolts", -1);
   private static final LoggedTunableNumber homingTimeSecs =
-      new LoggedTunableNumber("Elevator/HomingTimeSecs", 0.1);
+      new LoggedTunableNumber("Elevator/HomingTimeSecs", .75);
   private static final LoggedTunableNumber homingVelocityThresh =
       new LoggedTunableNumber("Elevator/HomingVelocityThresh", 5.0);
   private static final LoggedTunableNumber stowStopCheckHeight =
@@ -86,7 +86,7 @@ public class Elevator {
   static {
     switch (Constants.getRobot()) {
       case COMPBOT, DEVBOT -> {
-        kP.initDefault(1);
+        kP.initDefault(1.0);
         kD.initDefault(0);
         for (int stage = 0; stage < 3; stage++) {
           kS[stage].initDefault(0);
