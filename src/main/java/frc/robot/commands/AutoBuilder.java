@@ -10,7 +10,6 @@ package frc.robot.commands;
 import static frc.robot.FieldConstants.fieldWidth;
 import static frc.robot.FieldConstants.startingLineX;
 
-import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform2d;
@@ -53,10 +52,8 @@ public class AutoBuilder {
 
   private final double pushSecs = 0.5;
 
-  private Debouncer coralDebouncer = new Debouncer(0.1, Debouncer.DebounceType.kBoth);
-
   public Command DefaultAuto() {
-    return Autonomous(ReefLevel.L4, ReefLevel.L3, ReefLevel.L3, ReefLevel.L3, 9, 10, 11, 1);
+    return Autonomous(ReefLevel.L4, ReefLevel.L4, ReefLevel.L4, ReefLevel.L4, 9, 10, 11, 0);
   }
 
   public Command Autonomous(
