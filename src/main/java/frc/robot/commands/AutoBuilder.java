@@ -39,8 +39,6 @@ import lombok.RequiredArgsConstructor;
  * <p>Each autonomous routine handles robot positioning, coral piece collection, and scoring at
  * specified reef levels and positions.
  */
-
- //hello
 @RequiredArgsConstructor
 public class AutoBuilder {
   private static final LoggedTunableNumber scoreCancelSecs =
