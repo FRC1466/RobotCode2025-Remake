@@ -425,7 +425,7 @@ public class RobotContainer {
                         < FieldConstants.fieldWidth / 2 - Drive.DRIVE_BASE_WIDTH
                     || onOpposingSide.getAsBoolean());
     Trigger shouldIceCream = new Trigger(() -> false);
-        // new Trigger(() -> AllianceFlipUtil.applyX(drive.getPose().getX()) < 2.4);
+    // new Trigger(() -> AllianceFlipUtil.applyX(drive.getPose().getX()) < 2.4);
     Container<Boolean> hasAlgae = new Container<>(false);
     controller
         .leftBumper()
