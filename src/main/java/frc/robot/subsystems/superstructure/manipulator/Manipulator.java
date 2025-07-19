@@ -80,7 +80,7 @@ public class Manipulator {
       new LoggedTunableNumber("Dispenser/CoralProxThresh", 0.06);
 
   public static final LoggedTunableNumber tolerance =
-      new LoggedTunableNumber("Manipulator/Tolerance", Math.PI / 4);
+      new LoggedTunableNumber("Manipulator/Tolerance", Math.PI);
   public static final LoggedTunableNumber homingTimeSecs =
       new LoggedTunableNumber("Manipulator/HomingTimeSecs", 0.2);
   public static final LoggedTunableNumber homingVolts =
