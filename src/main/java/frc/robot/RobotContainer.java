@@ -459,9 +459,11 @@ public class RobotContainer {
                     drive,
                     superstructure,
                     () ->
-                        Optional.of(
-                            new FieldConstants.AlgaeObjective(
-                                drive.getClosestCoralObjective().branchId() / 2)),
+                        disableReefAutoAlign.getAsBoolean()
+                            ? Optional.of(
+                                new FieldConstants.AlgaeObjective(
+                                    drive.getClosestCoralObjective().branchId() / 2))
+                            : Optional.of(new FieldConstants.AlgaeObjective(0)),
                     driverX,
                     driverY,
                     driverOmega,
