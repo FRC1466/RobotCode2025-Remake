@@ -424,8 +424,8 @@ public class RobotContainer {
                             .getY()
                         < FieldConstants.fieldWidth / 2 - Drive.DRIVE_BASE_WIDTH
                     || onOpposingSide.getAsBoolean());
-    Trigger shouldIceCream =
-        new Trigger(() -> AllianceFlipUtil.applyX(drive.getPose().getX()) < 2.4);
+    Trigger shouldIceCream = new Trigger(() -> false);
+        // new Trigger(() -> AllianceFlipUtil.applyX(drive.getPose().getX()) < 2.4);
     Container<Boolean> hasAlgae = new Container<>(false);
     controller
         .leftBumper()
@@ -459,11 +459,11 @@ public class RobotContainer {
                     drive,
                     superstructure,
                     () ->
-                        disableReefAutoAlign.getAsBoolean()
+                        !disableReefAutoAlign.getAsBoolean()
                             ? Optional.of(
                                 new FieldConstants.AlgaeObjective(
                                     drive.getClosestCoralObjective().branchId() / 2))
-                            : Optional.of(new FieldConstants.AlgaeObjective(0)),
+                            : Optional.of(new FieldConstants.AlgaeObjective(1)),
                     driverX,
                     driverY,
                     driverOmega,
