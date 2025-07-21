@@ -67,9 +67,13 @@ public class Elevator {
   private static final LoggedTunableNumber maxAccelerationMetersPerSec2 =
       new LoggedTunableNumber("Elevator/MaxAccelerationMetersPerSec2", 10.0);
   private static final LoggedTunableNumber algaeMaxVelocityMetersPerSec =
-      new LoggedTunableNumber("Elevator/AlgaeMaxVelocityMetersPerSec", 3.0);
+      new LoggedTunableNumber("Elevator/AlgaeMaxVelocityMetersPerSec", 2.0);
   private static final LoggedTunableNumber algaeMaxAccelerationMetersPerSec2 =
-      new LoggedTunableNumber("Elevator/AlgaeMaxAccelerationMetersPerSec2", 10.0);
+      new LoggedTunableNumber("Elevator/AlgaeMaxAccelerationMetersPerSec2", 8.0);
+  private static final LoggedTunableNumber downMaxVelocityMetersPerSec =
+      new LoggedTunableNumber("Elevator/DownMaxVelocityMetersPerSec", 3.0);
+  private static final LoggedTunableNumber downMaxAccelerationMetersPerSec2 =
+      new LoggedTunableNumber("Elevator/DownMaxAccelerationMetersPerSec2", 8.0);
   private static final LoggedTunableNumber homingVolts =
       new LoggedTunableNumber("Elevator/HomingVolts", -1);
   private static final LoggedTunableNumber homingTimeSecs =
@@ -121,6 +125,7 @@ public class Elevator {
 
   private TrapezoidProfile profile;
   private TrapezoidProfile algaeProfile;
+  private TrapezoidProfile downProfile;
   @Getter private State setpoint = new State();
   private Supplier<State> goal = State::new;
   private boolean stopProfile = false;
@@ -128,6 +133,8 @@ public class Elevator {
   @Setter private boolean isEStopped = false;
   @Setter private boolean hasAlgae = false;
   @Setter private boolean forceFastConstraints = false;
+  @Setter private boolean isGoingDown = false;
+  @Getter private Profile activateProfile = Profile.NONE;
 
   @AutoLogOutput(key = "Elevator/HomedPositionRad")
   private double homedPosition = 0.0;
@@ -151,6 +158,14 @@ public class Elevator {
         new TrapezoidProfile(
             new TrapezoidProfile.Constraints(
                 maxVelocityMetersPerSec.get(), maxAccelerationMetersPerSec2.get()));
+    algaeProfile =
+        new TrapezoidProfile(
+            new TrapezoidProfile.Constraints(
+                algaeMaxVelocityMetersPerSec.get(), algaeMaxAccelerationMetersPerSec2.get()));
+    downProfile =
+        new TrapezoidProfile(
+            new TrapezoidProfile.Constraints(
+                downMaxVelocityMetersPerSec.get(), downMaxAccelerationMetersPerSec2.get()));
   }
 
   public void periodic() {
@@ -178,6 +193,13 @@ public class Elevator {
               new TrapezoidProfile.Constraints(
                   algaeMaxVelocityMetersPerSec.get(), algaeMaxAccelerationMetersPerSec2.get()));
     }
+    if (downMaxVelocityMetersPerSec.hasChanged(hashCode())
+        || downMaxAccelerationMetersPerSec2.hasChanged(hashCode())) {
+      downProfile =
+          new TrapezoidProfile(
+              new TrapezoidProfile.Constraints(
+                  downMaxVelocityMetersPerSec.get(), downMaxAccelerationMetersPerSec2.get()));
+    }
 
     // Set coast mode
     setBrakeMode(!coastOverride.getAsBoolean());
@@ -201,9 +223,29 @@ public class Elevator {
               MathUtil.clamp(goal.get().position, 0.0, SuperstructureConstants.elevatorMaxTravel),
               goal.get().velocity);
       double previousVelocity = setpoint.velocity;
-      setpoint =
-          (hasAlgae && !forceFastConstraints ? algaeProfile : profile)
-              .calculate(Constants.loopPeriodSecs, setpoint, goalState);
+      isGoingDown = getPositionMeters() > goalState.position;
+      if (forceFastConstraints) {
+        activateProfile = Profile.DEFAULT;
+      } else if (hasAlgae) {
+        activateProfile = Profile.ALGAE;
+      } else if (isGoingDown) {
+        activateProfile = Profile.DOWN;
+      } else {
+        activateProfile = Profile.DEFAULT;
+      }
+      switch (activateProfile) {
+        case DEFAULT:
+          setpoint = profile.calculate(Constants.loopPeriodSecs, setpoint, goalState);
+          break;
+        case ALGAE:
+          setpoint = algaeProfile.calculate(Constants.loopPeriodSecs, setpoint, goalState);
+          break;
+        case DOWN:
+          setpoint = downProfile.calculate(Constants.loopPeriodSecs, setpoint, goalState);
+          break;
+        case NONE:
+          break;
+      }
       if (setpoint.position < 0.0
           || setpoint.position > SuperstructureConstants.elevatorMaxTravel) {
         setpoint =
@@ -234,6 +276,7 @@ public class Elevator {
       Logger.recordOutput("Elevator/Profile/SetpointVelocityMetersPerSec", setpoint.velocity);
       Logger.recordOutput("Elevator/Profile/GoalPositionMeters", goalState.position);
       Logger.recordOutput("Elevator/Profile/GoalVelocityMetersPerSec", goalState.velocity);
+      Logger.recordOutput("Elevator/Profile/ActiveProfile", activateProfile.toString());
     } else {
       // Reset setpoint
       setpoint = new State(getPositionMeters(), 0.0);
@@ -243,6 +286,7 @@ public class Elevator {
       Logger.recordOutput("Elevator/Profile/SetpointVelocityMetersPerSec", 0.0);
       Logger.recordOutput("Elevator/Profile/GoalPositionMeters", 0.0);
       Logger.recordOutput("Elevator/Profile/GoalVelocityMetersPerSec", 0.0);
+      Logger.recordOutput("Elevator/Profile/ActiveProfile", "None");
     }
 
     if (isEStopped) {
@@ -389,5 +433,12 @@ public class Elevator {
 
   private static class StaticCharacterizationState {
     public double characterizationOutput = 0.0;
+  }
+
+  private static enum Profile {
+    NONE,
+    DEFAULT,
+    ALGAE,
+    DOWN
   }
 }
