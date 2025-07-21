@@ -79,7 +79,7 @@ public class Elevator {
   private static final LoggedTunableNumber stowStopCheckHeight =
       new LoggedTunableNumber("Elevator/StowStopCheckHeight", .08);
   private static final LoggedTunableNumber tolerance =
-      new LoggedTunableNumber("Elevator/Tolerance", 0.8);
+      new LoggedTunableNumber("Elevator/Tolerance", 2);
 
   @AutoLogOutput @Setter @Getter private static double elevatorExtensionPercent = 0.0;
 

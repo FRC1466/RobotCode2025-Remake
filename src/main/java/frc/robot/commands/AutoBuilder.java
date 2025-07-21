@@ -53,7 +53,7 @@ public class AutoBuilder {
   private final double pushSecs = 0.5;
 
   public Command DefaultAuto() {
-    return Autonomous(ReefLevel.L4, ReefLevel.L3, ReefLevel.L3, ReefLevel.L3, 9, 10, 11, 1);
+    return Autonomous(ReefLevel.L4, ReefLevel.L4, ReefLevel.L4, ReefLevel.L4, 9, 10, 11, 0);
   }
 
   public Command Autonomous(
