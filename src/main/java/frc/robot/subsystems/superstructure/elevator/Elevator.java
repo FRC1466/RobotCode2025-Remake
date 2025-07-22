@@ -20,6 +20,8 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.Constants;
 import frc.robot.Robot;
+import frc.robot.subsystems.sensors.elevatorHomeSensor.ElevatorHomeSensorIO;
+import frc.robot.subsystems.sensors.elevatorHomeSensor.ElevatorHomeSensorIOInputsAutoLogged;
 import frc.robot.subsystems.superstructure.SuperstructureConstants;
 import frc.robot.util.EqualsUtil;
 import frc.robot.util.LoggedTracer;
@@ -112,6 +114,9 @@ public class Elevator {
 
   private final ElevatorIO io;
   private final ElevatorIOInputsAutoLogged inputs = new ElevatorIOInputsAutoLogged();
+  private final ElevatorHomeSensorIO sensorIO;
+  private final ElevatorHomeSensorIOInputsAutoLogged sensorInputs =
+      new ElevatorHomeSensorIOInputsAutoLogged();
 
   private final Alert motorDisconnectedAlert =
       new Alert("Elevator leader motor disconnected!", Alert.AlertType.kWarning);
@@ -135,6 +140,7 @@ public class Elevator {
   @Setter private boolean forceFastConstraints = false;
   @Setter private boolean isGoingDown = false;
   @Getter private Profile activateProfile = Profile.NONE;
+  @Setter private boolean sensorAtHome = false;
 
   @AutoLogOutput(key = "Elevator/HomedPositionRad")
   private double homedPosition = 0.0;
@@ -142,8 +148,8 @@ public class Elevator {
   @AutoLogOutput @Getter private boolean homed = false;
 
   private Debouncer homingDebouncer = new Debouncer(homingTimeSecs.get());
-
   private Debouncer toleranceDebouncer = new Debouncer(0.25, DebounceType.kRising);
+  private Debouncer sensorHomingDebouncer = new Debouncer(1, DebounceType.kRising);
 
   @Getter
   @AutoLogOutput(key = "Elevator/Profile/AtGoal")
@@ -151,8 +157,9 @@ public class Elevator {
 
   @Setter private boolean stowed = false;
 
-  public Elevator(ElevatorIO io) {
+  public Elevator(ElevatorIO io, ElevatorHomeSensorIO sensorIO) {
     this.io = io;
+    this.sensorIO = sensorIO;
 
     profile =
         new TrapezoidProfile(
@@ -171,6 +178,8 @@ public class Elevator {
   public void periodic() {
     io.updateInputs(inputs);
     Logger.processInputs("Elevator", inputs);
+    sensorIO.updateInputs(sensorInputs);
+    Logger.processInputs("Manipulator/CoralSensor", sensorInputs);
 
     motorDisconnectedAlert.set(!inputs.data.motorConnected() && !Robot.isJITing());
     followerDisconnectedAlert.set(!inputs.data.followerConnected() && !Robot.isJITing());
@@ -203,6 +212,13 @@ public class Elevator {
 
     // Set coast mode
     setBrakeMode(!coastOverride.getAsBoolean());
+
+    // Has lower beam break been triggered
+    sensorAtHome = sensorHomingDebouncer.calculate(sensorInputs.data.atBottom());
+
+    if (getPositionMeters() < 0.1 && sensorAtHome && !Robot.isSimulation()) {
+      setHome();
+    }
 
     // Run profile
     final boolean shouldRunProfile =

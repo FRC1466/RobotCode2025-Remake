@@ -42,8 +42,10 @@ import frc.robot.subsystems.rollers.RollerSystemIO;
 import frc.robot.subsystems.rollers.RollerSystemIOSim;
 import frc.robot.subsystems.rollers.RollerSystemIOSpark;
 import frc.robot.subsystems.rollers.RollerSystemIOTalonFX;
-import frc.robot.subsystems.sensors.CoralSensorIO;
-import frc.robot.subsystems.sensors.CoralSensorIOColorSensor;
+import frc.robot.subsystems.sensors.coralSensor.CoralSensorIO;
+import frc.robot.subsystems.sensors.coralSensor.CoralSensorIOColorSensor;
+import frc.robot.subsystems.sensors.elevatorHomeSensor.ElevatorHomeSensorIO;
+import frc.robot.subsystems.sensors.elevatorHomeSensor.ElevatorHomeSensorIOBeamBreak;
 import frc.robot.subsystems.superstructure.Superstructure;
 import frc.robot.subsystems.superstructure.SuperstructureState;
 import frc.robot.subsystems.superstructure.elevator.Elevator;
@@ -140,7 +142,7 @@ public class RobotContainer {
                       .map(
                           config -> new VisionIOPhotonVision(config.name(), config.robotToCamera()))
                       .toArray(VisionIO[]::new));
-          elevator = new Elevator(new ElevatorIOTalonFX());
+          elevator = new Elevator(new ElevatorIOTalonFX(), new ElevatorHomeSensorIOBeamBreak(9));
           manipulator =
               new Manipulator(
                   new PivotIOTalonFX(),
@@ -182,7 +184,7 @@ public class RobotContainer {
                               new VisionIOPhotonVisionSim(
                                   config.name(), config.robotToCamera(), drive::getPose))
                       .toArray(VisionIO[]::new));
-          elevator = new Elevator(new ElevatorIOSim());
+          elevator = new Elevator(new ElevatorIOSim(), new ElevatorHomeSensorIO() {});
           manipulator =
               new Manipulator(
                   new PivotIOSim(),
@@ -211,7 +213,7 @@ public class RobotContainer {
               cameras.values().stream().map(config -> new VisionIO() {}).toArray(VisionIO[]::new));
     }
     if (elevator == null) {
-      elevator = new Elevator(new ElevatorIO() {});
+      elevator = new Elevator(new ElevatorIO() {}, new ElevatorHomeSensorIO() {});
     }
     if (manipulator == null) {
       manipulator =
