@@ -179,7 +179,7 @@ public class Elevator {
     io.updateInputs(inputs);
     Logger.processInputs("Elevator", inputs);
     sensorIO.updateInputs(sensorInputs);
-    Logger.processInputs("Manipulator/CoralSensor", sensorInputs);
+    Logger.processInputs("Elevator/HomeSensor", sensorInputs);
 
     motorDisconnectedAlert.set(!inputs.data.motorConnected() && !Robot.isJITing());
     followerDisconnectedAlert.set(!inputs.data.followerConnected() && !Robot.isJITing());
