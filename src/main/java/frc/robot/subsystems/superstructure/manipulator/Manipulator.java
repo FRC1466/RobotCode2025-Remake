@@ -27,8 +27,9 @@ import frc.robot.Constants;
 import frc.robot.Constants.RobotType;
 import frc.robot.FieldConstants;
 import frc.robot.Robot;
+import frc.robot.RobotState;
 import frc.robot.commands.AutoScoreCommands;
-import frc.robot.subsystems.drive.Drive;
+import frc.robot.subsystems.drive2.Drive;
 import frc.robot.subsystems.rollers.RollerSystemIO;
 import frc.robot.subsystems.rollers.RollerSystemIOInputsAutoLogged;
 import frc.robot.subsystems.sensors.CoralSensorIO;
@@ -424,7 +425,8 @@ public class Manipulator {
       lastCoralButtonPressed = coralButtonPressed;
     }
 
-    var flippedRobot = AllianceFlipUtil.apply(drive.getPose());
+    var flippedRobot =
+        AllianceFlipUtil.apply(RobotState.getInstance().getRobotPoseFromSwerveDriveOdometry());
     var algaeIntakingError =
         flippedRobot.relativeTo(flippedRobot.nearest(List.of(FieldConstants.Reef.centerFaces)));
     var algaeIceCreamIntakingError =

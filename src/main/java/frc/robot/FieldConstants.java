@@ -254,6 +254,13 @@ public class FieldConstants {
     }
   }
 
+  public static Pose3d getTagPose(int tagId) {
+    return AprilTagLayoutType.OFFICIAL
+        .getLayout()
+        .getTagPose(tagId)
+        .orElseThrow(() -> new IllegalArgumentException("Invalid tag ID: " + tagId));
+  }
+
   @RequiredArgsConstructor
   public enum FieldType {
     ANDYMARK("andymark"),

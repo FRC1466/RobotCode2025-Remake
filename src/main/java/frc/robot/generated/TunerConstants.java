@@ -29,9 +29,9 @@ public class TunerConstants {
   // output type specified by SwerveModuleConstants.SteerMotorClosedLoopOutput
   private static final Slot0Configs steerGains =
       new Slot0Configs()
-          .withKP(1000)
+          .withKP(100)
           .withKI(0)
-          .withKD(50)
+          .withKD(0)
           .withKS(0)
           .withKV(0)
           .withKA(0)
@@ -39,16 +39,14 @@ public class TunerConstants {
   // When using closed-loop control, the drive motor uses the control
   // output type specified by SwerveModuleConstants.DriveMotorClosedLoopOutput
   private static final Slot0Configs driveGains =
-      new Slot0Configs().withKP(45).withKI(0).withKD(0).withKS(0).withKV(0);
+      new Slot0Configs().withKP(0).withKI(0).withKD(0).withKS(0).withKV(0.1238);
 
   // The closed-loop output type to use for the steer motors;
   // This affects the PID/FF gains for the steer motors
-  private static final ClosedLoopOutputType kSteerClosedLoopOutput =
-      ClosedLoopOutputType.TorqueCurrentFOC;
+  private static final ClosedLoopOutputType kSteerClosedLoopOutput = ClosedLoopOutputType.Voltage;
   // The closed-loop output type to use for the drive motors;
   // This affects the PID/FF gains for the drive motors
-  private static final ClosedLoopOutputType kDriveClosedLoopOutput =
-      ClosedLoopOutputType.TorqueCurrentFOC;
+  private static final ClosedLoopOutputType kDriveClosedLoopOutput = ClosedLoopOutputType.Voltage;
 
   // The type of motor used for the drive motor
   private static final DriveMotorArrangement kDriveMotorType =
@@ -68,18 +66,27 @@ public class TunerConstants {
   // Initial configs for the drive and steer motors and the azimuth encoder; these cannot be null.
   // Some configs will be overwritten; check the `with*InitialConfigs()` API documentation.
   private static final TalonFXConfiguration driveInitialConfigs = new TalonFXConfiguration();
-  private static final TalonFXConfiguration steerInitialConfigs =
-      new TalonFXConfiguration()
-          .withCurrentLimits(
-              new CurrentLimitsConfigs()
-                  // Swerve azimuth does not require much torque output, so we can set a relatively
-                  // low
-                  // stator current limit to help avoid brownouts without impacting performance.
-                  .withStatorCurrentLimit(Amps.of(60))
-                  .withStatorCurrentLimitEnable(true));
+  private static final TalonFXConfiguration steerInitialConfigs = new TalonFXConfiguration();
   private static final CANcoderConfiguration encoderInitialConfigs = new CANcoderConfiguration();
   // Configs for the Pigeon 2; leave this null to skip applying Pigeon 2 configs
   private static final Pigeon2Configuration pigeonConfigs = null;
+
+  // These are 2910s limits and should be tested
+  static {
+    var driveCurrentLimits = new CurrentLimitsConfigs();
+    driveCurrentLimits.SupplyCurrentLimitEnable = true;
+    driveCurrentLimits.StatorCurrentLimitEnable = true;
+    driveCurrentLimits.SupplyCurrentLimit = 50.0;
+    driveCurrentLimits.StatorCurrentLimit = 100.0;
+    driveInitialConfigs.withCurrentLimits(driveCurrentLimits);
+
+    var steerCurrentLimits = new CurrentLimitsConfigs();
+    steerCurrentLimits.SupplyCurrentLimitEnable = true;
+    steerCurrentLimits.StatorCurrentLimitEnable = true;
+    steerCurrentLimits.SupplyCurrentLimit = 30.0;
+    steerCurrentLimits.StatorCurrentLimit = 90.0;
+    steerInitialConfigs.withCurrentLimits(steerCurrentLimits);
+  }
 
   // CAN bus that the devices are located on;
   // All swerve devices must share the same CAN bus
@@ -103,11 +110,11 @@ public class TunerConstants {
   private static final int kPigeonId = 13;
 
   // These are only used for simulation
-  private static final MomentOfInertia kSteerInertia = KilogramSquareMeters.of(0.004);
-  private static final MomentOfInertia kDriveInertia = KilogramSquareMeters.of(0.025);
+  private static final MomentOfInertia kSteerInertia = KilogramSquareMeters.of(0.00001);
+  private static final MomentOfInertia kDriveInertia = KilogramSquareMeters.of(0.001);
   // Simulated voltage necessary to overcome friction
-  private static final Voltage kSteerFrictionVoltage = Volts.of(0.2);
-  private static final Voltage kDriveFrictionVoltage = Volts.of(0.2);
+  private static final Voltage kSteerFrictionVoltage = Volts.of(0.001);
+  private static final Voltage kDriveFrictionVoltage = Volts.of(0.25);
 
   public static final SwerveDrivetrainConstants DrivetrainConstants =
       new SwerveDrivetrainConstants()
@@ -237,6 +244,17 @@ public class TunerConstants {
               kInvertRightSide,
               kBackRightSteerMotorInverted,
               kBackRightEncoderInverted);
+
+  public static SwerveDrivetrainConstants getSwerveDrivetrainConstants() {
+    return DrivetrainConstants;
+  }
+
+  @SuppressWarnings("unchecked")
+  public static SwerveModuleConstants<
+          TalonFXConfiguration, TalonFXConfiguration, CANcoderConfiguration>
+      [] getModuleConstants() {
+    return new SwerveModuleConstants[] {FrontLeft, FrontRight, BackLeft, BackRight};
+  }
 
   /** Swerve Drive class utilizing CTR Electronics' Phoenix 6 API with the selected device types. */
   public static class TunerSwerveDrivetrain extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder> {

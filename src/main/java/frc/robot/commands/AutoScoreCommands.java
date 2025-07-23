@@ -23,7 +23,8 @@ import frc.robot.FieldConstants.CoralObjective;
 import frc.robot.FieldConstants.IceCreamObjective;
 import frc.robot.FieldConstants.Reef;
 import frc.robot.FieldConstants.ReefLevel;
-import frc.robot.subsystems.drive.Drive;
+import frc.robot.RobotState;
+import frc.robot.subsystems.drive2.Drive;
 import frc.robot.subsystems.superstructure.Superstructure;
 import frc.robot.subsystems.superstructure.SuperstructureState;
 import frc.robot.util.*;
@@ -153,7 +154,8 @@ public class AutoScoreCommands {
       Command controllerRumble,
       BooleanSupplier disableReefAutoAlign,
       BooleanSupplier manualEject) {
-    Supplier<Pose2d> drivePoseSupplier = () -> drive.getPose();
+    Supplier<Pose2d> drivePoseSupplier =
+        () -> RobotState.getInstance().getRobotPoseFromSwerveDriveOdometry();
 
     Function<CoralObjective, Pose2d> goal =
         objective -> {
@@ -204,23 +206,21 @@ public class AutoScoreCommands {
     Container<Boolean> hasEnded = new Container<>(false);
 
     var driveCommand =
-        new DriveToPose(
-            drive,
-            () ->
-                coralObjective
-                    .get()
-                    .filter(
-                        objective ->
-                            !(superstructure.hasAlgae() && objective.reefLevel() == ReefLevel.L1))
-                    .map(
-                        objective -> getDriveTarget(drivePoseSupplier.get(), goal.apply(objective)))
-                    .orElseGet(() -> drive.getPose()),
-            drivePoseSupplier,
-            () ->
-                DriveCommands.getLinearVelocityFromJoysticks(
-                        driverX.getAsDouble(), driverY.getAsDouble())
-                    .times(AllianceFlipUtil.shouldFlip() ? -1.0 : 1.0),
-            () -> DriveCommands.getOmegaFromJoysticks(driverOmega.getAsDouble()));
+        Commands.run(
+            () -> {
+              var targetPose =
+                  coralObjective
+                      .get()
+                      .filter(
+                          objective ->
+                              !(superstructure.hasAlgae() && objective.reefLevel() == ReefLevel.L1))
+                      .map(
+                          objective ->
+                              getDriveTarget(drivePoseSupplier.get(), goal.apply(objective)))
+                      .orElseGet(
+                          () -> RobotState.getInstance().getRobotPoseFromSwerveDriveOdometry());
+              drive.setDesiredPoseForDriveToPoint(targetPose);
+            });
 
     Timer l4EjectTimer = new Timer();
     l4EjectTimer.start();
@@ -277,8 +277,8 @@ public class AutoScoreCommands {
                       Pose2d flippedRobot = AllianceFlipUtil.apply(currentRobotPose);
                       Pose2d predictedRobot =
                           flippedRobot.exp(
-                              drive
-                                  .getChassisSpeeds()
+                              RobotState.getInstance()
+                                  .getRobotChassisSpeeds()
                                   .toTwist2d(lookaheadEject[reefLevel.get().ordinal()].get()));
 
                       boolean ready =
@@ -364,7 +364,8 @@ public class AutoScoreCommands {
       Command joystickDrive,
       BooleanSupplier disableReefAutoAlign,
       Boolean isSuper) {
-    Supplier<Pose2d> drivePoseSupplier = () -> drive.getPose();
+    Supplier<Pose2d> drivePoseSupplier =
+        () -> RobotState.getInstance().getRobotPoseFromSwerveDriveOdometry();
 
     Supplier<SuperstructureState> algaeIntakeState =
         () ->
@@ -406,12 +407,12 @@ public class AutoScoreCommands {
         .andThen(
             Commands.either(
                     joystickDrive,
-                    new DriveToPose(
-                        drive,
+                    Commands.run(
                         () -> {
                           Pose2d goalPose = goal.get();
                           if (algaeObjective.get().isEmpty() && !superstructure.hasAlgae()) {
-                            return AllianceFlipUtil.apply(goalPose);
+                            drive.setDesiredPoseForDriveToPoint(AllianceFlipUtil.apply(goalPose));
+                            return;
                           }
                           if (superstructure.getState() != algaeIntakeState.get()
                               && algaeObjective.get().isPresent()) {
@@ -435,15 +436,10 @@ public class AutoScoreCommands {
                           } else {
                             hasAlgaeTimer.restart();
                           }
-                          return getDriveTarget(
-                              drivePoseSupplier.get(), AllianceFlipUtil.apply(goalPose));
-                        },
-                        drivePoseSupplier,
-                        () ->
-                            DriveCommands.getLinearVelocityFromJoysticks(
-                                    driverX.getAsDouble(), driverY.getAsDouble())
-                                .times(AllianceFlipUtil.shouldFlip() ? -1.0 : 1.0),
-                        () -> DriveCommands.getOmegaFromJoysticks(driverOmega.getAsDouble())),
+                          drive.setDesiredPoseForDriveToPoint(
+                              getDriveTarget(
+                                  drivePoseSupplier.get(), AllianceFlipUtil.apply(goalPose)));
+                        }),
                     disableReefAutoAlign)
                 .alongWith(
                     // Check if need wait until pre ready or already ready
@@ -498,7 +494,7 @@ public class AutoScoreCommands {
       BooleanSupplier disableIceCreamAutoAlign,
       BooleanSupplier intake) {
 
-    Supplier<Pose2d> robot = drive::getPose;
+    Supplier<Pose2d> robot = RobotState.getInstance()::getRobotPoseFromSwerveDriveOdometry;
 
     Supplier<SuperstructureState> iceCreamIntakeState =
         () -> SuperstructureState.ALGAE_ICE_CREAM_INTAKE;
@@ -522,8 +518,7 @@ public class AutoScoreCommands {
         .andThen(
             Commands.either(
                     joystickDrive,
-                    new DriveToPose(
-                        drive,
+                    Commands.run(
                         () -> {
                           Pose2d goalPose = goal.get();
                           if (superstructure.hasAlgae()) {
@@ -549,14 +544,9 @@ public class AutoScoreCommands {
                             intakeDriveTimer.reset();
                           }
 
-                          return getDriveTarget(robot.get(), AllianceFlipUtil.apply(goalPose));
-                        },
-                        robot,
-                        () ->
-                            DriveCommands.getLinearVelocityFromJoysticks(
-                                    driverX.getAsDouble(), driverY.getAsDouble())
-                                .times(AllianceFlipUtil.shouldFlip() ? -1.0 : 1.0),
-                        () -> DriveCommands.getOmegaFromJoysticks(driverOmega.getAsDouble())),
+                          drive.setDesiredPoseForDriveToPoint(
+                              getDriveTarget(robot.get(), AllianceFlipUtil.apply(goalPose)));
+                        }),
                     disableIceCreamAutoAlign)
                 .alongWith(
                     Commands.waitUntil(

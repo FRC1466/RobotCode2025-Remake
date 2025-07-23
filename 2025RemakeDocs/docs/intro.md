@@ -10,4 +10,3 @@ Welcome to my 2025 Robot Code Remake Documentation. After the many issues with c
 3. Sources: How did I learn this, and where can you learn it too?
 
 So, let's get started! I recommend going sequentially in folder order but it is up to you.
-

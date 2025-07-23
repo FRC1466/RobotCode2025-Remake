@@ -9,8 +9,9 @@ package frc.robot;
 
 import static frc.robot.subsystems.vision.VisionConstants.*;
 
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
+import com.ctre.phoenix6.configs.CANcoderConfiguration;
+import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.swerve.SwerveModuleConstants;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
@@ -28,16 +29,12 @@ import frc.robot.FieldConstants.ReefLevel;
 import frc.robot.commands.AlgaeScoreCommands;
 import frc.robot.commands.AutoBuilder;
 import frc.robot.commands.AutoScoreCommands;
-import frc.robot.commands.DriveCommands;
 import frc.robot.commands.DriveToStation;
 import frc.robot.commands.IntakeCommands;
 import frc.robot.generated.TunerConstants;
-import frc.robot.subsystems.drive.Drive;
-import frc.robot.subsystems.drive.GyroIO;
-import frc.robot.subsystems.drive.GyroIOPigeon2;
-import frc.robot.subsystems.drive.ModuleIO;
-import frc.robot.subsystems.drive.ModuleIOSim;
-import frc.robot.subsystems.drive.ModuleIOTalonFX;
+import frc.robot.subsystems.drive2.Drive;
+import frc.robot.subsystems.drive2.Drive.WantedState;
+import frc.robot.subsystems.drive2.SwerveIOCTRE;
 import frc.robot.subsystems.rollers.RollerSystemIO;
 import frc.robot.subsystems.rollers.RollerSystemIOSim;
 import frc.robot.subsystems.rollers.RollerSystemIOSpark;
@@ -55,9 +52,6 @@ import frc.robot.subsystems.superstructure.manipulator.PivotIO;
 import frc.robot.subsystems.superstructure.manipulator.PivotIOSim;
 import frc.robot.subsystems.superstructure.manipulator.PivotIOTalonFX;
 import frc.robot.subsystems.vision.Vision;
-import frc.robot.subsystems.vision.VisionIO;
-import frc.robot.subsystems.vision.VisionIOPhotonVision;
-import frc.robot.subsystems.vision.VisionIOPhotonVisionSim;
 import frc.robot.util.AllianceFlipUtil;
 import frc.robot.util.Container;
 import frc.robot.util.DoublePressTracker;
@@ -66,7 +60,7 @@ import frc.robot.util.OverridePublisher;
 import frc.robot.util.TriggerUtil;
 import java.util.Optional;
 import java.util.function.DoubleSupplier;
-import java.util.function.Supplier;
+import lombok.Getter;
 import lombok.experimental.ExtensionMethod;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
@@ -80,7 +74,7 @@ import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
 @ExtensionMethod({DoublePressTracker.class, TriggerUtil.class})
 public class RobotContainer {
   // Subsystems
-  private Drive drive;
+  @Getter private Drive drive;
   private Vision vision;
   private final Superstructure superstructure;
 
@@ -120,19 +114,24 @@ public class RobotContainer {
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
+    SwerveModuleConstants<TalonFXConfiguration, TalonFXConfiguration, CANcoderConfiguration>[]
+        moduleConstants = TunerConstants.getModuleConstants();
+
+    drive =
+        new Drive(
+            new SwerveIOCTRE(
+                TunerConstants.getSwerveDrivetrainConstants(), TunerConstants.getModuleConstants()),
+            controller,
+            moduleConstants[0].SpeedAt12Volts,
+            moduleConstants[0].SpeedAt12Volts
+                / Math.hypot(moduleConstants[0].LocationX, moduleConstants[0].LocationY));
+
     Elevator elevator = null;
     Manipulator manipulator = null;
 
     if (Constants.getMode() != Constants.Mode.REPLAY) {
       switch (Constants.getRobot()) {
         case COMPBOT -> {
-          drive =
-              new Drive(
-                  new GyroIOPigeon2(),
-                  new ModuleIOTalonFX(TunerConstants.FrontLeft),
-                  new ModuleIOTalonFX(TunerConstants.FrontRight),
-                  new ModuleIOTalonFX(TunerConstants.BackLeft),
-                  new ModuleIOTalonFX(TunerConstants.BackRight));
           vision =
               new Vision(
                   drive::addVisionMeasurement,
@@ -149,14 +148,6 @@ public class RobotContainer {
                   new CoralSensorIOColorSensor(I2C.Port.kOnboard) {},
                   drive);
         }
-        case DEVBOT -> {
-          drive =
-              new Drive(
-                  new GyroIOPigeon2(),
-                  new ModuleIOTalonFX(TunerConstants.FrontLeft),
-                  new ModuleIOTalonFX(TunerConstants.FrontRight),
-                  new ModuleIOTalonFX(TunerConstants.BackLeft),
-                  new ModuleIOTalonFX(TunerConstants.BackRight));
           vision =
               new Vision(
                   drive::addVisionMeasurement,
@@ -165,14 +156,8 @@ public class RobotContainer {
                           config -> new VisionIOPhotonVision(config.name(), config.robotToCamera()))
                       .toArray(VisionIO[]::new));
         }
+        case DEVBOT -> {}
         case SIMBOT -> {
-          drive =
-              new Drive(
-                  new GyroIO() {},
-                  new ModuleIOSim(TunerConstants.FrontLeft),
-                  new ModuleIOSim(TunerConstants.FrontRight),
-                  new ModuleIOSim(TunerConstants.BackLeft),
-                  new ModuleIOSim(TunerConstants.BackRight));
           vision =
               new Vision(
                   drive::addVisionMeasurement,
@@ -195,21 +180,13 @@ public class RobotContainer {
     }
 
     // No-op implementations for replay or if not set above
-    if (drive == null) {
-      drive =
-          new Drive(
-              new GyroIO() {},
-              new ModuleIO() {},
-              new ModuleIO() {},
-              new ModuleIO() {},
-              new ModuleIO() {});
-    }
     if (vision == null) {
       vision =
           new Vision(
               drive::addVisionMeasurement,
               cameras.values().stream().map(config -> new VisionIO() {}).toArray(VisionIO[]::new));
     }
+    if (drive == null) {}
     if (elevator == null) {
       elevator = new Elevator(new ElevatorIO() {});
     }
@@ -271,10 +248,6 @@ public class RobotContainer {
     DoubleSupplier driverY = () -> -controller.getLeftX();
     DoubleSupplier driverOmega = () -> -controller.getRightX();
 
-    Supplier<Command> joystickDriveCommandFactory =
-        () -> DriveCommands.joystickDrive(drive, driverX, driverY, driverOmega);
-    drive.setDefaultCommand(joystickDriveCommandFactory.get());
-
     final Container<ReefLevel> selectedCoralScoreLevel = new Container<>(ReefLevel.L4);
 
     // POV selection for coral score level
@@ -305,14 +278,15 @@ public class RobotContainer {
                     driverX,
                     driverY,
                     driverOmega,
-                    joystickDriveCommandFactory.get(),
+                    Commands.none(),
                     controllerRumbleCommand(),
                     disableReefAutoAlign::getAsBoolean,
                     controller.b().doublePress()::getAsBoolean)
                 .deadlineFor(
                     Commands.startEnd(
                         () -> autoScoreRunning.value = true, () -> autoScoreRunning.value = false))
-                .withName("Auto Score Selected Level"));
+                .withName("Auto Score Selected Level"))
+        .onFalse(Commands.runOnce(() -> drive.setWantedState(WantedState.TELEOP_DRIVE)));
     controller
         .rightTrigger()
         .and(autoScoreAvailable.negate())
@@ -354,7 +328,7 @@ public class RobotContainer {
                     driverX,
                     driverY,
                     driverOmega,
-                    joystickDriveCommandFactory,
+                    () -> Commands.none(),
                     RobotContainer::controllerRumbleCommand,
                     disableReefAutoAlign::getAsBoolean,
                     controller.b().doublePress()::getAsBoolean)
@@ -362,7 +336,8 @@ public class RobotContainer {
                     Commands.startEnd(
                         () -> superAutoScoreExecutionTracker.value = true,
                         () -> superAutoScoreExecutionTracker.value = false))
-                .withName("Super Auto Score"));
+                .withName("Super Auto Score"))
+        .onFalse(Commands.runOnce(() -> drive.setWantedState(WantedState.TELEOP_DRIVE)));
 
     controller
         .rightTrigger()
@@ -391,38 +366,40 @@ public class RobotContainer {
         .leftTrigger()
         .whileTrue(
             Commands.either(
-                    joystickDriveCommandFactory.get(),
-                    new DriveToStation(drive, driverX, driverY, driverOmega, false),
-                    disableCoralStationAutoAlign)
+                    Commands.none(), new DriveToStation(drive, false), disableCoralStationAutoAlign)
                 .alongWith(
                     IntakeCommands.intake(superstructure),
                     Commands.runOnce(superstructure::resetHasCoral))
                 .withName("Coral Station Intake"))
         .onFalse(
             Commands.runOnce(
-                () -> {
-                  if (!superstructure.hasCoral()) {
-                    superstructure.runGoal(() -> SuperstructureState.STOWREST).schedule();
-                  }
-                }));
+                    () -> {
+                      if (!superstructure.hasCoral()) {
+                        superstructure.runGoal(() -> SuperstructureState.STOWREST).schedule();
+                      }
+                    })
+                .alongWith(Commands.runOnce(() -> drive.setWantedState(WantedState.TELEOP_DRIVE))));
 
     // Algae reef intake & score
     Trigger onOpposingSide =
         new Trigger(
-            () -> AllianceFlipUtil.applyX(drive.getPose().getX()) > FieldConstants.fieldLength / 2);
+            () ->
+                AllianceFlipUtil.applyX(
+                        RobotState.getInstance().getRobotPoseFromSwerveDriveOdometry().getX())
+                    > FieldConstants.fieldLength / 2);
     Trigger shouldProcess =
         new Trigger(
             () ->
                 AllianceFlipUtil.apply(
-                                drive
-                                    .getPose()
+                                RobotState.getInstance()
+                                    .getRobotPoseFromSwerveDriveOdometry()
                                     .exp(
-                                        drive
-                                            .getChassisSpeeds()
+                                        RobotState.getInstance()
+                                            .getRobotChassisSpeeds()
                                             .toTwist2d(
                                                 AlgaeScoreCommands.getLookaheadSecs().get())))
                             .getY()
-                        < FieldConstants.fieldWidth / 2 - Drive.DRIVE_BASE_WIDTH
+                        < FieldConstants.fieldWidth / 2 - Drive.robotWidth
                     || onOpposingSide.getAsBoolean());
     Trigger shouldIceCream = new Trigger(() -> false);
     // new Trigger(() -> AllianceFlipUtil.applyX(drive.getPose().getX()) < 2.4);
@@ -444,10 +421,11 @@ public class RobotContainer {
                     driverX,
                     driverY,
                     driverOmega,
-                    joystickDriveCommandFactory.get(),
+                    Commands.none(),
                     disableIceCreamAutoAlign,
                     controller.a())
-                .withName("Algae Ice Cream Intake"));
+                .withName("Algae Ice Cream Intake"))
+        .onFalse(Commands.runOnce(() -> drive.setWantedState(WantedState.TELEOP_DRIVE)));
 
     // Algae reef intake
     controller
@@ -467,10 +445,11 @@ public class RobotContainer {
                     driverX,
                     driverY,
                     driverOmega,
-                    joystickDriveCommandFactory.get(),
+                    Commands.none(),
                     disableReefAutoAlign,
                     false)
-                .withName("Algae Reef Intake"));
+                .withName("Algae Reef Intake"))
+        .onFalse(Commands.runOnce(() -> drive.setWantedState(WantedState.TELEOP_DRIVE)));
 
     // Algae pre-processor
     controller
@@ -479,19 +458,20 @@ public class RobotContainer {
         .and(() -> hasAlgae.value)
         .and(controller.a().negate())
         .or(AlgaeScoreCommands::shouldForceProcess)
-        .whileTrueContinuous(
+        .whileTrue(
             AlgaeScoreCommands.process(
                     drive,
                     superstructure,
                     driverX,
                     driverY,
                     driverOmega,
-                    joystickDriveCommandFactory,
+                    () -> Commands.none(),
                     onOpposingSide,
                     controller.leftBumper(),
                     false,
                     disableAlgaeScoreAutoAlign)
-                .withName("Algae Pre-Processor"));
+                .withName("Algae Pre-Processor"))
+        .onFalse(Commands.runOnce(() -> drive.setWantedState(WantedState.TELEOP_DRIVE)));
 
     // Algae process
     controller
@@ -499,19 +479,20 @@ public class RobotContainer {
         .and(shouldProcess)
         .and(() -> hasAlgae.value)
         .and(controller.a())
-        .whileTrueContinuous(
+        .whileTrue(
             AlgaeScoreCommands.process(
                     drive,
                     superstructure,
                     driverX,
                     driverY,
                     driverOmega,
-                    joystickDriveCommandFactory,
+                    () -> Commands.none(),
                     onOpposingSide,
                     controller.leftBumper(),
                     true,
                     disableAlgaeScoreAutoAlign)
-                .withName("Algae Processing"));
+                .withName("Algae Processing"))
+        .onFalse(Commands.runOnce(() -> drive.setWantedState(WantedState.TELEOP_DRIVE)));
 
     // Algae pre-net
     controller
@@ -525,7 +506,7 @@ public class RobotContainer {
                     superstructure,
                     driverX,
                     driverY,
-                    joystickDriveCommandFactory.get(),
+                    Commands.none(),
                     disableAlgaeScoreAutoAlign)
                 .withName("Algae Pre-Net"))
         // Indicate ready for score
@@ -534,7 +515,8 @@ public class RobotContainer {
             controllerRumbleCommand()
                 .withTimeout(0.1)
                 .andThen(Commands.waitSeconds(0.1))
-                .repeatedly());
+                .repeatedly())
+        .onFalse(Commands.runOnce(() -> drive.setWantedState(WantedState.TELEOP_DRIVE)));
 
     // Algae net score
     controller
@@ -543,7 +525,8 @@ public class RobotContainer {
         .and(() -> hasAlgae.value)
         .and(controller.a())
         .whileTrue(
-            AlgaeScoreCommands.netThrowScore(drive, superstructure).withName("Algae Net Score"));
+            AlgaeScoreCommands.netThrowScore(drive, superstructure).withName("Algae Net Score"))
+        .onFalse(Commands.runOnce(() -> drive.setWantedState(WantedState.TELEOP_DRIVE)));
 
     // Algae eject
     controller
@@ -554,12 +537,7 @@ public class RobotContainer {
     // Reset gyro
     var driverStartAndBack = controller.start().and(controller.back());
     driverStartAndBack.onTrue(
-        Commands.runOnce(
-                () ->
-                    drive.setPose(
-                        new Pose2d(
-                            drive.getPose().getTranslation(),
-                            AllianceFlipUtil.apply(Rotation2d.kZero))))
+        Commands.runOnce(() -> drive.resetRotationBasedOnAlliance())
             .withName("Reset Gyro")
             .ignoringDisable(true));
 

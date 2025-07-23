@@ -13,7 +13,8 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.FieldConstants;
-import frc.robot.subsystems.drive.Drive;
+import frc.robot.RobotState;
+import frc.robot.subsystems.drive2.Drive;
 import frc.robot.subsystems.superstructure.Superstructure;
 import frc.robot.subsystems.superstructure.SuperstructureState;
 import frc.robot.util.AllianceFlipUtil;
@@ -95,8 +96,7 @@ public class AlgaeScoreCommands {
     Container<Pose2d> goalPose = new Container<>(Pose2d.kZero);
     return Commands.either(
             joystickDrive.get(),
-            new DriveToPose(
-                    drive,
+            Commands.run(
                     () -> {
                       goalPose.value =
                           AllianceFlipUtil.apply(
@@ -105,7 +105,7 @@ public class AlgaeScoreCommands {
                                       : FieldConstants.Processor.centerFace)
                               .transformBy(
                                   GeomUtil.toTransform2d(
-                                      Drive.DRIVE_BASE_WIDTH / 2.0
+                                      Drive.robotWidth / 2.0
                                           + processLineupXOffset.get()
                                           + (!eject
                                                   && superstructure.getState()
@@ -118,14 +118,12 @@ public class AlgaeScoreCommands {
                                       Rotation2d.kPi.plus(
                                           Rotation2d.fromDegrees(
                                               eject ? processEjectDegOffset.get() : 0.0))));
-                      return AutoScoreCommands.getDriveTarget(drive.getPose(), goalPose.value);
+                      drive.setDesiredPoseForDriveToPoint(
+                          AutoScoreCommands.getDriveTarget(
+                              RobotState.getInstance().getRobotPoseFromSwerveDriveOdometry(),
+                              goalPose.value));
                     },
-                    drive::getPose,
-                    () ->
-                        DriveCommands.getLinearVelocityFromJoysticks(
-                                driverX.getAsDouble(), driverY.getAsDouble())
-                            .times(AllianceFlipUtil.shouldFlip() ? -1.0 : 1.0),
-                    () -> DriveCommands.getOmegaFromJoysticks(driverOmega.getAsDouble()))
+                    drive)
                 .onlyWhile(holdingButton)
                 .andThen(joystickDrive.get()),
             disableAlgaeScoreAutoAlign)
@@ -138,8 +136,8 @@ public class AlgaeScoreCommands {
                     shouldForceProcess =
                         !disableAlgaeScoreAutoAlign.getAsBoolean()
                             && superstructure.getState() == SuperstructureState.PRE_PROCESS
-                            && drive
-                                    .getPose()
+                            && RobotState.getInstance()
+                                    .getRobotPoseFromSwerveDriveOdometry()
                                     .getTranslation()
                                     .getDistance(goalPose.value.getTranslation())
                                 < forceProcessorMaxDistance.get()))
@@ -154,28 +152,27 @@ public class AlgaeScoreCommands {
       Command joystickDrive,
       BooleanSupplier disableAlgaeScoreAutoAlign) {
     var autoAlignCommand =
-        new DriveToPose(
-            drive,
-            () ->
-                new Pose2d(
-                    AllianceFlipUtil.applyX(
-                        FieldConstants.fieldLength / 2.0 - throwLineupDistance.get()),
-                    drive.getPose().getY(),
-                    AllianceFlipUtil.apply(Rotation2d.k180deg)),
-            drive::getPose,
-            () ->
-                DriveCommands.getLinearVelocityFromJoysticks(
-                        driverX.getAsDouble(), driverY.getAsDouble())
-                    .times(AllianceFlipUtil.shouldFlip() ? -1.0 : 1.0),
-            () -> 0);
+        Commands.run(
+            () -> {
+              Pose2d targetPose =
+                  new Pose2d(
+                      AllianceFlipUtil.applyX(
+                          FieldConstants.fieldLength / 2.0 - throwLineupDistance.get()),
+                      RobotState.getInstance().getRobotPoseFromSwerveDriveOdometry().getY(),
+                      AllianceFlipUtil.apply(Rotation2d.k180deg));
+              drive.setDesiredPoseForDriveToPoint(
+                  AutoScoreCommands.getDriveTarget(
+                      RobotState.getInstance().getRobotPoseFromSwerveDriveOdometry(), targetPose));
+            },
+            drive);
 
     return Commands.either(joystickDrive, autoAlignCommand, disableAlgaeScoreAutoAlign)
         .alongWith(
             Commands.waitUntil(
                     () ->
                         disableAlgaeScoreAutoAlign.getAsBoolean()
-                            || (autoAlignCommand.isRunning()
-                                && autoAlignCommand.withinTolerance(
+                            || (drive.getSystemState() == Drive.SystemState.DRIVE_TO_POINT
+                                && drive.isAtDriveToPointSetpoint(
                                     throwReadyLinearTolerance.get(),
                                     Rotation2d.fromDegrees(throwReadyThetaToleranceDeg.get()))))
                 .andThen(superstructure.runGoal(SuperstructureState.PRE_THROW)));
@@ -186,19 +183,22 @@ public class AlgaeScoreCommands {
     Timer driveTimer = new Timer();
     return Commands.runOnce(
             () -> {
-              startPose.value = drive.getPose();
+              startPose.value = RobotState.getInstance().getRobotPoseFromSwerveDriveOdometry();
               driveTimer.restart();
             })
         .andThen(
-            new DriveToPose(
-                    drive,
-                    () ->
-                        startPose.value.transformBy(
-                            GeomUtil.toTransform2d(
-                                -Math.min(
-                                    driveTimer.get() * throwDriveVelocity.get(),
-                                    throwDriveDistance.get()),
-                                0)))
+            Commands.run(
+                    () -> {
+                      Pose2d targetPose =
+                          startPose.value.transformBy(
+                              GeomUtil.toTransform2d(
+                                  -Math.min(
+                                      driveTimer.get() * throwDriveVelocity.get(),
+                                      throwDriveDistance.get()),
+                                  0));
+                      drive.setDesiredPoseForDriveToPoint(targetPose);
+                    },
+                    drive)
                 .alongWith(
                     superstructure.runGoal(
                         () ->

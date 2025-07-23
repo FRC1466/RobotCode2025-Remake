@@ -21,7 +21,8 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.FieldConstants;
 import frc.robot.FieldConstants.CoralObjective;
 import frc.robot.FieldConstants.ReefLevel;
-import frc.robot.subsystems.drive.Drive;
+import frc.robot.RobotState;
+import frc.robot.subsystems.drive2.Drive;
 import frc.robot.subsystems.superstructure.Superstructure;
 import frc.robot.util.*;
 import java.util.Optional;
@@ -81,7 +82,7 @@ public class AutoBuilder {
     Timer coralIndexedTimer = new Timer();
     return Commands.runOnce(
             () -> {
-              drive.setPose(
+              drive.resetTranslationAndRotation(
                   AllianceFlipUtil.apply(
                       MirrorUtil.apply(
                           new Pose2d(
@@ -140,25 +141,28 @@ public class AutoBuilder {
                 .repeatedly()
                 .until(() -> currentObjectiveIndex.value >= coralObjectives.length))
         .andThen(
-            new DriveToPose(
-                    drive,
-                    () ->
-                        drive
-                            .getPose()
-                            .transformBy(
-                                GeomUtil.toTransform2d(
-                                    -AutoScoreCommands.minDistanceReefClearL4.get(), 0.0)))
-                .until(
-                    () ->
-                        AutoScoreCommands.outOfDistanceToReef(
-                            drive.getPose(), AutoScoreCommands.minDistanceReefClearL4.get())));
+            Commands.runOnce(
+                    () -> {
+                      drive.setDesiredPoseForDriveToPoint(
+                          RobotState.getInstance()
+                              .getRobotPoseFromSwerveDriveOdometry()
+                              .transformBy(
+                                  GeomUtil.toTransform2d(
+                                      -AutoScoreCommands.minDistanceReefClearL4.get(), 0)));
+                    })
+                .andThen(
+                    Commands.waitUntil(
+                        () ->
+                            AutoScoreCommands.outOfDistanceToReef(
+                                RobotState.getInstance().getRobotPoseFromSwerveDriveOdometry(),
+                                AutoScoreCommands.minDistanceReefClearL4.get()))));
   }
 
   public Command TheOnePiece() {
     final var objective = new CoralObjective(7, ReefLevel.L4);
     return Commands.runOnce(
             () -> {
-              drive.setPose(
+              drive.resetTranslationAndRotation(
                   AllianceFlipUtil.apply(
                       MirrorUtil.apply(
                           new Pose2d(
@@ -174,12 +178,13 @@ public class AutoBuilder {
                 superstructure,
                 objective::reefLevel,
                 () -> Optional.of(MirrorUtil.apply(objective))),
-            new DriveToPose(
-                    drive,
-                    () ->
-                        AllianceFlipUtil.apply(
-                            AutoScoreCommands.getCoralScorePose(objective)
-                                .plus(new Transform2d(-0.5, 0.0, Rotation2d.kZero))))
+            Commands.runOnce(
+                    () -> {
+                      drive.setDesiredPoseForDriveToPoint(
+                          AllianceFlipUtil.apply(
+                              AutoScoreCommands.getCoralScorePose(objective)
+                                  .plus(new Transform2d(-0.5, 0.0, Rotation2d.kZero))));
+                    })
                 .withTimeout(3.0)
                 .deadlineFor(
                     superstructure.runGoal(
@@ -189,30 +194,35 @@ public class AutoBuilder {
   public Command Taxi() {
     return Commands.runOnce(
             () ->
-                drive.setPose(
+                drive.resetTranslationAndRotation(
                     AllianceFlipUtil.apply(
-                        new Pose2d(drive.getPose().getTranslation(), Rotation2d.kPi))))
+                        new Pose2d(
+                            RobotState.getInstance()
+                                .getRobotPoseFromSwerveDriveOdometry()
+                                .getTranslation(),
+                            Rotation2d.kPi))))
         .andThen(
-            new DriveToPose(
-                    drive,
-                    () -> drive.getPose(),
-                    () -> drive.getPose(),
+            Commands.runOnce(
                     () ->
-                        new Translation2d((AllianceFlipUtil.shouldFlip() ? -1.0 : 1.0) * -1.0, 0.0),
-                    () -> 0.0)
+                        drive.setDesiredPoseForDriveToPoint(
+                            RobotState.getInstance()
+                                .getRobotPoseFromSwerveDriveOdometry()
+                                .transformBy(
+                                    GeomUtil.toTransform2d(
+                                        -AutoScoreCommands.minDistanceReefClearL4.get(), 0.0))))
                 .withTimeout(0.6));
   }
 
   private Command Push() {
-    return new DriveToPose(
-            drive,
+    return Commands.runOnce(
             () -> {
-              Pose2d robot = drive.getPose();
-              return new Pose2d(
-                  robot
-                      .getTranslation()
-                      .plus(new Translation2d(AllianceFlipUtil.shouldFlip() ? 0.1 : -0.1, 0.0)),
-                  robot.getRotation());
+              Pose2d robot = RobotState.getInstance().getRobotPoseFromSwerveDriveOdometry();
+              drive.setDesiredPoseForDriveToPoint(
+                  new Pose2d(
+                      robot
+                          .getTranslation()
+                          .plus(new Translation2d(AllianceFlipUtil.shouldFlip() ? 0.1 : -0.1, 0.0)),
+                      robot.getRotation()));
             })
         .withTimeout(pushSecs)
         .onlyIf(push);

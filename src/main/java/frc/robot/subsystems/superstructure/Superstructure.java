@@ -22,8 +22,9 @@ import frc.robot.Constants;
 import frc.robot.Constants.Mode;
 import frc.robot.Constants.RobotType;
 import frc.robot.FieldConstants;
+import frc.robot.RobotState;
 import frc.robot.commands.DriveToStation;
-import frc.robot.subsystems.drive.Drive;
+import frc.robot.subsystems.drive2.Drive;
 import frc.robot.subsystems.superstructure.SuperstructureStateData.Height;
 import frc.robot.subsystems.superstructure.elevator.Elevator;
 import frc.robot.subsystems.superstructure.manipulator.Manipulator;
@@ -388,7 +389,8 @@ public class Superstructure extends SubsystemBase {
         runGoal(
             (Supplier<SuperstructureState>)
                 () -> {
-                  final Pose2d robot = drive.getPose();
+                  final Pose2d robot =
+                      RobotState.getInstance().getRobotPoseFromSwerveDriveOdometry();
                   final Pose2d flippedRobot = AllianceFlipUtil.apply(robot);
 
                   // Check danger state
@@ -508,19 +510,19 @@ public class Superstructure extends SubsystemBase {
         manipulator.getPivotAngle().getRadians(),
         hasCoral(),
         hasAlgae(),
-        drive.getPose());
+        RobotState.getInstance().getRobotPoseFromSwerveDriveOdometry());
     setpointVisualizer.update(
         elevator.getPositionMeters(),
         manipulator.getPivotAngle().getRadians(),
         hasCoral(),
         hasAlgae(),
-        drive.getPose());
+        RobotState.getInstance().getRobotPoseFromSwerveDriveOdometry());
     goalVisualizer.update(
         elevator.getPositionMeters(),
         manipulator.getPivotAngle().getRadians(),
         hasCoral(),
         hasAlgae(),
-        drive.getPose());
+        RobotState.getInstance().getRobotPoseFromSwerveDriveOdometry());
 
     // Record cycle time
     LoggedTracer.record("Superstructure");
