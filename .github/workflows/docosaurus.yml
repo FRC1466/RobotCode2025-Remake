@@ -1,0 +1,33 @@
+name: Deploy Docusaurus
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  deploy:
+    name: Deploy Docusaurus
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+          cache-dependency-path: '2025RemakeDocs/yarn.lock'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+        working-directory: ./2025RemakeDocs
+
+      - name: Deploy to GitHub Pages
+        run: |
+          GIT_USER=${{ secrets.GIT_USER }} yarn deploy
+        working-directory: ./2025RemakeDocs
+        env:
+          GIT_PASS: ${{ secrets.GIT_PASS }}
