@@ -9,7 +9,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write  # needed to push to gh-pages
     defaults:
       run:
         working-directory: 2025RemakeDocs
@@ -25,6 +25,7 @@ jobs:
         with:
           node-version: 20
           cache: yarn
+          cache-dependency-path: 2025RemakeDocs/yarn.lock
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile
