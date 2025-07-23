@@ -1,31 +1,43 @@
-name: Deploy Docusaurus
+name: Deploy 2025RemakeDocs
 
 on:
   push:
-    branches:
-      - main
-  pull_request:
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
   deploy:
-    name: Deploy Docusaurus
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # needed to push to gh-pages
+    defaults:
+      run:
+        working-directory: 2025RemakeDocs
+
     steps:
-      - name: Checkout repository
+      - name: Checkout repo
         uses: actions/checkout@v4
-      
-      - name: Set up Node.js
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'yarn'
-          cache-dependency-path: '2025RemakeDocs'
+          node-version: 20
+          cache: yarn
+          cache-dependency-path: 2025RemakeDocs/yarn.lock
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile
-        working-directory: ./2025RemakeDocs
 
-      - name: Deploy to GitHub Pages
+      - name: Configure Git identity
         run: |
-          GIT_USER=${{ secrets.GIT_USER }} GIT_PASS=${{ secrets.GIT_PASS }} yarn deploy
-        working-directory: ./2025RemakeDocs
+          git config --global user.name "${{ secrets.GIT_USER }}"
+          git config --global user.email "${{ secrets.GIT_USER }}@users.noreply.github.com"
+
+      - name: Build & deploy docs
+        env:
+          GIT_USER: ${{ secrets.GIT_USER }}
+          GIT_PASS: ${{ secrets.GIT_PASS }}
+          USE_SSH: false
+        run: yarn deploy
