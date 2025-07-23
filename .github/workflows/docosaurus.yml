@@ -27,7 +27,5 @@ jobs:
 
       - name: Deploy to GitHub Pages
         run: |
-          GIT_USER=${{ secrets.GIT_USER }} yarn deploy
+          GIT_USER=${{ secrets.GIT_USER }} GIT_PASS=${{ secrets.GIT_PASS }} yarn deploy
         working-directory: ./2025RemakeDocs
-        env:
-          GIT_PASS: ${{ secrets.GIT_PASS }}
