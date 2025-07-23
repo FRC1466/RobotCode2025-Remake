@@ -261,52 +261,74 @@ public class Drive extends SubsystemBase {
                 .withTargetDirection(desiredRotationForRotationLockState));
         break;
       case DRIVE_TO_POINT:
-        var translationToDesiredPoint =
-            desiredPoseForDriveToPoint.getTranslation().minus(swerveInputs.Pose.getTranslation());
-        var linearDistance = translationToDesiredPoint.getNorm();
-        var frictionConstant = 0.0;
-        if (linearDistance >= Units.inchesToMeters(0.5)) {
-          frictionConstant = driveToPointStaticFrictionCompensation * maxVelocity;
-        }
-        var directionOfTravel = translationToDesiredPoint.getAngle();
-        var velocityOutput = 0.0;
-        if (DriverStation.isAutonomous()) {
-          velocityOutput =
-              Math.min(
-                  Math.abs(autoDriveToPointController.calculate(linearDistance, 0))
-                      + frictionConstant,
-                  maxVelocityOutputForDriveToPoint);
-        } else {
-          velocityOutput =
-              Math.min(
-                  Math.abs(teleopDriveToPointController.calculate(linearDistance, 0))
-                      + frictionConstant,
-                  maxVelocityOutputForDriveToPoint);
-        }
-        var xComponent = velocityOutput * directionOfTravel.getCos();
-        var yComponent = velocityOutput * directionOfTravel.getSin();
+        var joystickFeedforward = calculateSpeedsBasedOnJoystickInputs();
+        double xJoy = MathUtil.applyDeadband(controller.getLeftY(), controllerDeadband);
+        double yJoy = MathUtil.applyDeadband(controller.getLeftX(), controllerDeadband);
+        double joyMagnitude = Math.sqrt(xJoy * xJoy + yJoy * yJoy);
+        double angularJoy = MathUtil.applyDeadband(controller.getRightX(), controllerDeadband);
 
-        Logger.recordOutput("Subsystems/Drive/DriveToPoint/xVelocitySetpoint", xComponent);
-        Logger.recordOutput("Subsystems/Drive/DriveToPoint/yVelocitySetpoint", yComponent);
-        Logger.recordOutput("Subsystems/Drive/DriveToPoint/velocityOutput", velocityOutput);
-        Logger.recordOutput("Subsystems/Drive/DriveToPoint/linearDistance", linearDistance);
-        Logger.recordOutput("Subsystems/Drive/DriveToPoint/directionOfTravel", directionOfTravel);
-        Logger.recordOutput(
-            "Subsystems/Drive/DriveToPoint/desiredPoint", desiredPoseForDriveToPoint);
-
-        if (Double.isNaN(maximumAngularVelocityForDriveToPoint)) {
+        if (joyMagnitude > 0.5 || Math.abs(angularJoy) > 0.5) {
+          // If joystick is commanded, switch to full teleop control
           io.setSwerveState(
-              driveAtAngle
-                  .withVelocityX(xComponent)
-                  .withVelocityY(yComponent)
-                  .withTargetDirection(desiredPoseForDriveToPoint.getRotation()));
+              new SwerveRequest.ApplyFieldSpeeds()
+                  .withSpeeds(joystickFeedforward)
+                  .withDriveRequestType(SwerveModule.DriveRequestType.OpenLoopVoltage));
         } else {
-          io.setSwerveState(
-              driveAtAngle
-                  .withVelocityX(xComponent)
-                  .withVelocityY(yComponent)
-                  .withTargetDirection(desiredPoseForDriveToPoint.getRotation())
-                  .withMaxAbsRotationalRate(maximumAngularVelocityForDriveToPoint));
+          // Else, drive to the point automatically
+          double xComponent;
+          double yComponent;
+
+          var translationToDesiredPoint =
+              desiredPoseForDriveToPoint.getTranslation().minus(swerveInputs.Pose.getTranslation());
+          var linearDistance = translationToDesiredPoint.getNorm();
+          var frictionConstant = 0.0;
+          if (linearDistance >= Units.inchesToMeters(0.5)) {
+            frictionConstant = driveToPointStaticFrictionCompensation * maxVelocity;
+          }
+          var directionOfTravel = translationToDesiredPoint.getAngle();
+          var velocityOutput = 0.0;
+          if (DriverStation.isAutonomous()) {
+            velocityOutput =
+                Math.min(
+                    Math.abs(autoDriveToPointController.calculate(linearDistance, 0))
+                        + frictionConstant,
+                    maxVelocityOutputForDriveToPoint);
+          } else {
+            velocityOutput =
+                Math.min(
+                    Math.abs(teleopDriveToPointController.calculate(linearDistance, 0))
+                        + frictionConstant,
+                    maxVelocityOutputForDriveToPoint);
+          }
+          xComponent = velocityOutput * directionOfTravel.getCos();
+          yComponent = velocityOutput * directionOfTravel.getSin();
+
+          // Add small joystick inputs for fine-tuning
+          xComponent += joystickFeedforward.vxMetersPerSecond;
+          yComponent += joystickFeedforward.vyMetersPerSecond;
+
+          Logger.recordOutput("Subsystems/Drive/DriveToPoint/velocityOutput", velocityOutput);
+          Logger.recordOutput("Subsystems/Drive/DriveToPoint/linearDistance", linearDistance);
+          Logger.recordOutput("Subsystems/Drive/DriveToPoint/directionOfTravel", directionOfTravel);
+          Logger.recordOutput(
+              "Subsystems/Drive/DriveToPoint/desiredPoint", desiredPoseForDriveToPoint);
+          Logger.recordOutput("Subsystems/Drive/DriveToPoint/xVelocitySetpoint", xComponent);
+          Logger.recordOutput("Subsystems/Drive/DriveToPoint/yVelocitySetpoint", yComponent);
+
+          if (Double.isNaN(maximumAngularVelocityForDriveToPoint)) {
+            io.setSwerveState(
+                driveAtAngle
+                    .withVelocityX(xComponent)
+                    .withVelocityY(yComponent)
+                    .withTargetDirection(desiredPoseForDriveToPoint.getRotation()));
+          } else {
+            io.setSwerveState(
+                driveAtAngle
+                    .withVelocityX(xComponent)
+                    .withVelocityY(yComponent)
+                    .withTargetDirection(desiredPoseForDriveToPoint.getRotation())
+                    .withMaxAbsRotationalRate(maximumAngularVelocityForDriveToPoint));
+          }
         }
         break;
     }

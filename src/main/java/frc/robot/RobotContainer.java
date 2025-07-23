@@ -52,6 +52,9 @@ import frc.robot.subsystems.superstructure.manipulator.PivotIO;
 import frc.robot.subsystems.superstructure.manipulator.PivotIOSim;
 import frc.robot.subsystems.superstructure.manipulator.PivotIOTalonFX;
 import frc.robot.subsystems.vision.Vision;
+import frc.robot.subsystems.vision.VisionIO;
+import frc.robot.subsystems.vision.VisionIOPhotonVision;
+import frc.robot.subsystems.vision.VisionIOPhotonVisionSim;
 import frc.robot.util.AllianceFlipUtil;
 import frc.robot.util.Container;
 import frc.robot.util.DoublePressTracker;
@@ -145,18 +148,21 @@ public class RobotContainer {
                   new PivotIOTalonFX(),
                   new RollerSystemIOTalonFX(15, "", 40, false, true, 5),
                   new RollerSystemIOSpark(19, false),
-                  new CoralSensorIOColorSensor(I2C.Port.kOnboard) {},
-                  drive);
+                  new CoralSensorIOColorSensor(I2C.Port.kOnboard) {});
         }
+        case DEVBOT -> {
           vision =
               new Vision(
                   drive::addVisionMeasurement,
                   devCameras.values().stream()
                       .map(
-                          config -> new VisionIOPhotonVision(config.name(), config.robotToCamera()))
+                          config ->
+                              new VisionIOPhotonVisionSim(
+                                  config.name(),
+                                  config.robotToCamera(),
+                                  RobotState.getInstance()::getRobotPoseFromSwerveDriveOdometry))
                       .toArray(VisionIO[]::new));
         }
-        case DEVBOT -> {}
         case SIMBOT -> {
           vision =
               new Vision(
@@ -165,7 +171,9 @@ public class RobotContainer {
                       .map(
                           config ->
                               new VisionIOPhotonVisionSim(
-                                  config.name(), config.robotToCamera(), drive::getPose))
+                                  config.name(),
+                                  config.robotToCamera(),
+                                  RobotState.getInstance()::getRobotPoseFromSwerveDriveOdometry))
                       .toArray(VisionIO[]::new));
           elevator = new Elevator(new ElevatorIOSim());
           manipulator =
@@ -173,8 +181,7 @@ public class RobotContainer {
                   new PivotIOSim(),
                   new RollerSystemIOSim(DCMotor.getKrakenX60Foc(1), 1, 1),
                   new RollerSystemIOSim(DCMotor.getKrakenX60Foc(1), 1, 1),
-                  new CoralSensorIO() {},
-                  drive);
+                  new CoralSensorIO() {});
         }
       }
     }
@@ -196,10 +203,9 @@ public class RobotContainer {
               new PivotIO() {},
               new RollerSystemIO() {},
               new RollerSystemIO() {},
-              new CoralSensorIO() {},
-              drive);
+              new CoralSensorIO() {});
     }
-    superstructure = new Superstructure(elevator, manipulator, drive);
+    superstructure = new Superstructure(elevator, manipulator);
 
     // Set up auto routines
     autoChooser = new LoggedDashboardChooser<>("Auto Choices");

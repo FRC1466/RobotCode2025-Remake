@@ -24,7 +24,6 @@ import frc.robot.Constants.RobotType;
 import frc.robot.FieldConstants;
 import frc.robot.RobotState;
 import frc.robot.commands.DriveToStation;
-import frc.robot.subsystems.drive2.Drive;
 import frc.robot.subsystems.superstructure.SuperstructureStateData.Height;
 import frc.robot.subsystems.superstructure.elevator.Elevator;
 import frc.robot.subsystems.superstructure.manipulator.Manipulator;
@@ -60,7 +59,6 @@ public class Superstructure extends SubsystemBase {
 
   private final Elevator elevator;
   private final Manipulator manipulator;
-  private final Drive drive;
 
   private final Graph<SuperstructureState, EdgeCommand> graph =
       new DefaultDirectedGraph<>(EdgeCommand.class);
@@ -92,10 +90,9 @@ public class Superstructure extends SubsystemBase {
 
   @Setter private Optional<SuperstructureState> reefDangerState = Optional.empty();
 
-  public Superstructure(Elevator elevator, Manipulator manipulator, Drive drive) {
+  public Superstructure(Elevator elevator, Manipulator manipulator) {
     this.elevator = elevator;
     this.manipulator = manipulator;
-    this.drive = drive;
 
     this.measuredVisualizer = new SuperstructureVisualizer("Measured");
     this.setpointVisualizer = new SuperstructureVisualizer("Setpoint");

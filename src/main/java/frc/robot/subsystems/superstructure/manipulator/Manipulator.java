@@ -29,7 +29,6 @@ import frc.robot.FieldConstants;
 import frc.robot.Robot;
 import frc.robot.RobotState;
 import frc.robot.commands.AutoScoreCommands;
-import frc.robot.subsystems.drive2.Drive;
 import frc.robot.subsystems.rollers.RollerSystemIO;
 import frc.robot.subsystems.rollers.RollerSystemIOInputsAutoLogged;
 import frc.robot.subsystems.sensors.CoralSensorIO;
@@ -175,7 +174,6 @@ public class Manipulator {
   private final CoralSensorIO coralSensorIO;
   private final CoralSensorIOInputsAutoLogged coralSensorInputs =
       new CoralSensorIOInputsAutoLogged();
-  private final Drive drive;
 
   // Overrides
   private OverridePublisher coastOverride = new OverridePublisher("ManipulatorCoastOverride");
@@ -236,13 +234,11 @@ public class Manipulator {
       PivotIO pivotIO,
       RollerSystemIO mailboxIO,
       RollerSystemIO funnelRollerIO,
-      CoralSensorIO coralSensorIO,
-      Drive drive) {
+      CoralSensorIO coralSensorIO) {
     this.pivotIO = pivotIO;
     this.mailboxIO = mailboxIO;
     this.funnelRollerIO = funnelRollerIO;
     this.coralSensorIO = coralSensorIO;
-    this.drive = drive;
 
     profile =
         new TrapezoidProfile(
