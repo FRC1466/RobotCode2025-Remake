@@ -10,7 +10,7 @@ const config: Config = {
   future: { v4: true },
 
   url: 'https://your-docusaurus-site.example.com',
-  baseUrl: '/',
+  baseUrl: '/Code2025Remake-Docs/',
 
   organizationName: 'FRC1466',
   projectName: 'Code2025Remake-Docs',
