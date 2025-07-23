@@ -19,7 +19,7 @@ jobs:
         with:
           node-version: '20'
           cache: 'yarn'
-          cache-dependency-path: '2025RemakeDocs/yarn.lock'
+          cache-dependency-path: '2025RemakeDocs'
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile
