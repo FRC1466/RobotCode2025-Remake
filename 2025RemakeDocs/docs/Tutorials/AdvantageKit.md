@@ -1,1 +1,1 @@
-All information can be found on their website
+Although AdvantageKit is a big part of our code for its logging and replay features, I will not be explaining it in these docs. However, their documentation on [their website](https://docs.advantagekit.org/getting-started/what-is-advantagekit/) clearly explains its purpose and setup.
