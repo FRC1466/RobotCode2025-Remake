@@ -93,7 +93,7 @@ public class Drive extends SubsystemBase {
 
   private Pose2d desiredPoseForDriveToPoint = new Pose2d();
 
-  final SwerveIOInputsAutoLogged swerveInputs = new SwerveIOInputsAutoLogged();
+  final DriveIOInputsAutoLogged swerveInputs = new DriveIOInputsAutoLogged();
   ModuleIOInputsAutoLogged frontLeftInputs = new ModuleIOInputsAutoLogged();
   ModuleIOInputsAutoLogged frontRightInputs = new ModuleIOInputsAutoLogged();
   ModuleIOInputsAutoLogged backLeftInputs = new ModuleIOInputsAutoLogged();
@@ -101,7 +101,7 @@ public class Drive extends SubsystemBase {
 
   private final Object moduleIOLock = new Object();
 
-  private SwerveIO io = new SwerveIO() {};
+  private DriveIO io = new DriveIO() {};
   private final CommandXboxController controller;
 
   private final double maxVelocity;
@@ -155,10 +155,7 @@ public class Drive extends SubsystemBase {
               volts -> io.setSwerveState(steerCharacterization.withVolts(volts)), null, this));
 
   public Drive(
-      SwerveIO io,
-      CommandXboxController controller,
-      double maxVelocity,
-      double maxAngularVelocity) {
+      DriveIO io, CommandXboxController controller, double maxVelocity, double maxAngularVelocity) {
     this.io = io;
     this.controller = controller;
     this.maxVelocity = maxVelocity;

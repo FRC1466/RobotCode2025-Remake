@@ -7,18 +7,14 @@
 
 package frc.robot;
 
-import static frc.robot.subsystems.vision.VisionConstants.*;
-
 import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants;
-import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.GenericHID.RumbleType;
-import edu.wpi.first.wpilibj.I2C;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -35,26 +31,6 @@ import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.Drive.WantedState;
 import frc.robot.subsystems.drive.SwerveIOCTRE;
-import frc.robot.subsystems.rollers.RollerSystemIO;
-import frc.robot.subsystems.rollers.RollerSystemIOSim;
-import frc.robot.subsystems.rollers.RollerSystemIOSpark;
-import frc.robot.subsystems.rollers.RollerSystemIOTalonFX;
-import frc.robot.subsystems.sensors.CoralSensorIO;
-import frc.robot.subsystems.sensors.CoralSensorIOColorSensor;
-import frc.robot.subsystems.superstructure.Superstructure;
-import frc.robot.subsystems.superstructure.SuperstructureState;
-import frc.robot.subsystems.superstructure.elevator.Elevator;
-import frc.robot.subsystems.superstructure.elevator.ElevatorIO;
-import frc.robot.subsystems.superstructure.elevator.ElevatorIOSim;
-import frc.robot.subsystems.superstructure.elevator.ElevatorIOTalonFX;
-import frc.robot.subsystems.superstructure.manipulator.Manipulator;
-import frc.robot.subsystems.superstructure.manipulator.PivotIO;
-import frc.robot.subsystems.superstructure.manipulator.PivotIOSim;
-import frc.robot.subsystems.superstructure.manipulator.PivotIOTalonFX;
-import frc.robot.subsystems.vision.Vision;
-import frc.robot.subsystems.vision.VisionIO;
-import frc.robot.subsystems.vision.VisionIOPhotonVision;
-import frc.robot.subsystems.vision.VisionIOPhotonVisionSim;
 import frc.robot.util.AllianceFlipUtil;
 import frc.robot.util.Container;
 import frc.robot.util.DoublePressTracker;
@@ -78,8 +54,6 @@ import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
 public class RobotContainer {
   // Subsystems
   @Getter private Drive drive;
-  private Vision vision;
-  private final Superstructure superstructure;
 
   private Command blankAuto = Commands.none();
 
@@ -120,92 +94,28 @@ public class RobotContainer {
     SwerveModuleConstants<TalonFXConfiguration, TalonFXConfiguration, CANcoderConfiguration>[]
         moduleConstants = TunerConstants.getModuleConstants();
 
-    drive =
-        new Drive(
-            new SwerveIOCTRE(
-                TunerConstants.getSwerveDrivetrainConstants(), TunerConstants.getModuleConstants()),
-            controller,
-            moduleConstants[0].SpeedAt12Volts,
-            moduleConstants[0].SpeedAt12Volts
-                / Math.hypot(moduleConstants[0].LocationX, moduleConstants[0].LocationY));
-
-    Elevator elevator = null;
-    Manipulator manipulator = null;
-
     if (Constants.getMode() != Constants.Mode.REPLAY) {
+      drive =
+          new Drive(
+              new SwerveIOCTRE(
+                  TunerConstants.getSwerveDrivetrainConstants(),
+                  TunerConstants.getModuleConstants()),
+              controller,
+              moduleConstants[0].SpeedAt12Volts,
+              moduleConstants[0].SpeedAt12Volts
+                  / Math.hypot(moduleConstants[0].LocationX, moduleConstants[0].LocationY));
+
       switch (Constants.getRobot()) {
-        case COMPBOT -> {
-          vision =
-              new Vision(
-                  drive::addVisionMeasurement,
-                  compCameras.values().stream()
-                      .map(
-                          config -> new VisionIOPhotonVision(config.name(), config.robotToCamera()))
-                      .toArray(VisionIO[]::new));
-          elevator = new Elevator(new ElevatorIOTalonFX());
-          manipulator =
-              new Manipulator(
-                  new PivotIOTalonFX(),
-                  new RollerSystemIOTalonFX(15, "", 40, false, true, 5),
-                  new RollerSystemIOSpark(19, false),
-                  new CoralSensorIOColorSensor(I2C.Port.kOnboard) {});
-        }
-        case DEVBOT -> {
-          vision =
-              new Vision(
-                  drive::addVisionMeasurement,
-                  devCameras.values().stream()
-                      .map(
-                          config ->
-                              new VisionIOPhotonVisionSim(
-                                  config.name(),
-                                  config.robotToCamera(),
-                                  RobotState.getInstance()::getRobotPoseFromSwerveDriveOdometry))
-                      .toArray(VisionIO[]::new));
-        }
-        case SIMBOT -> {
-          vision =
-              new Vision(
-                  drive::addVisionMeasurement,
-                  simCameras.values().stream()
-                      .map(
-                          config ->
-                              new VisionIOPhotonVisionSim(
-                                  config.name(),
-                                  config.robotToCamera(),
-                                  RobotState.getInstance()::getRobotPoseFromSwerveDriveOdometry))
-                      .toArray(VisionIO[]::new));
-          elevator = new Elevator(new ElevatorIOSim());
-          manipulator =
-              new Manipulator(
-                  new PivotIOSim(),
-                  new RollerSystemIOSim(DCMotor.getKrakenX60Foc(1), 1, 1),
-                  new RollerSystemIOSim(DCMotor.getKrakenX60Foc(1), 1, 1),
-                  new CoralSensorIO() {});
-        }
+        case COMPBOT -> {}
+        case DEVBOT -> {}
+        case SIMBOT -> {}
       }
     }
 
     // No-op implementations for replay or if not set above
-    if (vision == null) {
-      vision =
-          new Vision(
-              drive::addVisionMeasurement,
-              cameras.values().stream().map(config -> new VisionIO() {}).toArray(VisionIO[]::new));
+    if (drive == null) {
+      drive = new Drive();
     }
-    if (drive == null) {}
-    if (elevator == null) {
-      elevator = new Elevator(new ElevatorIO() {});
-    }
-    if (manipulator == null) {
-      manipulator =
-          new Manipulator(
-              new PivotIO() {},
-              new RollerSystemIO() {},
-              new RollerSystemIO() {},
-              new CoralSensorIO() {});
-    }
-    superstructure = new Superstructure(elevator, manipulator);
 
     // Set up auto routines
     autoChooser = new LoggedDashboardChooser<>("Auto Choices");
