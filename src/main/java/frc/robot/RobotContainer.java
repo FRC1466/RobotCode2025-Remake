@@ -21,24 +21,13 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
-import frc.robot.FieldConstants.ReefLevel;
-import frc.robot.commands.AlgaeScoreCommands;
-import frc.robot.commands.AutoBuilder;
-import frc.robot.commands.AutoScoreCommands;
-import frc.robot.commands.DriveToStation;
-import frc.robot.commands.IntakeCommands;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.drive.Drive;
-import frc.robot.subsystems.drive.Drive.WantedState;
-import frc.robot.subsystems.drive.SwerveIOCTRE;
-import frc.robot.util.AllianceFlipUtil;
-import frc.robot.util.Container;
+import frc.robot.subsystems.drive.DriveIO;
+import frc.robot.subsystems.drive.DriveIOCTRE;
 import frc.robot.util.DoublePressTracker;
 import frc.robot.util.MirrorUtil;
-import frc.robot.util.OverridePublisher;
 import frc.robot.util.TriggerUtil;
-import java.util.Optional;
-import java.util.function.DoubleSupplier;
 import lombok.Getter;
 import lombok.experimental.ExtensionMethod;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
@@ -60,24 +49,6 @@ public class RobotContainer {
   // Controllers
   private static final CommandXboxController controller = new CommandXboxController(0);
 
-  // Override controls for disabling auto-alignment features
-
-  /** Disables auto-align when driving to coral station for intake */
-  private final OverridePublisher disableCoralStationAutoAlign =
-      new OverridePublisher("Disable Coral Station Auto Align");
-
-  /** Disables auto-align for reef operations (coral scoring and algae intake) */
-  private final OverridePublisher disableReefAutoAlign =
-      new OverridePublisher("Disable Reef Auto Align");
-
-  /** Disables auto-align for ice cream algae intake (typically used for testing) */
-  private final OverridePublisher disableIceCreamAutoAlign =
-      new OverridePublisher("Disable Ice Cream Auto Align");
-
-  /** Disables auto-align for algae scoring operations (processing and net throwing) */
-  private final OverridePublisher disableAlgaeScoreAutoAlign =
-      new OverridePublisher("Disable Algae Score Auto Align");
-
   private final Alert driverDisconnected =
       new Alert("Driver controller disconnected (port 0).", AlertType.kWarning);
   private final Alert noAuto = new Alert("Please select an auto routine.", AlertType.kWarning);
@@ -97,7 +68,7 @@ public class RobotContainer {
     if (Constants.getMode() != Constants.Mode.REPLAY) {
       drive =
           new Drive(
-              new SwerveIOCTRE(
+              new DriveIOCTRE(
                   TunerConstants.getSwerveDrivetrainConstants(),
                   TunerConstants.getModuleConstants()),
               controller,
@@ -106,15 +77,27 @@ public class RobotContainer {
                   / Math.hypot(moduleConstants[0].LocationX, moduleConstants[0].LocationY));
 
       switch (Constants.getRobot()) {
-        case COMPBOT -> {}
-        case DEVBOT -> {}
-        case SIMBOT -> {}
+        case COMPBOT -> {
+          break;
+        }
+        case DEVBOT -> {
+          break;
+        }
+        case SIMBOT -> {
+          break;
+        }
       }
     }
 
     // No-op implementations for replay or if not set above
     if (drive == null) {
-      drive = new Drive();
+      drive =
+          new Drive(
+              new DriveIO() {},
+              controller,
+              moduleConstants[0].SpeedAt12Volts,
+              moduleConstants[0].SpeedAt12Volts
+                  / Math.hypot(moduleConstants[0].LocationX, moduleConstants[0].LocationY));
     }
 
     // Set up auto routines
@@ -126,12 +109,6 @@ public class RobotContainer {
     push.addDefaultOption("No", false);
     push.addOption("Yes", true);
     MirrorUtil.setMirror(mirror::get);
-
-    var autoBuilder = new AutoBuilder(drive, superstructure, push::get);
-    autoChooser.addDefaultOption("None", blankAuto);
-    autoChooser.addOption("Default Auto", autoBuilder.DefaultAuto());
-    autoChooser.addOption("The One Piece is real!", autoBuilder.TheOnePiece());
-    autoChooser.addOption("Taxi", autoBuilder.Taxi());
 
     /* // Set up SysId routines
     autoChooser.addOption(
@@ -160,296 +137,6 @@ public class RobotContainer {
    * edu.wpi.first.wpilibj2.command.button.JoystickButton}.
    */
   private void configureButtonBindings() {
-    DoubleSupplier driverX = () -> -controller.getLeftY();
-    DoubleSupplier driverY = () -> -controller.getLeftX();
-    DoubleSupplier driverOmega = () -> -controller.getRightX();
-
-    final Container<ReefLevel> selectedCoralScoreLevel = new Container<>(ReefLevel.L4);
-
-    // POV selection for coral score level
-    controller.povUp().onTrue(Commands.runOnce(() -> selectedCoralScoreLevel.value = ReefLevel.L4));
-    controller
-        .povLeft()
-        .onTrue(Commands.runOnce(() -> selectedCoralScoreLevel.value = ReefLevel.L3));
-    controller
-        .povRight()
-        .onTrue(Commands.runOnce(() -> selectedCoralScoreLevel.value = ReefLevel.L2));
-    controller
-        .povDown()
-        .onTrue(Commands.runOnce(() -> selectedCoralScoreLevel.value = ReefLevel.L1));
-
-    // Auto score trigger (right trigger)
-    Container<Boolean> autoScoreRunning = new Container<>(false);
-    Trigger autoScoreAvailable = new Trigger(() -> drive.getClosestCoralObjective() != null);
-
-    controller
-        .rightTrigger()
-        .and(autoScoreAvailable)
-        .whileTrue(
-            AutoScoreCommands.autoScore(
-                    drive,
-                    superstructure,
-                    () -> selectedCoralScoreLevel.value,
-                    () -> Optional.ofNullable(drive.getClosestCoralObjective()),
-                    driverX,
-                    driverY,
-                    driverOmega,
-                    Commands.none(),
-                    controllerRumbleCommand(),
-                    disableReefAutoAlign::getAsBoolean,
-                    controller.b().doublePress()::getAsBoolean)
-                .deadlineFor(
-                    Commands.startEnd(
-                        () -> autoScoreRunning.value = true, () -> autoScoreRunning.value = false))
-                .withName("Auto Score Selected Level"))
-        .onFalse(Commands.runOnce(() -> drive.setWantedState(WantedState.TELEOP_DRIVE)));
-    controller
-        .rightTrigger()
-        .and(autoScoreAvailable.negate())
-        .and(() -> !autoScoreRunning.value)
-        .onTrue(
-            Commands.sequence(
-                controllerRumbleCommand().withTimeout(0.1),
-                Commands.waitSeconds(0.1),
-                controllerRumbleCommand().withTimeout(0.1)));
-    // Super auto score (double press right trigger)
-    Container<Boolean> superAutoScoreExecutionTracker = new Container<>(false);
-    Container<ReefLevel> lockedSelectedCoralScoreLevelForSuper =
-        new Container<>(
-            selectedCoralScoreLevel.value); // Initialize with current, will be updated onTrue
-    Container<FieldConstants.CoralObjective> lockedClosestCoralObjectiveForSuper =
-        new Container<>(null);
-
-    Trigger superAutoScoreCoralAvailable =
-        new Trigger(() -> drive.getClosestCoralObjective() != null);
-    Trigger canExecuteSuperAutoScore =
-        superAutoScoreCoralAvailable.and(() -> !superstructure.hasAlgae());
-
-    controller
-        .rightTrigger()
-        .doublePress()
-        .and(canExecuteSuperAutoScore)
-        .onTrue(
-            Commands.runOnce(
-                () -> {
-                  lockedSelectedCoralScoreLevelForSuper.value = selectedCoralScoreLevel.value;
-                  lockedClosestCoralObjectiveForSuper.value = drive.getClosestCoralObjective();
-                }))
-        .whileTrue(
-            AutoScoreCommands.superAutoScore(
-                    drive,
-                    superstructure,
-                    () -> lockedSelectedCoralScoreLevelForSuper.value,
-                    () -> Optional.ofNullable(lockedClosestCoralObjectiveForSuper.value),
-                    driverX,
-                    driverY,
-                    driverOmega,
-                    () -> Commands.none(),
-                    RobotContainer::controllerRumbleCommand,
-                    disableReefAutoAlign::getAsBoolean,
-                    controller.b().doublePress()::getAsBoolean)
-                .deadlineFor(
-                    Commands.startEnd(
-                        () -> superAutoScoreExecutionTracker.value = true,
-                        () -> superAutoScoreExecutionTracker.value = false))
-                .withName("Super Auto Score"))
-        .onFalse(Commands.runOnce(() -> drive.setWantedState(WantedState.TELEOP_DRIVE)));
-
-    controller
-        .rightTrigger()
-        .doublePress()
-        .and(canExecuteSuperAutoScore.negate())
-        .and(() -> !superAutoScoreExecutionTracker.value)
-        .onTrue(
-            Commands.sequence(
-                    controllerRumbleCommand().withTimeout(0.1),
-                    Commands.waitSeconds(0.1),
-                    controllerRumbleCommand().withTimeout(0.1))
-                .withName("Super Auto Score Unavailable Rumble"));
-
-    controller
-        .rightBumper()
-        .whileTrue(superstructure.backupCoral().withName("Manual Coral Backup"));
-
-    controller
-        .b()
-        .doublePress()
-        .and(controller.rightTrigger().negate())
-        .whileTrue(superstructure.ejectCoral().withName("Manual Coral Eject"));
-
-    // Coral intake
-    controller
-        .leftTrigger()
-        .whileTrue(
-            Commands.either(
-                    Commands.none(), new DriveToStation(drive, false), disableCoralStationAutoAlign)
-                .alongWith(
-                    IntakeCommands.intake(superstructure),
-                    Commands.runOnce(superstructure::resetHasCoral))
-                .withName("Coral Station Intake"))
-        .onFalse(
-            Commands.runOnce(
-                    () -> {
-                      if (!superstructure.hasCoral()) {
-                        superstructure.runGoal(() -> SuperstructureState.STOWREST).schedule();
-                      }
-                    })
-                .alongWith(Commands.runOnce(() -> drive.setWantedState(WantedState.TELEOP_DRIVE))));
-
-    // Algae reef intake & score
-    Trigger onOpposingSide =
-        new Trigger(
-            () ->
-                AllianceFlipUtil.applyX(
-                        RobotState.getInstance().getRobotPoseFromSwerveDriveOdometry().getX())
-                    > FieldConstants.fieldLength / 2);
-    Trigger shouldProcess =
-        new Trigger(
-            () ->
-                AllianceFlipUtil.apply(
-                                RobotState.getInstance()
-                                    .getRobotPoseFromSwerveDriveOdometry()
-                                    .exp(
-                                        RobotState.getInstance()
-                                            .getRobotChassisSpeeds()
-                                            .toTwist2d(
-                                                AlgaeScoreCommands.getLookaheadSecs().get())))
-                            .getY()
-                        < FieldConstants.fieldWidth / 2 - Drive.robotWidth
-                    || onOpposingSide.getAsBoolean());
-    Trigger shouldIceCream = new Trigger(() -> false);
-    // new Trigger(() -> AllianceFlipUtil.applyX(drive.getPose().getX()) < 2.4);
-    Container<Boolean> hasAlgae = new Container<>(false);
-    controller
-        .leftBumper()
-        .onTrue(Commands.runOnce(() -> hasAlgae.value = superstructure.hasAlgae()));
-
-    // Algae ice cream intake
-    controller
-        .leftBumper()
-        .and(() -> !hasAlgae.value)
-        .and(shouldIceCream)
-        .whileTrue(
-            AutoScoreCommands.iceCreamIntake(
-                    drive,
-                    superstructure,
-                    () -> Optional.ofNullable(drive.getClosestIceCream()),
-                    driverX,
-                    driverY,
-                    driverOmega,
-                    Commands.none(),
-                    disableIceCreamAutoAlign,
-                    controller.a())
-                .withName("Algae Ice Cream Intake"))
-        .onFalse(Commands.runOnce(() -> drive.setWantedState(WantedState.TELEOP_DRIVE)));
-
-    // Algae reef intake
-    controller
-        .leftBumper()
-        .and(() -> !hasAlgae.value)
-        .and(shouldIceCream.negate())
-        .whileTrue(
-            AutoScoreCommands.reefIntake(
-                    drive,
-                    superstructure,
-                    () ->
-                        !disableReefAutoAlign.getAsBoolean()
-                            ? Optional.of(
-                                new FieldConstants.AlgaeObjective(
-                                    drive.getClosestCoralObjective().branchId() / 2))
-                            : Optional.of(new FieldConstants.AlgaeObjective(1)),
-                    driverX,
-                    driverY,
-                    driverOmega,
-                    Commands.none(),
-                    disableReefAutoAlign,
-                    false)
-                .withName("Algae Reef Intake"))
-        .onFalse(Commands.runOnce(() -> drive.setWantedState(WantedState.TELEOP_DRIVE)));
-
-    // Algae pre-processor
-    controller
-        .leftBumper()
-        .and(shouldProcess)
-        .and(() -> hasAlgae.value)
-        .and(controller.a().negate())
-        .or(AlgaeScoreCommands::shouldForceProcess)
-        .whileTrue(
-            AlgaeScoreCommands.process(
-                    drive,
-                    superstructure,
-                    driverX,
-                    driverY,
-                    driverOmega,
-                    () -> Commands.none(),
-                    onOpposingSide,
-                    controller.leftBumper(),
-                    false,
-                    disableAlgaeScoreAutoAlign)
-                .withName("Algae Pre-Processor"))
-        .onFalse(Commands.runOnce(() -> drive.setWantedState(WantedState.TELEOP_DRIVE)));
-
-    // Algae process
-    controller
-        .leftBumper()
-        .and(shouldProcess)
-        .and(() -> hasAlgae.value)
-        .and(controller.a())
-        .whileTrue(
-            AlgaeScoreCommands.process(
-                    drive,
-                    superstructure,
-                    driverX,
-                    driverY,
-                    driverOmega,
-                    () -> Commands.none(),
-                    onOpposingSide,
-                    controller.leftBumper(),
-                    true,
-                    disableAlgaeScoreAutoAlign)
-                .withName("Algae Processing"))
-        .onFalse(Commands.runOnce(() -> drive.setWantedState(WantedState.TELEOP_DRIVE)));
-
-    // Algae pre-net
-    controller
-        .leftBumper()
-        .and(shouldProcess.negate())
-        .and(() -> hasAlgae.value)
-        .and(controller.a().negate())
-        .whileTrue(
-            AlgaeScoreCommands.netThrowLineup(
-                    drive,
-                    superstructure,
-                    driverX,
-                    driverY,
-                    Commands.none(),
-                    disableAlgaeScoreAutoAlign)
-                .withName("Algae Pre-Net"))
-        // Indicate ready for score
-        .and(() -> superstructure.getState() == SuperstructureState.PRE_THROW)
-        .whileTrue(
-            controllerRumbleCommand()
-                .withTimeout(0.1)
-                .andThen(Commands.waitSeconds(0.1))
-                .repeatedly())
-        .onFalse(Commands.runOnce(() -> drive.setWantedState(WantedState.TELEOP_DRIVE)));
-
-    // Algae net score
-    controller
-        .leftBumper()
-        .and(shouldProcess.negate())
-        .and(() -> hasAlgae.value)
-        .and(controller.a())
-        .whileTrue(
-            AlgaeScoreCommands.netThrowScore(drive, superstructure).withName("Algae Net Score"))
-        .onFalse(Commands.runOnce(() -> drive.setWantedState(WantedState.TELEOP_DRIVE)));
-
-    // Algae eject
-    controller
-        .a()
-        .and(controller.leftBumper().negate())
-        .whileTrue(superstructure.runGoal(SuperstructureState.TOSS).withName("Algae Toss"));
-
     // Reset gyro
     var driverStartAndBack = controller.start().and(controller.back());
     driverStartAndBack.onTrue(
