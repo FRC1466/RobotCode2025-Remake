@@ -9,7 +9,7 @@ package frc.robot.subsystems.archive.superstructure;
 
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.Timer;
-import frc.robot.FieldConstants.ReefLevel;
+import frc.robot.constants.FieldConstants.ReefLevel;
 import frc.robot.util.LoggedTunableNumber;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;

@@ -7,7 +7,9 @@
 
 package frc.robot.subsystems.drive;
 
-import static edu.wpi.first.units.Units.Volts;
+import static edu.wpi.first.units.Units.*;
+import static frc.robot.constants.FieldConstants.*;
+import static frc.robot.constants.SysIDConstants.*;
 
 import com.ctre.phoenix6.SignalLogger;
 import com.ctre.phoenix6.swerve.SwerveModule;
@@ -27,12 +29,6 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
-import frc.robot.Constants;
-import frc.robot.FieldConstants;
-import frc.robot.FieldConstants.CoralObjective;
-import frc.robot.FieldConstants.IceCreamObjective;
-import frc.robot.FieldConstants.Reef;
-import frc.robot.FieldConstants.ReefLevel;
 import frc.robot.util.AllianceFlipUtil;
 import frc.robot.util.AllianceUtil;
 import frc.robot.util.SysIdMechanism;
@@ -114,9 +110,9 @@ public class Drive extends SubsystemBase {
   private final SysIdRoutine translationSysIdRoutine =
       new SysIdRoutine(
           new SysIdRoutine.Config(
-              Constants.SysIdConstants.TRANSLATION_RAMP_RATE,
-              Constants.SysIdConstants.TRANSLATION_STEP_RATE,
-              Constants.SysIdConstants.TRANSLATION_TIMEOUT,
+              translationRampRate,
+              translationStepRate,
+              translationTimeout,
               state -> SignalLogger.writeString("SysIdTranslation_State", state.toString())),
           new SysIdRoutine.Mechanism(
               output -> io.setSwerveState(translationCharacterization.withVolts(output)),
@@ -130,9 +126,9 @@ public class Drive extends SubsystemBase {
   private final SysIdRoutine rotationSysIdRoutine =
       new SysIdRoutine(
           new SysIdRoutine.Config(
-              Constants.SysIdConstants.ROTATION_RAMP_RATE,
-              Constants.SysIdConstants.ROTATION_STEP_RATE,
-              Constants.SysIdConstants.ROTATION_TIMEOUT,
+              rotationRampRate,
+              rotationStepRate,
+              rotationTimeout,
               state -> SignalLogger.writeString("SysIdRotation_State", state.toString())),
           new SysIdRoutine.Mechanism(
               output -> {
@@ -147,9 +143,9 @@ public class Drive extends SubsystemBase {
   private final SysIdRoutine steerSysIdRoutine =
       new SysIdRoutine(
           new SysIdRoutine.Config(
-              Constants.SysIdConstants.STEER_RAMP_RATE,
-              Constants.SysIdConstants.STEER_STEP_RATE,
-              Constants.SysIdConstants.STEER_TIMEOUT,
+              steerRampRate,
+              steerStepRate,
+              steerTimeout,
               state -> SignalLogger.writeString("SysIdSteer_State", state.toString())),
           new SysIdRoutine.Mechanism(
               volts -> io.setSwerveState(steerCharacterization.withVolts(volts)), null, this));
@@ -506,10 +502,8 @@ public class Drive extends SubsystemBase {
     Pose2d robotPose = AllianceFlipUtil.apply(swerveInputs.Pose);
     IceCreamObjective closest = null;
     double minDist = Double.POSITIVE_INFINITY;
-    for (int iceCreamID = 1;
-        iceCreamID < FieldConstants.iceCreamPositions.size() + 1;
-        iceCreamID++) {
-      Pose2d iceCreamPose = FieldConstants.iceCreamPositions.get(new IceCreamObjective(iceCreamID));
+    for (int iceCreamID = 1; iceCreamID < iceCreamPositions.size() + 1; iceCreamID++) {
+      Pose2d iceCreamPose = iceCreamPositions.get(new IceCreamObjective(iceCreamID));
       double dist = robotPose.getTranslation().getDistance(iceCreamPose.getTranslation());
       if (dist < minDist) {
         minDist = dist;

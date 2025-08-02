@@ -15,7 +15,7 @@ import edu.wpi.first.math.numbers.N2;
 import edu.wpi.first.math.system.NumericalIntegration;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.util.Units;
-import frc.robot.Constants;
+import frc.robot.constants.Constants;
 import frc.robot.subsystems.archive.superstructure.SuperstructureConstants;
 import frc.robot.subsystems.archive.superstructure.elevator.ElevatorIOSim;
 

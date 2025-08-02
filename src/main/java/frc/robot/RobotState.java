@@ -9,6 +9,7 @@ package frc.robot;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import frc.robot.constants.ReefConstants;
 import frc.robot.util.AllianceUtil;
 import java.util.ArrayList;
 import java.util.List;
@@ -62,15 +63,12 @@ public class RobotState {
     int correctTagID = 0;
 
     if (AllianceUtil.isBlueAlliance()) {
-      possiblePoses =
-          Constants.ReefConstants.blueAlliancePoseToTagIdsMap.keySet().stream().toList();
-      correctTagID =
-          Constants.ReefConstants.blueAlliancePoseToTagIdsMap.get(pose.nearest(possiblePoses));
+      possiblePoses = ReefConstants.blueAlliancePoseToTagIdsMap.keySet().stream().toList();
+      correctTagID = ReefConstants.blueAlliancePoseToTagIdsMap.get(pose.nearest(possiblePoses));
 
     } else {
-      possiblePoses = Constants.ReefConstants.redAlliancePoseToTagIdsMap.keySet().stream().toList();
-      correctTagID =
-          Constants.ReefConstants.redAlliancePoseToTagIdsMap.get(pose.nearest(possiblePoses));
+      possiblePoses = ReefConstants.redAlliancePoseToTagIdsMap.keySet().stream().toList();
+      correctTagID = ReefConstants.redAlliancePoseToTagIdsMap.get(pose.nearest(possiblePoses));
     }
 
     return correctTagID;

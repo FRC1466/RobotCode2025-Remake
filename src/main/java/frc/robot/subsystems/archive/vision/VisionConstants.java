@@ -63,7 +63,7 @@ public class VisionConstants {
   public static Map<Integer, CameraConfig> cameras = getCameraMap();
 
   private static Map<Integer, CameraConfig> getCameraMap() {
-    return switch (frc.robot.Constants.getRobot()) {
+    return switch (frc.robot.constants.Constants.getRobot()) {
       case COMPBOT -> compCameras;
       case DEVBOT -> devCameras;
       case SIMBOT -> simCameras;

@@ -12,7 +12,7 @@ import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.system.plant.LinearSystemId;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
-import frc.robot.Constants;
+import frc.robot.constants.Constants;
 
 public class RollerSystemIOSim implements RollerSystemIO {
   private final DCMotorSim sim;

@@ -9,8 +9,8 @@ package frc.robot.util;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import frc.robot.FieldConstants;
-import frc.robot.FieldConstants.CoralObjective;
+import frc.robot.constants.FieldConstants;
+import frc.robot.constants.FieldConstants.CoralObjective;
 import java.util.function.BooleanSupplier;
 import lombok.Getter;
 import lombok.Setter;

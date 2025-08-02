@@ -7,8 +7,8 @@
 
 package frc.robot.commands;
 
-import static frc.robot.FieldConstants.fieldWidth;
-import static frc.robot.FieldConstants.startingLineX;
+import static frc.robot.constants.FieldConstants.fieldWidth;
+import static frc.robot.constants.FieldConstants.startingLineX;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -18,10 +18,10 @@ import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
-import frc.robot.FieldConstants;
-import frc.robot.FieldConstants.CoralObjective;
-import frc.robot.FieldConstants.ReefLevel;
 import frc.robot.RobotState;
+import frc.robot.constants.FieldConstants;
+import frc.robot.constants.FieldConstants.CoralObjective;
+import frc.robot.constants.FieldConstants.ReefLevel;
 import frc.robot.subsystems.archive.superstructure.Superstructure;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.util.*;

@@ -64,10 +64,7 @@ public class DriveIOCTRE extends SwerveDrivetrain implements DriveIO {
       moduleMap.put("steerAppliedVolts", steerMotor.getMotorVoltage());
       moduleMap.put("steerTemperature", steerMotor.getDeviceTemp());
 
-      // Register signals for centralized refresh
-      PhoenixUtil.registerSignals(
-          false, // Set to true if using CANivore
-          moduleMap.values().toArray(new BaseStatusSignal[0]));
+      PhoenixUtil.registerSignals(false, moduleMap.values().toArray(new BaseStatusSignal[0]));
     }
   }
 
