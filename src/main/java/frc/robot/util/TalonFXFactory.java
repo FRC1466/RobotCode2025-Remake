@@ -7,8 +7,6 @@
 
 package frc.robot.util;
 
-import java.util.Optional;
-
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.hardware.TalonFX;
@@ -45,11 +43,11 @@ public final class TalonFXFactory {
    * @param canBus The CAN bus name ("rio", "canivore", etc.).
    * @return A configured TalonFX instance.
    */
-public static TalonFX createDefaultTalon(int deviceId) {
+  public static TalonFX createDefaultTalon(int deviceId) {
     return createDefaultTalon(deviceId, "rio", true);
-}
+  }
 
-public static TalonFX createDefaultTalon(int deviceId, String canBus) {
+  public static TalonFX createDefaultTalon(int deviceId, String canBus) {
     return createDefaultTalon(deviceId, canBus, true);
   }
 

@@ -8,33 +8,28 @@
 package frc.robot.subsystems.elevator;
 
 import com.ctre.phoenix6.signals.NeutralModeValue;
-import edu.wpi.first.math.geometry.Rotation2d;
-import java.util.function.Supplier;
 import org.littletonrobotics.junction.AutoLog;
 
 public interface ElevatorIO {
-  default void updateInputs(ExtensionIOInputs inputs) {}
+  default void updateInputs(ElevatorIOInputs inputs) {}
 
   @AutoLog
-  class ExtensionIOInputs {
-    public double extensionPositionInMeters;
+  class ElevatorIOInputs {
+    public double elevatorPositionMeters;
+    public double elevatorVelocityMetersPerSec;
+    public double elevatorAccelerationMetersPerSecSquared;
 
-    public double extensionAppliedVolts;
-    public double extensionSupplyCurrentAmps;
-    public double extensionStatorCurrentAmps;
-    public double extensionVelocityMetersPerSec;
-    public double extensionAccelerationMetersPerSecSquared;
+    public double elevatorAppliedVolts;
+    public double elevatorSupplyCurrentAmps;
+    public double elevatorStatorCurrentAmps;
 
-    public double extensionOneMotorTemp;
-    public double extensionTwoMotorTemp;
-    public double extensionThreeMotorTemp;
+    public double elevatorMasterMotorTemp;
+    public double elevatorFollowerMotorTemp;
   }
 
-  default void setShoulderAngleSupplier(Supplier<Rotation2d> shoulderAngleSupplier) {}
+  default void setTargetPosition(double positionInMeters) {}
 
-  default void setTargetExtension(double positionInMeters) {}
-
-  default void resetExtensionPosition(double positionInMeters) {}
+  default void resetElevatorPosition(double positionInMeters) {}
 
   default void setDutyCycle(double dutyCycle) {}
 

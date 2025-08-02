@@ -7,4 +7,28 @@
 
 package frc.robot.subsystems.elevator;
 
-public class Elevator {}
+import static frc.robot.constants.ElevatorConstants.*;
+
+import java.util.function.Supplier;
+
+import lombok.Getter;
+import lombok.Setter;
+
+public class Elevator {
+     @Getter @Setter private static Supplier<ElevatorProfile> currentElevatorProfile =
+      () -> ElevatorProfile.DEFAULT;
+
+  public enum ElevatorProfile {
+    DEFAULT(velocityConstraint, accelerationConstraint),
+    DOWN(velocityConstraint, accelerationConstraintDown),
+    ALGAE(velocityConstraintAlgae, accelerationConstraintAlgae);
+
+    public final double velocity;
+    public final double acceleration;
+
+    ElevatorProfile(double velocity, double acceleration) {
+      this.velocity = velocity;
+      this.acceleration = acceleration;
+    }
+  }
+}
