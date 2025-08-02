@@ -7,10 +7,24 @@
 
 package frc.robot.subsystems.elevator;
 
+import static frc.robot.constants.ElevatorConstants.*;
+
+import java.util.function.Supplier;
+import com.ctre.phoenix6.BaseStatusSignal;
+import com.ctre.phoenix6.StatusSignal;
+import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.controls.DutyCycleOut;
+import com.ctre.phoenix6.controls.Follower;
+import com.ctre.phoenix6.controls.MotionMagicVoltage;
+import com.ctre.phoenix6.hardware.TalonFX;
+import com.ctre.phoenix6.signals.InvertedValue;
+import com.ctre.phoenix6.signals.NeutralModeValue;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.units.measure.*;
+import frc.robot.util.TalonFXFactory;
 
 public class ElevatorIOTalonFX implements ElevatorIO {
-  /* private final TalonFX masterTalonFX;
+  private final TalonFX masterTalonFX;
   private final TalonFX followerTalonFX;
   Follower followControlRequest;
   DutyCycleOut dutyCycleOut = new DutyCycleOut(0.0);
@@ -27,10 +41,10 @@ public class ElevatorIOTalonFX implements ElevatorIO {
 
   private Supplier<Rotation2d> shoulderAngleSupplier = () -> Rotation2d.kZero;
 
-  public ExtensionIOTalonFX(PortConfiguration ports, ArmConfiguration armConfiguration) {
-    masterTalonFX = TalonFXFactory.createDefaultTalon(ports.extensionOneID);
-    followerTalonFX = TalonFXFactory.createDefaultTalon(ports.extensionTwoID);
-    followControlRequest = new Follower(ports.extensionOneID.getDeviceNumber(), false);
+  public ExtensionIOTalonFX() {
+    masterTalonFX = TalonFXFactory.createDefaultTalon(masterMotorId);
+    followerTalonFX = TalonFXFactory.createDefaultTalon(followerMotorId);
+    followControlRequest = new Follower(masterMotorId, false);
 
     TalonFXConfiguration config = new TalonFXConfiguration();
 
@@ -135,5 +149,4 @@ public class ElevatorIOTalonFX implements ElevatorIO {
         extensionTwoMotorTemp,
         extensionThreeMotorTemp);
   }
-        */
 }
