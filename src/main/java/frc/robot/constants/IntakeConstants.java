@@ -13,10 +13,8 @@ public class IntakeConstants {
         public static final RollerVoltages algaeHold = new RollerVoltages(0.4, 0);
         public static final RollerVoltages algaeEject = new RollerVoltages(-2.5, 0);
 
-    public static final double topRollerCurrentThresholdForAlgaeDetection = 9.0;
-    public static final double topRollerVelocityRpsThresholdForAlgaeDetectionAllowance = -80.0;
-    public static final double topRollerVelocityRpsThresholdForAlgaeDetectionWhileIntaking = -20.0;
-    public static final double topRollerVelocityRpsThresholdForAlgaeDetectionWhileHolding = -70.0;
+    public static final double currentThresholdAlgaeIntake = 10.0;
+    public static final double currentThresholdAlgaeHold = -80.0;
 
     public static final class RollerVoltages {
         public final double endEffectorVoltage;
