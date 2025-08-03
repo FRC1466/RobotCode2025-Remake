@@ -10,6 +10,8 @@ package frc.robot;
 import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants;
+import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -22,17 +24,22 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.constants.Constants;
-import frc.robot.constants.ElevatorConstants;
+import frc.robot.constants.WristConstants;
 import frc.robot.generated.TunerConstants;
+import frc.robot.subsystems.SubsystemVisualizer;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.DriveIO;
 import frc.robot.subsystems.drive.DriveIOCTRE;
 import frc.robot.subsystems.elevator.Elevator;
 import frc.robot.subsystems.elevator.ElevatorIO;
 import frc.robot.subsystems.elevator.ElevatorIOSim;
+import frc.robot.subsystems.wrist.Wrist;
+import frc.robot.subsystems.wrist.WristIO;
+import frc.robot.subsystems.wrist.WristIOSim;
 import frc.robot.util.DoublePressTracker;
 import frc.robot.util.MirrorUtil;
 import frc.robot.util.TriggerUtil;
+import java.util.function.DoubleSupplier;
 import lombok.Getter;
 import lombok.experimental.ExtensionMethod;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
@@ -49,6 +56,12 @@ public class RobotContainer {
   // Subsystems
   @Getter private Drive drive;
   @Getter private Elevator elevator;
+  @Getter private Wrist wrist;
+  @Getter private SubsystemVisualizer subsystemVisualizerMeasured;
+  @Getter private SubsystemVisualizer subsystemVisualizerGoal;
+
+  @Getter
+  private DoubleSupplier elevatorGoal = () -> MathUtil.clamp(controller.getRawAxis(5) * 2, 0, 2);
 
   private Command blankAuto = Commands.none();
 
@@ -91,6 +104,7 @@ public class RobotContainer {
         }
         case SIMBOT -> {
           elevator = new Elevator(new ElevatorIOSim());
+          wrist = new Wrist(new WristIOSim());
           break;
         }
       }
@@ -109,6 +123,26 @@ public class RobotContainer {
     if (elevator == null) {
       elevator = new Elevator(new ElevatorIO() {});
     }
+    if (wrist == null) {
+      wrist = new Wrist(new WristIO() {});
+    }
+
+    subsystemVisualizerMeasured =
+        new SubsystemVisualizer(
+            "Measured",
+            () -> elevator.getPosition(),
+            () -> wrist.getAngle().getRadians(),
+            () -> false,
+            () -> false,
+            RobotState.getInstance()::getRobotPoseFromSwerveDriveOdometry);
+    subsystemVisualizerGoal =
+        new SubsystemVisualizer(
+            "Goal",
+            () -> elevator.getGoalPosition(),
+            () -> wrist.getGoalAngle().getRadians(),
+            () -> false,
+            () -> false,
+            RobotState.getInstance()::getRobotPoseFromSwerveDriveOdometry);
 
     // Set up auto routines
     autoChooser = new LoggedDashboardChooser<>("Auto Choices");
@@ -152,23 +186,27 @@ public class RobotContainer {
         .onTrue(
             Commands.runOnce(
                     () ->
-                        elevator.setWantedState(
-                            Elevator.WantedState.MOVE_TO_POSITION, ElevatorConstants.stowed.get()))
-                .withName("Elevator Stow"));
+                        wrist.setWantedState(
+                            Wrist.WantedState.MOVE_TO_POSITION,
+                            Rotation2d.fromRadians(WristConstants.stowedPosition.get())))
+                .withName("Wrist Stow"));
 
     controller
         .b()
         .onTrue(
             Commands.runOnce(
-                    () -> elevator.setWantedState(Elevator.WantedState.MOVE_TO_POSITION, 0.8))
-                .withName("Elevator Medium"));
+                    () ->
+                        wrist.setWantedState(
+                            Wrist.WantedState.MOVE_TO_POSITION, Rotation2d.kCCW_Pi_2))
+                .withName("Wrist Medium"));
 
     controller
         .x()
         .onTrue(
             Commands.runOnce(
-                    () -> elevator.setWantedState(Elevator.WantedState.MOVE_TO_POSITION, 1.5))
-                .withName("Elevator High"));
+                    () -> wrist.setWantedState(Wrist.WantedState.MOVE_TO_POSITION, Rotation2d.kPi))
+                .withName("Wrist High"));
+
     // Reset gyro
     var driverStartAndBack = controller.start().and(controller.back());
     driverStartAndBack.onTrue(

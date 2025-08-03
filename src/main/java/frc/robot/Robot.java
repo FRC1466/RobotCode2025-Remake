@@ -29,6 +29,7 @@ import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.constants.Constants;
 import frc.robot.constants.Constants.RobotType;
 import frc.robot.generated.TunerConstants;
+import frc.robot.subsystems.elevator.Elevator;
 import frc.robot.util.DummyLogReceiver;
 import frc.robot.util.LoggedTracer;
 import frc.robot.util.NTClientLogger;
@@ -276,6 +277,11 @@ public class Robot extends LoggedRobot {
 
     // JIT alert
     jitAlert.set(isJITing());
+
+    robotContainer
+        .getElevator()
+        .setWantedState(
+            Elevator.WantedState.MOVE_TO_POSITION, robotContainer.getElevatorGoal().getAsDouble());
 
     // Record cycle time
     LoggedTracer.record("RobotPeriodic");

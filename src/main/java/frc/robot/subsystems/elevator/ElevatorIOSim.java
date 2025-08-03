@@ -9,13 +9,14 @@ package frc.robot.subsystems.elevator;
 
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.system.plant.DCMotor;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.simulation.ElevatorSim;
 
 /**
- * Simulated implementation of the ElevatorIO interface for development and testing when not at the lab.
- * This class simulates the elevator's behavior using the ElevatorSim class from WPILib.
- * To learn more on implementing WPILib simulations, view their documentation here:
+ * Simulated implementation of the ElevatorIO interface for development and testing when not at the
+ * lab. This class simulates the elevator's behavior using the ElevatorSim class from WPILib. To
+ * learn more on implementing WPILib simulations, view their documentation here:
  * https://docs.wpilib.org/en/stable/docs/software/wpilib-tools/robot-simulation/physics-sim.html
  */
 public class ElevatorIOSim implements ElevatorIO {
@@ -52,7 +53,9 @@ public class ElevatorIOSim implements ElevatorIO {
     inputs.elevatorMasterMotorTemp = 40.0;
     inputs.elevatorFollowerMotorTemp = 40.0;
 
-    if (closedLoop) {
+    if (!DriverStation.isEnabled()) {
+      appliedVoltage = 0.0;
+    } else if (closedLoop) {
       appliedVoltage = pid.calculate(sim.getPositionMeters(), targetPosition);
       appliedVoltage = Math.max(-12.0, Math.min(12.0, appliedVoltage));
     }

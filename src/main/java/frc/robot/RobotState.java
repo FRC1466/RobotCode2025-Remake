@@ -13,6 +13,7 @@ import frc.robot.constants.ReefConstants;
 import frc.robot.util.AllianceUtil;
 import java.util.ArrayList;
 import java.util.List;
+import org.littletonrobotics.junction.AutoLogOutput;
 
 public class RobotState {
   private static RobotState instance;
@@ -25,8 +26,8 @@ public class RobotState {
   }
 
   private final List<AprilTagObservation> aprilTagObservations = new ArrayList<>();
-  private Pose2d robotToFieldFromSwerveDriveOdometry = new Pose2d();
-  private ChassisSpeeds robotChassisSpeeds = new ChassisSpeeds();
+  @AutoLogOutput private Pose2d robotToFieldFromSwerveDriveOdometry = new Pose2d();
+  @AutoLogOutput private ChassisSpeeds robotChassisSpeeds = new ChassisSpeeds();
 
   public record AprilTagObservation(String cameraName, int tagId, Pose2d robotPoseFromCamera) {}
 

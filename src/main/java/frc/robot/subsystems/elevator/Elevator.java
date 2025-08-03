@@ -82,7 +82,7 @@ public class Elevator extends SubsystemBase {
    * Sets the desired state for the elevator and the target position to move to.
    *
    * @param wantedState The desired state.
-   * @param goalPosition The target position in meters to move the elevator to.
+   * @param goalPositionMeters The target position in meters to move the elevator to.
    */
   public void setWantedState(WantedState wantedState, double goalPositionMeters) {
     this.wantedState = wantedState;
@@ -210,12 +210,12 @@ public class Elevator extends SubsystemBase {
 
   /** Logs the essential state of the subsystem to AdvantageKit Logger. */
   private void logState() {
-    Logger.recordOutput("Elevator/SystemState", systemState.name());
-    Logger.recordOutput("Elevator/WantedState", wantedState.name());
-    Logger.recordOutput("Elevator/MotionProfile", currentElevatorProfile.name());
-    Logger.recordOutput("Elevator/GoalPositionMeters", goalPosition);
-    Logger.recordOutput("Elevator/AtGoal", atGoal());
-    Logger.recordOutput("Elevator/PositionMeters", getPosition());
-    Logger.recordOutput("Elevator/VelocityMetersPerSec", getVelocity());
+    Logger.recordOutput("Subsystems/Elevator/SystemState", systemState.name());
+    Logger.recordOutput("Subsystems/Elevator/WantedState", wantedState.name());
+    Logger.recordOutput("Subsystems/Elevator/MotionProfile", currentElevatorProfile.name());
+    Logger.recordOutput("Subsystems/Elevator/GoalPositionMeters", goalPosition);
+    Logger.recordOutput("Subsystems/Elevator/AtGoal", atGoal());
+    Logger.recordOutput("Subsystems/Elevator/PositionMeters", getPosition());
+    Logger.recordOutput("Subsystems/Elevator/VelocityMetersPerSec", getVelocity());
   }
 }
