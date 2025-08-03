@@ -17,13 +17,11 @@ import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.util.Units;
 import frc.robot.Constants;
 import frc.robot.subsystems.superstructure.SuperstructureConstants;
-import frc.robot.subsystems.superstructure.elevator.ElevatorIOSim;
 
 public class PivotIOSim implements PivotIO {
   private static final double reduction = 3.0;
 
-  public static final double moi =
-      (1.0 / 3.0) * (ElevatorIOSim.carriageMassKg) * Math.pow(Units.inchesToMeters(7.2), 2.0);
+  public static final double moi = (1.0 / 3.0) * 6 * Math.pow(Units.inchesToMeters(7.2), 2.0);
   private static final double cgRadius = Units.inchesToMeters(10.0);
   public static final DCMotor gearbox = DCMotor.getKrakenX60Foc(1).withReduction(reduction);
   public static final Matrix<N2, N2> A =

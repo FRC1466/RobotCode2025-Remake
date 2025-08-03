@@ -17,15 +17,28 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 public record SuperstructurePose(DoubleSupplier elevatorHeight, Supplier<Rotation2d> pivotAngle) {
+  private static final double gearRatio = 12.0;
+  private static final double drumCircumferenceMeters = 2 * Math.PI * 0.0254;
+  private static final double cascadeMultiplier = 2.0;
+  private static final double conversionConstant = drumCircumferenceMeters * cascadeMultiplier;
+
+  public static double rotationsToMeters(double rotations) {
+    return (rotations / gearRatio) * conversionConstant;
+  }
+
+  public static double metersToRotations(double meters) {
+    return (meters / conversionConstant) * gearRatio;
+  }
+
   private static final LoggedTunableNumber StowHeight =
-      new LoggedTunableNumber("Superstructure/Stow/Height", 0.00254);
+      new LoggedTunableNumber("Superstructure/Stow/Height", rotationsToMeters(0.1));
   private static final LoggedTunableNumber StowTravelAngle =
       new LoggedTunableNumber("Superstructure/Stow/TravelSafeAngle", .7);
   private static final LoggedTunableNumber StowRestAngle =
       new LoggedTunableNumber("Superstructure/Stow/RestAngle", 0);
 
   private static final LoggedTunableNumber intakeHeight =
-      new LoggedTunableNumber("Superstructure/Intake/Height", 0.00254);
+      new LoggedTunableNumber("Superstructure/Intake/Height", rotationsToMeters(0.1));
   private static final LoggedTunableNumber intakeAngleAmplitude =
       new LoggedTunableNumber("Superstructure/Intake/AmplitudeDegrees", .65);
   private static final LoggedTunableNumber intakeAnglePeriodSec =
@@ -41,49 +54,49 @@ public record SuperstructurePose(DoubleSupplier elevatorHeight, Supplier<Rotatio
       };
 
   private static final LoggedTunableNumber IceCreamIntakeHeight =
-      new LoggedTunableNumber("Superstructure/AlgaeIntake/IceCream/Height", 0.2);
+      new LoggedTunableNumber("Superstructure/AlgaeIntake/IceCream/Height", 0.209342);
   private static final LoggedTunableNumber IceCreamIntakeAngle =
       new LoggedTunableNumber("Superstructure/AlgaeIntake/IceCream/Angle", Math.PI);
 
   private static final LoggedTunableNumber l2ReefIntakeHeight =
-      new LoggedTunableNumber("Superstructure/AlgaeIntake/L2/Height", 0.6096);
+      new LoggedTunableNumber("Superstructure/AlgaeIntake/L2/Height", 0.6384);
   private static final LoggedTunableNumber l2ReefIntakeAngle =
       new LoggedTunableNumber("Superstructure/AlgaeIntake/L2/Angle", Math.PI - .3);
 
   private static final LoggedTunableNumber l3ReefIntakeHeight =
-      new LoggedTunableNumber("Superstructure/AlgaeIntake/L3/Height", 1.0668);
+      new LoggedTunableNumber("Superstructure/AlgaeIntake/L3/Height", 1.1172);
   private static final LoggedTunableNumber l3ReefIntakeAngle =
       new LoggedTunableNumber("Superstructure/AlgaeIntake/L3/Angle", Math.PI - .3);
 
   private static final LoggedTunableNumber NetHeight =
-      new LoggedTunableNumber("Superstructure/AlgaeScore/Net/Height", 1.6764);
+      new LoggedTunableNumber("Superstructure/AlgaeScore/Net/Height", 1.7556);
   private static final LoggedTunableNumber NetAnglePreThrow =
       new LoggedTunableNumber("Superstructure/AlgaeScore/Net/AnglePreThrow", Math.PI - .3);
   private static final LoggedTunableNumber NetAnglePostThrow =
       new LoggedTunableNumber("Superstructure/AlgaeScore/Net/AnglePostThrow", 0);
 
   private static final LoggedTunableNumber ProcessorHeight =
-      new LoggedTunableNumber("Superstructure/AlgaeScore/Processor/Height", 0.2);
+      new LoggedTunableNumber("Superstructure/AlgaeScore/Processor/Height", 0.1463);
   private static final LoggedTunableNumber ProcessorAngle =
       new LoggedTunableNumber("Superstructure/AlgaeScore/Processor/Angle", Math.PI - .3);
 
   private static final LoggedTunableNumber l1Height =
-      new LoggedTunableNumber("Superstructure/ReefScore/L1/Height", 0.5);
+      new LoggedTunableNumber("Superstructure/ReefScore/L1/Height", 0.5054);
   private static final LoggedTunableNumber l1Angle =
       new LoggedTunableNumber("Superstructure/ReefScore/L1/Angle", Math.PI - .67);
 
   private static final LoggedTunableNumber l2Height =
-      new LoggedTunableNumber("Superstructure/ReefScore/L2/Height", 0.38);
+      new LoggedTunableNumber("Superstructure/ReefScore/L2/Height", 0.399);
   private static final LoggedTunableNumber l2Angle =
       new LoggedTunableNumber("Superstructure/ReefScore/L2/Angle", .7);
 
   private static final LoggedTunableNumber l3Height =
-      new LoggedTunableNumber("Superstructure/ReefScore/L3/Height", 0.8);
+      new LoggedTunableNumber("Superstructure/ReefScore/L3/Height", 0.8379);
   private static final LoggedTunableNumber l3Angle =
       new LoggedTunableNumber("Superstructure/ReefScore/L3/Angle", .7);
 
   private static final LoggedTunableNumber l4Height =
-      new LoggedTunableNumber("Superstructure/ReefScore/L4/Height", 1.67);
+      new LoggedTunableNumber("Superstructure/ReefScore/L4/Height", 1.7556);
   private static final LoggedTunableNumber l4Angle =
       new LoggedTunableNumber("Superstructure/ReefScore/L4/Angle", 1.15);
 
@@ -108,7 +121,6 @@ public record SuperstructurePose(DoubleSupplier elevatorHeight, Supplier<Rotatio
     }
   }
 
-  // Read distance to branch from robot state to calculate positions
   @RequiredArgsConstructor
   @Getter
   enum Preset {
@@ -125,7 +137,6 @@ public record SuperstructurePose(DoubleSupplier elevatorHeight, Supplier<Rotatio
         "AlgaeIceCreamIntake", IceCreamIntakeHeight.get(), IceCreamIntakeAngle.get()),
     PRETHROW("Pre-Throw", NetHeight.get(), NetAnglePreThrow.get()),
     THROW("Throw", NetHeight.get(), NetAnglePostThrow.get()),
-    // ALGAE_STOW("AlgaeStow", intakeHeightBaseline.get(), -15.0),
     PROCESS("Process", ProcessorHeight.get(), ProcessorAngle.get());
 
     private final SuperstructurePose pose;

@@ -20,7 +20,6 @@ import com.ctre.phoenix6.hardware.ParentDevice;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.filter.Debouncer;
-import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.*;
 import frc.robot.util.PhoenixUtil;
 
@@ -115,7 +114,7 @@ public class ElevatorIOTalonFX implements ElevatorIO {
                     followerSupplyCurrent,
                     followerTemp)),
             position.getValueAsDouble(),
-            Units.rotationsToRadians(velocity.getValueAsDouble()),
+            velocity.getValueAsDouble(),
             appliedVolts.getValueAsDouble(),
             torqueCurrent.getValueAsDouble(),
             supplyCurrent.getValueAsDouble(),

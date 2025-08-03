@@ -12,7 +12,6 @@ import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.State;
-import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
@@ -23,6 +22,7 @@ import frc.robot.Robot;
 import frc.robot.subsystems.sensors.elevatorHomeSensor.ElevatorHomeSensorIO;
 import frc.robot.subsystems.sensors.elevatorHomeSensor.ElevatorHomeSensorIOInputsAutoLogged;
 import frc.robot.subsystems.superstructure.SuperstructureConstants;
+import frc.robot.subsystems.superstructure.SuperstructurePose;
 import frc.robot.util.EqualsUtil;
 import frc.robot.util.LoggedTracer;
 import frc.robot.util.LoggedTunableNumber;
@@ -36,7 +36,6 @@ import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
 public class Elevator {
-  public static final double drumRadius = Units.inchesToMeters(1.0);
   private static final LoggedTunableNumber characterizationRampRate =
       new LoggedTunableNumber("Elevator/CharacterizationRampRate", 0.5);
   private static final LoggedTunableNumber characterizationUpVelocityThresh =
@@ -67,15 +66,15 @@ public class Elevator {
   private static final LoggedTunableNumber maxVelocityMetersPerSec =
       new LoggedTunableNumber("Elevator/MaxVelocityMetersPerSec", 3.0);
   private static final LoggedTunableNumber maxAccelerationMetersPerSec2 =
-      new LoggedTunableNumber("Elevator/MaxAccelerationMetersPerSec2", 10.0);
+      new LoggedTunableNumber("Elevator/MaxAccelerationMetersPerSec2", 8);
   private static final LoggedTunableNumber algaeMaxVelocityMetersPerSec =
-      new LoggedTunableNumber("Elevator/AlgaeMaxVelocityMetersPerSec", 2.0);
+      new LoggedTunableNumber("Elevator/AlgaeMaxVelocityMetersPerSec", 2.6);
   private static final LoggedTunableNumber algaeMaxAccelerationMetersPerSec2 =
-      new LoggedTunableNumber("Elevator/AlgaeMaxAccelerationMetersPerSec2", 8.0);
+      new LoggedTunableNumber("Elevator/AlgaeMaxAccelerationMetersPerSec2", 6);
   private static final LoggedTunableNumber downMaxVelocityMetersPerSec =
       new LoggedTunableNumber("Elevator/DownMaxVelocityMetersPerSec", 3.0);
   private static final LoggedTunableNumber downMaxAccelerationMetersPerSec2 =
-      new LoggedTunableNumber("Elevator/DownMaxAccelerationMetersPerSec2", 8.0);
+      new LoggedTunableNumber("Elevator/DownMaxAccelerationMetersPerSec2", 7.5);
   private static final LoggedTunableNumber homingVolts =
       new LoggedTunableNumber("Elevator/HomingVolts", -1);
   private static final LoggedTunableNumber homingTimeSecs =
@@ -101,11 +100,11 @@ public class Elevator {
         }
       }
       case SIMBOT -> {
-        kP.initDefault(5000);
-        kD.initDefault(2000);
+        kP.initDefault(300);
+        kD.initDefault(0);
         for (int stage = 0; stage < 3; stage++) {
-          kS[stage].initDefault(5);
-          kG[stage].initDefault(50);
+          kS[stage].initDefault(0);
+          kG[stage].initDefault(0.13);
           kA[stage].initDefault(0);
         }
       }
@@ -281,7 +280,7 @@ public class Elevator {
       } else {
         double accel = (setpoint.velocity - previousVelocity) / Constants.loopPeriodSecs;
         io.runPosition(
-            setpoint.position / drumRadius + homedPosition,
+            SuperstructurePose.metersToRotations(setpoint.position) + homedPosition,
             kS[getStage()].get() * Math.signum(setpoint.velocity) // Magnitude irrelevant
                 + kG[getStage()].get()
                 + kA[getStage()].get() * accel);
@@ -316,7 +315,8 @@ public class Elevator {
     Logger.recordOutput("Elevator/CoastOverride", coastOverride.getAsBoolean());
     Logger.recordOutput("Elevator/DisabledOverride", disabledOverride.getAsBoolean());
     Logger.recordOutput(
-        "Elevator/MeasuredVelocityMetersPerSec", inputs.data.velocityRadPerSec() * drumRadius);
+        "Elevator/MeasuredVelocityMetersPerSec",
+        SuperstructurePose.rotationsToMeters(inputs.data.velocityRadPerSec()));
 
     // Record cycle time
     LoggedTracer.record("Elevator");
@@ -429,7 +429,7 @@ public class Elevator {
   /** Get position of elevator in meters with 0 at home */
   @AutoLogOutput(key = "Elevator/MeasuredHeightMeters")
   public double getPositionMeters() {
-    return (inputs.data.positionRad() - homedPosition) * drumRadius;
+    return SuperstructurePose.rotationsToMeters(inputs.data.positionRad() - homedPosition);
   }
 
   @AutoLogOutput(key = "Elevator/MeasuredStage")
