@@ -14,6 +14,7 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.constants.ElevatorConstants;
+import frc.robot.util.LoggedTracer;
 import java.util.function.Supplier;
 import lombok.Getter;
 import lombok.Setter;
@@ -165,6 +166,9 @@ public class Elevator extends SubsystemBase {
 
     // Log subsystem state for debugging and analysis
     logState();
+
+    // Record cycle time
+    LoggedTracer.record("Elevator");
   }
 
   /**

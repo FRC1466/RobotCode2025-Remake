@@ -29,8 +29,13 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import frc.robot.constants.FieldConstants.CoralObjective;
+import frc.robot.constants.FieldConstants.IceCreamObjective;
+import frc.robot.constants.FieldConstants.Reef;
+import frc.robot.constants.FieldConstants.ReefLevel;
 import frc.robot.util.AllianceFlipUtil;
 import frc.robot.util.AllianceUtil;
+import frc.robot.util.LoggedTracer;
 import frc.robot.util.SysIdMechanism;
 import lombok.Getter;
 import org.littletonrobotics.junction.Logger;
@@ -223,6 +228,9 @@ public class Drive extends SubsystemBase {
     Logger.recordOutput("Subsystems/Drive/DesiredState", wantedState);
     Logger.recordOutput("Subsystems/Drive/Pose", swerveInputs.Pose);
     applyStates();
+
+    // Record cycle time
+    LoggedTracer.record("Drive");
   }
 
   private SystemState handleStateTransition() {

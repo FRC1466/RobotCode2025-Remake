@@ -5,7 +5,7 @@
 // license that can be found in the LICENSE file at
 // the root directory of this project.
 
-package frc.robot.subsystems.archive.rollers;
+package frc.robot.subsystems.rollers;
 
 import static frc.robot.util.PhoenixUtil.tryUntilOk;
 
@@ -19,7 +19,6 @@ import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
-import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
@@ -49,8 +48,6 @@ public class RollerSystemIOTalonFX implements RollerSystemIO {
 
   private final double reduction;
 
-  private final Debouncer connectedDebouncer = new Debouncer(0.5);
-
   public RollerSystemIOTalonFX(
       int id, String bus, int currentLimitAmps, boolean invert, boolean brake, double reduction) {
     this.reduction = reduction;
@@ -62,6 +59,7 @@ public class RollerSystemIOTalonFX implements RollerSystemIO {
     config.CurrentLimits.SupplyCurrentLimit = currentLimitAmps;
     config.CurrentLimits.SupplyCurrentLimitEnable = true;
     config.Feedback.VelocityFilterTimeConstant = 0.1;
+    config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
     tryUntilOk(5, () -> talon.getConfigurator().apply(config));
 
     position = talon.getPosition();
@@ -109,15 +107,14 @@ public class RollerSystemIOTalonFX implements RollerSystemIO {
             torqueCurrent.getValueAsDouble(),
             tempCelsius.getValueAsDouble(),
             tempFault.getValue(),
-            connectedDebouncer.calculate(
-                BaseStatusSignal.isAllGood(
-                    position,
-                    velocity,
-                    appliedVoltage,
-                    supplyCurrent,
-                    torqueCurrent,
-                    tempCelsius,
-                    tempFault)));
+            BaseStatusSignal.isAllGood(
+                position,
+                velocity,
+                appliedVoltage,
+                supplyCurrent,
+                torqueCurrent,
+                tempCelsius,
+                tempFault));
   }
 
   @Override
@@ -142,17 +139,5 @@ public class RollerSystemIOTalonFX implements RollerSystemIO {
           config.withCurrentLimits(config.CurrentLimits.withStatorCurrentLimit(currentLimit));
           tryUntilOk(5, () -> talon.getConfigurator().apply(config));
         });
-  }
-
-  @Override
-  public void setBrakeMode(boolean enabled) {
-    new Thread(
-            () ->
-                tryUntilOk(
-                    5,
-                    () ->
-                        talon.setNeutralMode(
-                            enabled ? NeutralModeValue.Brake : NeutralModeValue.Coast)))
-        .start();
   }
 }

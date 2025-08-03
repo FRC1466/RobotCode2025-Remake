@@ -15,6 +15,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.constants.WristConstants;
+import frc.robot.util.LoggedTracer;
 import lombok.Getter;
 import org.littletonrobotics.junction.Logger;
 
@@ -145,6 +146,9 @@ public class Wrist extends SubsystemBase {
 
     // Log subsystem state for debugging and analysis
     logState();
+
+    // Record cycle time
+    LoggedTracer.record("Wrist");
   }
 
   /**
