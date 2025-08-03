@@ -12,6 +12,12 @@ import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.simulation.ElevatorSim;
 
+/**
+ * Simulated implementation of the ElevatorIO interface for development and testing when not at the lab.
+ * This class simulates the elevator's behavior using the ElevatorSim class from WPILib.
+ * To learn more on implementing WPILib simulations, view their documentation here:
+ * https://docs.wpilib.org/en/stable/docs/software/wpilib-tools/robot-simulation/physics-sim.html
+ */
 public class ElevatorIOSim implements ElevatorIO {
   private static final double gearRatio = 12.0;
   private static final double drumRadius = 0.0254;
