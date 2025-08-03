@@ -9,22 +9,21 @@ package frc.robot.subsystems.elevator;
 
 import static frc.robot.constants.ElevatorConstants.*;
 
-import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
+import com.ctre.phoenix6.configs.MotionMagicConfigs;
+import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.DutyCycleOut;
 import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.MotionMagicVoltage;
-import com.ctre.phoenix6.hardware.ParentDevice;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
-import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.units.measure.*;
+import frc.robot.constants.ElevatorConstants;
 import frc.robot.subsystems.elevator.Elevator.ElevatorProfile;
 import frc.robot.util.PhoenixUtil;
 import frc.robot.util.TalonFXFactory;
-import java.util.function.Supplier;
 
 public class ElevatorIOTalonFX implements ElevatorIO {
   private final TalonFX masterTalonFX;
@@ -33,9 +32,9 @@ public class ElevatorIOTalonFX implements ElevatorIO {
   DutyCycleOut dutyCycleOut = new DutyCycleOut(0.0);
   MotionMagicVoltage positionVoltage = new MotionMagicVoltage(0).withSlot(0);
 
-  private final StatusSignal<Angle> positionInMeters;
-  private final StatusSignal<AngularVelocity> velocityMetersPerSec;
-  private final StatusSignal<AngularAcceleration> accelerationMetersPerSecSquared;
+  private final StatusSignal<Angle> positionInRotations;
+  private final StatusSignal<AngularVelocity> velocityRotationsPerSec;
+  private final StatusSignal<AngularAcceleration> accelerationRotationsPerSecSquared;
   private final StatusSignal<Voltage> masterAppliedVolts;
   private final StatusSignal<Current> masterStatorCurrentAmps;
   private final StatusSignal<Current> masterSupplyCurrentAmps;
@@ -44,8 +43,6 @@ public class ElevatorIOTalonFX implements ElevatorIO {
   private final StatusSignal<Current> followerStatorCurrentAmps;
   private final StatusSignal<Current> followerSupplyCurrentAmps;
   private final StatusSignal<Temperature> followerTemp;
-
-  private Supplier<Rotation2d> shoulderAngleSupplier = () -> Rotation2d.kZero;
 
   public ElevatorIOTalonFX() {
     masterTalonFX = TalonFXFactory.createDefaultTalon(masterMotorId);
@@ -59,27 +56,29 @@ public class ElevatorIOTalonFX implements ElevatorIO {
     config.CurrentLimits.SupplyCurrentLimit = 60.0;
     config.CurrentLimits.StatorCurrentLimit = 120.0;
 
-    config.Slot0.kP = kP;
-    config.Slot0.kI = kI;
-    config.Slot0.kD = kD;
-    config.Slot0.kS = kS;
-    config.Slot0.kG = kG;
+    config.Slot0.kP = kP.get();
+    config.Slot0.kI = kI.get();
+    config.Slot0.kD = kD.get();
+    config.Slot0.kS = kS.get();
+    config.Slot0.kG = kG.get();
 
     config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
 
-    config.MotionMagic.MotionMagicAcceleration = ElevatorProfile.DEFAULT.acceleration;
-    config.MotionMagic.MotionMagicCruiseVelocity = ElevatorProfile.DEFAULT.velocity;
+    config.MotionMagic.MotionMagicAcceleration =
+        ElevatorConstants.elevatorMetersToRotations(ElevatorProfile.DEFAULT.acceleration.get());
+    config.MotionMagic.MotionMagicCruiseVelocity =
+        ElevatorConstants.elevatorMetersToRotations(ElevatorProfile.DEFAULT.velocity.get());
 
     config.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
 
-    masterTalonFX.getConfigurator().apply(config);
-    followerTalonFX.getConfigurator().apply(config);
+    PhoenixUtil.tryUntilOk(5, () -> masterTalonFX.getConfigurator().apply(config));
+    PhoenixUtil.tryUntilOk(5, () -> followerTalonFX.getConfigurator().apply(config));
 
     followerTalonFX.setControl(followControlRequest);
 
-    positionInMeters = masterTalonFX.getPosition();
-    velocityMetersPerSec = masterTalonFX.getRotorVelocity();
-    accelerationMetersPerSecSquared = masterTalonFX.getAcceleration();
+    positionInRotations = masterTalonFX.getPosition();
+    velocityRotationsPerSec = masterTalonFX.getRotorVelocity();
+    accelerationRotationsPerSecSquared = masterTalonFX.getAcceleration();
     masterAppliedVolts = masterTalonFX.getMotorVoltage();
     masterStatorCurrentAmps = masterTalonFX.getStatorCurrent();
     masterSupplyCurrentAmps = masterTalonFX.getSupplyCurrent();
@@ -92,8 +91,9 @@ public class ElevatorIOTalonFX implements ElevatorIO {
     // Register signals for refresh
     PhoenixUtil.registerSignals(
         false,
-        positionInMeters,
-        velocityMetersPerSec,
+        positionInRotations,
+        velocityRotationsPerSec,
+        accelerationRotationsPerSecSquared,
         masterAppliedVolts,
         masterStatorCurrentAmps,
         masterSupplyCurrentAmps,
@@ -106,14 +106,18 @@ public class ElevatorIOTalonFX implements ElevatorIO {
 
   @Override
   public void updateInputs(ElevatorIOInputs inputs) {
-    inputs.elevatorPositionMeters = positionInMeters.getValueAsDouble() * EXTENSION_POSITION_COEFFICIENT;
-    inputs.elevatorVelocityMetersPerSec = velocityMetersPerSec.getValueAsDouble() * EXTENSION_POSITION_COEFFICIENT;
-    inputs.elevatorAccelerationMetersPerSecSquared = accelerationMetersPerSecSquared.getValueAsDouble() * EXTENSION_POSITION_COEFFICIENT;
-    
+    inputs.elevatorPositionMeters =
+        ElevatorConstants.elevatorRotationsToMeters(positionInRotations.getValueAsDouble());
+    inputs.elevatorVelocityMetersPerSec =
+        ElevatorConstants.elevatorRotationsToMeters(velocityRotationsPerSec.getValueAsDouble());
+    inputs.elevatorAccelerationMetersPerSecSquared =
+        ElevatorConstants.elevatorRotationsToMeters(
+            accelerationRotationsPerSecSquared.getValueAsDouble());
+
     inputs.elevatorAppliedVolts = masterAppliedVolts.getValueAsDouble();
     inputs.elevatorSupplyCurrentAmps = masterSupplyCurrentAmps.getValueAsDouble();
     inputs.elevatorStatorCurrentAmps = masterStatorCurrentAmps.getValueAsDouble();
-    
+
     inputs.elevatorMasterMotorTemp = masterTemp.getValueAsDouble();
     inputs.elevatorFollowerMotorTemp = followerTemp.getValueAsDouble();
   }
@@ -122,14 +126,12 @@ public class ElevatorIOTalonFX implements ElevatorIO {
   public void setTargetPosition(double positionInMeters) {
     masterTalonFX.setControl(
         positionVoltage.withPosition(
-            (shoulderAngleSupplier.get().getRotations()
-                    * SHOULDER_EXTENSION_COUPLING_RATIO)
-                + positionInMeters / EXTENSION_POSITION_COEFFICIENT));
+            ElevatorConstants.elevatorMetersToRotations(positionInMeters)));
   }
 
   @Override
   public void resetElevatorPosition(double positionInMeters) {
-    masterTalonFX.setPosition(positionInMeters / EXTENSION_POSITION_COEFFICIENT);
+    masterTalonFX.setPosition(ElevatorConstants.elevatorMetersToRotations(positionInMeters));
   }
 
   @Override
@@ -141,5 +143,27 @@ public class ElevatorIOTalonFX implements ElevatorIO {
   @Override
   public void setDutyCycle(double dutyCycle) {
     masterTalonFX.setControl(dutyCycleOut.withOutput(dutyCycle));
+  }
+
+  @Override
+  public void setMotionProfileConstraints(ElevatorProfile elevatorProfile) {
+    masterTalonFX
+        .getConfigurator()
+        .apply(
+            new MotionMagicConfigs()
+                .withMotionMagicCruiseVelocity(
+                    ElevatorConstants.elevatorMetersToRotations(elevatorProfile.velocity.get()))
+                .withMotionMagicAcceleration(
+                    ElevatorConstants.elevatorMetersToRotations(
+                        elevatorProfile.acceleration.get())));
+  }
+
+  @Override
+  public void setPID(double kP, double kI, double kD) {
+    var slot0Config = new Slot0Configs();
+    slot0Config.kP = kP;
+    slot0Config.kI = kI;
+    slot0Config.kD = kD;
+    masterTalonFX.getConfigurator().apply(slot0Config);
   }
 }

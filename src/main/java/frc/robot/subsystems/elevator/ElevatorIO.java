@@ -8,6 +8,7 @@
 package frc.robot.subsystems.elevator;
 
 import com.ctre.phoenix6.signals.NeutralModeValue;
+import frc.robot.subsystems.elevator.Elevator.ElevatorProfile;
 import org.littletonrobotics.junction.AutoLog;
 
 public interface ElevatorIO {
@@ -34,4 +35,8 @@ public interface ElevatorIO {
   default void setDutyCycle(double dutyCycle) {}
 
   default void setNeutralMode(NeutralModeValue neutralMode) {}
+
+  default void setMotionProfileConstraints(ElevatorProfile elevatorProfile) {}
+
+  default void setPID(double kP, double kI, double kD) {}
 }

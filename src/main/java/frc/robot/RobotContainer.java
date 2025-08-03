@@ -22,10 +22,14 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.constants.Constants;
+import frc.robot.constants.ElevatorConstants;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.DriveIO;
 import frc.robot.subsystems.drive.DriveIOCTRE;
+import frc.robot.subsystems.elevator.Elevator;
+import frc.robot.subsystems.elevator.ElevatorIO;
+import frc.robot.subsystems.elevator.ElevatorIOSim;
 import frc.robot.util.DoublePressTracker;
 import frc.robot.util.MirrorUtil;
 import frc.robot.util.TriggerUtil;
@@ -44,6 +48,7 @@ import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
 public class RobotContainer {
   // Subsystems
   @Getter private Drive drive;
+  @Getter private Elevator elevator;
 
   private Command blankAuto = Commands.none();
 
@@ -85,6 +90,7 @@ public class RobotContainer {
           break;
         }
         case SIMBOT -> {
+          elevator = new Elevator(new ElevatorIOSim());
           break;
         }
       }
@@ -99,6 +105,9 @@ public class RobotContainer {
               moduleConstants[0].SpeedAt12Volts,
               moduleConstants[0].SpeedAt12Volts
                   / Math.hypot(moduleConstants[0].LocationX, moduleConstants[0].LocationY));
+    }
+    if (elevator == null) {
+      elevator = new Elevator(new ElevatorIO() {});
     }
 
     // Set up auto routines
@@ -138,6 +147,28 @@ public class RobotContainer {
    * edu.wpi.first.wpilibj2.command.button.JoystickButton}.
    */
   private void configureButtonBindings() {
+    controller
+        .a()
+        .onTrue(
+            Commands.runOnce(
+                    () ->
+                        elevator.setWantedState(
+                            Elevator.WantedState.MOVE_TO_POSITION, ElevatorConstants.stowed.get()))
+                .withName("Elevator Stow"));
+
+    controller
+        .b()
+        .onTrue(
+            Commands.runOnce(
+                    () -> elevator.setWantedState(Elevator.WantedState.MOVE_TO_POSITION, 0.8))
+                .withName("Elevator Medium"));
+
+    controller
+        .x()
+        .onTrue(
+            Commands.runOnce(
+                    () -> elevator.setWantedState(Elevator.WantedState.MOVE_TO_POSITION, 1.5))
+                .withName("Elevator High"));
     // Reset gyro
     var driverStartAndBack = controller.start().and(controller.back());
     driverStartAndBack.onTrue(
