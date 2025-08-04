@@ -131,7 +131,7 @@ public class Wrist extends SubsystemBase {
   public void periodic() {
     // Update and log inputs from the hardware layer
     io.updateInputs(inputs);
-    Logger.processInputs("Wrist", inputs);
+    Logger.processInputs("Subsystems/Wrist", inputs);
 
     if (WristConstants.kP.hasChanged(hashCode())
         || WristConstants.kI.hasChanged(hashCode())

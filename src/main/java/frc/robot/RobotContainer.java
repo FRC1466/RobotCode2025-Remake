@@ -12,6 +12,7 @@ import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -33,6 +34,10 @@ import frc.robot.subsystems.drive.DriveIOCTRE;
 import frc.robot.subsystems.elevator.Elevator;
 import frc.robot.subsystems.elevator.ElevatorIO;
 import frc.robot.subsystems.elevator.ElevatorIOSim;
+import frc.robot.subsystems.intake.Intake;
+import frc.robot.subsystems.rollers.RollerSystemIO;
+import frc.robot.subsystems.rollers.RollerSystemIOSim;
+import frc.robot.subsystems.sensors.CoralSensorIO;
 import frc.robot.subsystems.wrist.Wrist;
 import frc.robot.subsystems.wrist.WristIO;
 import frc.robot.subsystems.wrist.WristIOSim;
@@ -57,6 +62,8 @@ public class RobotContainer {
   @Getter private Drive drive;
   @Getter private Elevator elevator;
   @Getter private Wrist wrist;
+  @Getter private Intake intake;
+
   @Getter private SubsystemVisualizer subsystemVisualizerMeasured;
   @Getter private SubsystemVisualizer subsystemVisualizerGoal;
 
@@ -105,6 +112,7 @@ public class RobotContainer {
         case SIMBOT -> {
           elevator = new Elevator(new ElevatorIOSim());
           wrist = new Wrist(new WristIOSim());
+          intake = new Intake(new RollerSystemIOSim(DCMotor.getKrakenX60(1), 1, 1), new RollerSystemIOSim(DCMotor.getNeoVortex(1), 1, 1), new CoralSensorIO() {});
           break;
         }
       }
@@ -125,6 +133,9 @@ public class RobotContainer {
     }
     if (wrist == null) {
       wrist = new Wrist(new WristIO() {});
+    }
+    if (intake == null) {
+      intake = new Intake(new RollerSystemIO() {}, new RollerSystemIO() {}, new CoralSensorIO() {});
     }
 
     subsystemVisualizerMeasured =

@@ -148,7 +148,7 @@ public class Elevator extends SubsystemBase {
   public void periodic() {
     // Update and log inputs from the hardware layer
     io.updateInputs(inputs);
-    Logger.processInputs("Elevator", inputs);
+    Logger.processInputs("Subsystems/Elevator", inputs);
 
     if (ElevatorConstants.kP.hasChanged(hashCode())
         || ElevatorConstants.kI.hasChanged(hashCode())
