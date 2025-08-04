@@ -90,11 +90,6 @@ public class Intake extends SubsystemBase {
   
   private boolean hasAlgae = false;
 
-  /**
-   * This method is called periodically by the scheduler. It is the main workhorse of the subsystem.
-   * It reads sensor inputs, updates the internal state machine, applies motor outputs based on the
-   * current state, and logs all relevant data.
-   */
   @Override
   public void periodic() {
     // Update and log all inputs
@@ -106,21 +101,19 @@ public class Intake extends SubsystemBase {
     Logger.processInputs("Subsystems/Intake/CoralSensor", coralSensorInputs);
 
     // Handle state transitions and logic
-    SystemState nextState = handleStateTransition();
-    if (systemState != nextState) {
-      systemState = nextState;
+     systemState = handleStateTransition();
+
       // Reset hasAlgae flag unless transitioning to a state that holds algae
       if (systemState != SystemState.HOLDING_ALGAE
           && systemState != SystemState.HOLDING_ALGAE_HARDER) {
         hasAlgae = false;
       }
-    }
 
     // Perform state-specific actions
     if (systemState == SystemState.INTAKING_ALGAE && !hasAlgae) {
       if (endEffectorInputs.data.torqueCurrentAmps() >= currentThresholdAlgaeIntake) {
         hasAlgae = true;
-        systemState = SystemState.HOLDING_ALGAE_HARDER; // Transition to harder hold on detection
+        systemState = SystemState.HOLDING_ALGAE;
       }
     }
 
