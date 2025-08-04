@@ -7,6 +7,8 @@
 
 package frc.robot;
 
+import static frc.robot.subsystems.vision.VisionConstants.*;
+
 import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants;
@@ -38,6 +40,9 @@ import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.rollers.RollerSystemIO;
 import frc.robot.subsystems.rollers.RollerSystemIOSim;
 import frc.robot.subsystems.sensors.CoralSensorIO;
+import frc.robot.subsystems.vision.Vision;
+import frc.robot.subsystems.vision.VisionIO;
+import frc.robot.subsystems.vision.VisionIOPhotonVisionSim;
 import frc.robot.subsystems.wrist.Wrist;
 import frc.robot.subsystems.wrist.WristIO;
 import frc.robot.subsystems.wrist.WristIOSim;
@@ -63,6 +68,7 @@ public class RobotContainer {
   @Getter private Elevator elevator;
   @Getter private Wrist wrist;
   @Getter private Intake intake;
+  @Getter private Vision vision;
 
   @Getter private SubsystemVisualizer subsystemVisualizerMeasured;
   @Getter private SubsystemVisualizer subsystemVisualizerGoal;
@@ -117,6 +123,17 @@ public class RobotContainer {
                   new RollerSystemIOSim(DCMotor.getKrakenX60(1), 1, 1),
                   new RollerSystemIOSim(DCMotor.getNeoVortex(1), 1, 1),
                   new CoralSensorIO() {});
+          vision =
+              new Vision(
+                  drive::addVisionMeasurement,
+                  simCameras.values().stream()
+                      .map(
+                          config ->
+                              new VisionIOPhotonVisionSim(
+                                  config.name(),
+                                  config.robotToCamera(),
+                                  RobotState.getInstance()::getRobotPoseFromSwerveDriveOdometry))
+                      .toArray(VisionIO[]::new));
           break;
         }
       }
@@ -140,6 +157,12 @@ public class RobotContainer {
     }
     if (intake == null) {
       intake = new Intake(new RollerSystemIO() {}, new RollerSystemIO() {}, new CoralSensorIO() {});
+    }
+    if (vision == null) {
+      vision =
+          new Vision(
+              drive::addVisionMeasurement,
+              cameras.values().stream().map(config -> new VisionIO() {}).toArray(VisionIO[]::new));
     }
 
     subsystemVisualizerMeasured =
