@@ -7,8 +7,6 @@
 
 package frc.robot.subsystems;
 
-import static frc.robot.subsystems.archive.superstructure.SuperstructureConstants.*;
-
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation3d;
@@ -70,15 +68,13 @@ public class SubsystemVisualizer extends SubsystemBase {
             elevatorMechanismWidthMeters,
             elevatorMechanismHeightMeters,
             new Color8Bit(Color.kDarkGray));
-    LoggedMechanismRoot2d elevatorRoot =
-        elevatorMechanism2d.getRoot(
-            name + "Root", superstructureOrigin2d.getX(), superstructureOrigin2d.getY());
+    LoggedMechanismRoot2d elevatorRoot = elevatorMechanism2d.getRoot(name + "Root", 0, 0);
     this.elevatorLigament =
         elevatorRoot.append(
             new LoggedMechanismLigament2d(
                 name + "Elevator",
                 elevatorLigamentDefaultLengthMeters,
-                elevatorAngle.getDegrees(),
+                90,
                 elevatorLigamentLineWidth,
                 new Color8Bit(Color.kFirstBlue)));
 

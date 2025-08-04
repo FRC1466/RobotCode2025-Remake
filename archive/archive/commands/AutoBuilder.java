@@ -22,7 +22,6 @@ import frc.robot.RobotState;
 import frc.robot.constants.FieldConstants;
 import frc.robot.constants.FieldConstants.CoralObjective;
 import frc.robot.constants.FieldConstants.ReefLevel;
-import frc.robot.subsystems.archive.superstructure.Superstructure;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.util.*;
 import java.util.Optional;

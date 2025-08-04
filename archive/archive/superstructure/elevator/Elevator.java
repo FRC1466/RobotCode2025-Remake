@@ -24,7 +24,6 @@ import frc.robot.subsystems.archive.superstructure.SuperstructureConstants;
 import frc.robot.util.EqualsUtil;
 import frc.robot.util.LoggedTracer;
 import frc.robot.util.LoggedTunableNumber;
-import frc.robot.util.OverridePublisher;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
@@ -118,7 +117,6 @@ public class Elevator {
   private final Alert followerDisconnectedAlert =
       new Alert("Elevator follower motor disconnected!", Alert.AlertType.kWarning);
 
-  private OverridePublisher coastOverride = new OverridePublisher("ElevatorCoastOverride");
   private BooleanSupplier disabledOverride = () -> false;
 
   @AutoLogOutput private boolean brakeModeEnabled = true;
@@ -201,13 +199,9 @@ public class Elevator {
                   downMaxVelocityMetersPerSec.get(), downMaxAccelerationMetersPerSec2.get()));
     }
 
-    // Set coast mode
-    setBrakeMode(!coastOverride.getAsBoolean());
-
     // Run profile
     final boolean shouldRunProfile =
         !stopProfile
-            && !coastOverride.getAsBoolean()
             && !disabledOverride.getAsBoolean()
             && (homed || Constants.getRobot() == Constants.RobotType.SIMBOT)
             && !isEStopped
@@ -297,7 +291,6 @@ public class Elevator {
     setElevatorExtensionPercent(getPositionMeters() / SuperstructureConstants.elevatorMaxTravel);
 
     // Log state
-    Logger.recordOutput("Elevator/CoastOverride", coastOverride.getAsBoolean());
     Logger.recordOutput("Elevator/DisabledOverride", disabledOverride.getAsBoolean());
     Logger.recordOutput(
         "Elevator/MeasuredVelocityMetersPerSec", inputs.data.velocityRadPerSec() * drumRadius);
@@ -315,15 +308,8 @@ public class Elevator {
     this.goal = goal;
   }
 
-  public void setOverrides(OverridePublisher coastOverride, BooleanSupplier disabledOverride) {
-    this.coastOverride = coastOverride;
+  public void setOverrides(BooleanSupplier disabledOverride) {
     this.disabledOverride = disabledOverride;
-  }
-
-  private void setBrakeMode(boolean enabled) {
-    if (brakeModeEnabled == enabled) return;
-    brakeModeEnabled = enabled;
-    io.setBrakeMode(enabled);
   }
 
   public Command upStaticCharacterization() {
@@ -396,7 +382,7 @@ public class Elevator {
               homingDebouncer.calculate(false);
             },
             () -> {
-              if (disabledOverride.getAsBoolean() || coastOverride.getAsBoolean()) return;
+              if (disabledOverride.getAsBoolean()) return;
               io.runVolts(homingVolts.get());
               homed =
                   homingDebouncer.calculate(

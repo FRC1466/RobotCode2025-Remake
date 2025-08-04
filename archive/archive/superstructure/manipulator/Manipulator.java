@@ -37,7 +37,6 @@ import frc.robot.util.AllianceFlipUtil;
 import frc.robot.util.EqualsUtil;
 import frc.robot.util.LoggedTracer;
 import frc.robot.util.LoggedTunableNumber;
-import frc.robot.util.OverridePublisher;
 import java.util.List;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
@@ -176,7 +175,6 @@ public class Manipulator {
       new CoralSensorIOInputsAutoLogged();
 
   // Overrides
-  private OverridePublisher coastOverride = new OverridePublisher("ManipulatorCoastOverride");
   private BooleanSupplier disabledOverride = () -> false;
 
   @AutoLogOutput(key = "Manipulator/PivotBrakeModeEnabled")
@@ -292,13 +290,9 @@ public class Manipulator {
                   Units.degreesToRadians(slowMaxAccelerationDegPerSec2.get())));
     }
 
-    // Set coast mode
-    setBrakeMode(!coastOverride.getAsBoolean());
-
     // Run profile
     final boolean shouldRunProfile =
         !stopProfile
-            && !coastOverride.getAsBoolean()
             && !disabledOverride.getAsBoolean()
             && !isEStopped
             && DriverStation.isEnabled();
@@ -475,7 +469,6 @@ public class Manipulator {
     SmartDashboard.putBoolean("Has Algae?", hasAlgae);
 
     // Log state
-    Logger.recordOutput("Manipulator/CoastOverride", coastOverride.getAsBoolean());
     Logger.recordOutput("Manipulator/DisabledOverride", disabledOverride.getAsBoolean());
 
     // Record cycle time
@@ -511,17 +504,6 @@ public class Manipulator {
     hasAlgae = value;
     algaeDebouncer = new Debouncer(algaeDebounceTime, DebounceType.kRising);
     algaeDebouncer.calculate(value);
-  }
-
-  public void setOverrides(OverridePublisher coastOverride, BooleanSupplier disabledOverride) {
-    this.coastOverride = coastOverride;
-    this.disabledOverride = disabledOverride;
-  }
-
-  private void setBrakeMode(boolean enabled) {
-    if (brakeModeEnabled == enabled) return;
-    brakeModeEnabled = enabled;
-    pivotIO.setBrakeMode(enabled);
   }
 
   public Command staticCharacterization() {

@@ -50,6 +50,18 @@ public class Vision extends SubsystemBase {
     }
   }
 
+  public List<Integer> getVisibleTagIds() {
+    List<Integer> visibleTagIds = new LinkedList<>();
+    for (int i = 0; i < io.length; i++) {
+      for (int tagId : inputs[i].tagIds) {
+        if (!visibleTagIds.contains(tagId)) {
+          visibleTagIds.add(tagId);
+        }
+      }
+    }
+    return visibleTagIds;
+  }
+
   /**
    * Returns the X angle to the best target, which can be used for simple servoing with vision.
    *
