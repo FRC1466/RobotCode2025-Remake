@@ -19,15 +19,14 @@ import org.littletonrobotics.junction.Logger;
 /**
  * The Intake subsystem is responsible for managing the intake and outtake of game pieces,
  * specifically Coral and Algae. It controls two roller systems: an end effector and a star wheel,
- * and uses a Coral sensor to detect the presence of Coral. The subsystem operates based on a
- * state machine, transitioning between different states like intaking, holding, and ejecting
- * game pieces.
+ * and uses a Coral sensor to detect the presence of Coral. The subsystem operates based on a state
+ * machine, transitioning between different states like intaking, holding, and ejecting game pieces.
  */
 public class Intake extends SubsystemBase {
   private final RollerSystemIO endEffectorIO;
   private final RollerSystemIOInputsAutoLogged endEffectorInputs =
       new RollerSystemIOInputsAutoLogged();
-      
+
   private final RollerSystemIO starWheelIO;
   private final RollerSystemIOInputsAutoLogged starWheelInputs =
       new RollerSystemIOInputsAutoLogged();
@@ -35,10 +34,8 @@ public class Intake extends SubsystemBase {
   private final CoralSensorIO coralSensorIO;
   private final CoralSensorIOInputsAutoLogged coralSensorInputs =
       new CoralSensorIOInputsAutoLogged();
-      
-  /**
-   * Represents the desired state of the Intake subsystem
-   */
+
+  /** Represents the desired state of the Intake subsystem */
   public enum WantedState {
     INTAKE_CORAL,
     GRIP_CORAL,
@@ -53,8 +50,8 @@ public class Intake extends SubsystemBase {
   }
 
   /**
-   * Represents the actual, internal state of the Intake subsystem. This state is determined
-   * by the subsystem's logic in the periodic loop, based on the wantedState and sensor feedback.
+   * Represents the actual, internal state of the Intake subsystem. This state is determined by the
+   * subsystem's logic in the periodic loop, based on the wantedState and sensor feedback.
    */
   private enum SystemState {
     INTAKING_CORAL,
@@ -87,7 +84,7 @@ public class Intake extends SubsystemBase {
 
   private WantedState wantedState = WantedState.OFF;
   private SystemState systemState = SystemState.OFF;
-  
+
   private boolean hasAlgae = false;
 
   @Override
@@ -101,13 +98,13 @@ public class Intake extends SubsystemBase {
     Logger.processInputs("Subsystems/Intake/CoralSensor", coralSensorInputs);
 
     // Handle state transitions and logic
-     systemState = handleStateTransition();
+    systemState = handleStateTransition();
 
-      // Reset hasAlgae flag unless transitioning to a state that holds algae
-      if (systemState != SystemState.HOLDING_ALGAE
-          && systemState != SystemState.HOLDING_ALGAE_HARDER) {
-        hasAlgae = false;
-      }
+    // Reset hasAlgae flag unless transitioning to a state that holds algae
+    if (systemState != SystemState.HOLDING_ALGAE
+        && systemState != SystemState.HOLDING_ALGAE_HARDER) {
+      hasAlgae = false;
+    }
 
     // Perform state-specific actions
     if (systemState == SystemState.INTAKING_ALGAE && !hasAlgae) {

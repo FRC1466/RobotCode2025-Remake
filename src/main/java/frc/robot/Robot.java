@@ -29,11 +29,11 @@ import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.constants.Constants;
 import frc.robot.constants.Constants.RobotType;
 import frc.robot.generated.TunerConstants;
-import frc.robot.subsystems.elevator.Elevator;
 import frc.robot.util.DummyLogReceiver;
 import frc.robot.util.LoggedTracer;
 import frc.robot.util.NTClientLogger;
 import frc.robot.util.PhoenixUtil;
+import frc.robot.util.WristElevatorHelper;
 import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
@@ -219,6 +219,8 @@ public class Robot extends LoggedRobot {
     // and put our autonomous chooser on the dashboard.
     robotContainer = new RobotContainer();
 
+    WristElevatorHelper.init(robotContainer);
+
     // DO NOT COPY UNLESS YOU UNDERSTAND THE CONSEQUENCES
     // https://docs.advantagekit.org/getting-started/template-projects/spark-swerve-template#real-time-thread-priority
     Threads.setCurrentThreadPriority(true, 1);
@@ -277,11 +279,6 @@ public class Robot extends LoggedRobot {
 
     // JIT alert
     jitAlert.set(isJITing());
-
-    robotContainer
-        .getElevator()
-        .setWantedState(
-            Elevator.WantedState.MOVE_TO_POSITION, robotContainer.getElevatorGoal().getAsDouble());
 
     // Record cycle time
     LoggedTracer.record("RobotPeriodic");

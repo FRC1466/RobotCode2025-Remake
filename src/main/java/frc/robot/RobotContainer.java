@@ -12,7 +12,6 @@ import static frc.robot.subsystems.vision.VisionConstants.*;
 import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants;
-import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj.Alert;
@@ -27,7 +26,6 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.constants.Constants;
-import frc.robot.constants.WristConstants;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.SubsystemVisualizer;
 import frc.robot.subsystems.drive.Drive;
@@ -49,7 +47,7 @@ import frc.robot.subsystems.wrist.WristIOSim;
 import frc.robot.util.DoublePressTracker;
 import frc.robot.util.MirrorUtil;
 import frc.robot.util.TriggerUtil;
-import java.util.function.DoubleSupplier;
+import frc.robot.util.WristElevatorHelper;
 import lombok.Getter;
 import lombok.experimental.ExtensionMethod;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
@@ -72,9 +70,6 @@ public class RobotContainer {
 
   @Getter private SubsystemVisualizer subsystemVisualizerMeasured;
   @Getter private SubsystemVisualizer subsystemVisualizerGoal;
-
-  @Getter
-  private DoubleSupplier elevatorGoal = () -> MathUtil.clamp(controller.getRawAxis(5) * 2, 0, 2);
 
   private Command blankAuto = Commands.none();
 
@@ -221,29 +216,24 @@ public class RobotContainer {
   private void configureButtonBindings() {
     controller
         .a()
-        .onTrue(
-            Commands.runOnce(
-                    () ->
-                        wrist.setWantedState(
-                            Wrist.WantedState.MOVE_TO_POSITION,
-                            Rotation2d.fromRadians(WristConstants.stowedPosition.get())))
-                .withName("Wrist Stow"));
+        .onTrue(WristElevatorHelper.setBothWantedState(new Rotation2d(), 0.0).withName("Stow"));
 
     controller
         .b()
         .onTrue(
-            Commands.runOnce(
-                    () ->
-                        wrist.setWantedState(
-                            Wrist.WantedState.MOVE_TO_POSITION, Rotation2d.kCCW_Pi_2))
-                .withName("Wrist Medium"));
+            WristElevatorHelper.setBothWantedState(new Rotation2d(Math.PI - .3), 0.6096)
+                .withName("Algae Intake L2"));
 
     controller
         .x()
         .onTrue(
-            Commands.runOnce(
-                    () -> wrist.setWantedState(Wrist.WantedState.MOVE_TO_POSITION, Rotation2d.kPi))
-                .withName("Wrist High"));
+            WristElevatorHelper.setBothWantedState(new Rotation2d(.7), 0.8).withName("Coral L3"));
+
+    controller
+        .y()
+        .onTrue(
+            WristElevatorHelper.setBothWantedState(new Rotation2d(1.15), 1.67)
+                .withName("Coral L4"));
 
     // Reset gyro
     var driverStartAndBack = controller.start().and(controller.back());
