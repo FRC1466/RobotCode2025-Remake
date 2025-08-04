@@ -112,7 +112,11 @@ public class RobotContainer {
         case SIMBOT -> {
           elevator = new Elevator(new ElevatorIOSim());
           wrist = new Wrist(new WristIOSim());
-          intake = new Intake(new RollerSystemIOSim(DCMotor.getKrakenX60(1), 1, 1), new RollerSystemIOSim(DCMotor.getNeoVortex(1), 1, 1), new CoralSensorIO() {});
+          intake =
+              new Intake(
+                  new RollerSystemIOSim(DCMotor.getKrakenX60(1), 1, 1),
+                  new RollerSystemIOSim(DCMotor.getNeoVortex(1), 1, 1),
+                  new CoralSensorIO() {});
           break;
         }
       }

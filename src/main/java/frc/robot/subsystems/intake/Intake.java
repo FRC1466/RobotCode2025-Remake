@@ -28,7 +28,10 @@ public class Intake extends SubsystemBase {
   private final CoralSensorIOInputsAutoLogged coralSensorInputs =
       new CoralSensorIOInputsAutoLogged();
 
-  public Intake(RollerSystemIO endEffectorRollerSystemIO, RollerSystemIO starWheelRollerSystemIO, CoralSensorIO coralSensorIO) {
+  public Intake(
+      RollerSystemIO endEffectorRollerSystemIO,
+      RollerSystemIO starWheelRollerSystemIO,
+      CoralSensorIO coralSensorIO) {
     this.endEffectorIO = endEffectorRollerSystemIO;
     this.starWheelIO = starWheelRollerSystemIO;
     this.coralSensorIO = coralSensorIO;
