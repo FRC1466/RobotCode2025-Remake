@@ -14,6 +14,8 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.constants.ElevatorConstants;
+import frc.robot.subsystems.sensors.HomeSensorIO;
+import frc.robot.subsystems.sensors.HomeSensorIOInputsAutoLogged;
 import frc.robot.util.LoggedTracer;
 import java.util.function.Supplier;
 import lombok.Getter;
@@ -56,6 +58,9 @@ public class Elevator extends SubsystemBase {
   private final ElevatorIO io;
   private final ElevatorIOInputsAutoLogged inputs = new ElevatorIOInputsAutoLogged();
 
+  private final HomeSensorIO homeSensorIO;
+  private final HomeSensorIOInputsAutoLogged homeSensorInputs = new HomeSensorIOInputsAutoLogged();
+
   private WantedState wantedState = WantedState.IDLE;
   private SystemState systemState = SystemState.IDLING;
 
@@ -64,8 +69,9 @@ public class Elevator extends SubsystemBase {
   @Getter @Setter private ElevatorProfile currentElevatorProfile = ElevatorProfile.DEFAULT;
   private ElevatorProfile lastProfile = ElevatorProfile.DEFAULT;
 
-  public Elevator(ElevatorIO io) {
+  public Elevator(ElevatorIO io, HomeSensorIO homeSensorIO) {
     this.io = io;
+    this.homeSensorIO = homeSensorIO;
     this.goalPosition = stowed.get(); // Default to stowed position on startup
   }
 
@@ -144,11 +150,22 @@ public class Elevator extends SubsystemBase {
     return inputs.elevatorAccelerationMetersPerSecSquared;
   }
 
+  public boolean getHomeSensor() {
+    return homeSensorInputs.data.broken();
+  }
+
+  public void resetPosition(double positionMeters) {
+    io.resetElevatorPosition(positionMeters);
+  }
+
   @Override
   public void periodic() {
     // Update and log inputs from the hardware layer
     io.updateInputs(inputs);
     Logger.processInputs("Subsystems/Elevator", inputs);
+
+    homeSensorIO.updateInputs(homeSensorInputs);
+    Logger.processInputs("Subsystems/Elevator/HomeSensor", homeSensorInputs);
 
     if (ElevatorConstants.kP.hasChanged(hashCode())
         || ElevatorConstants.kI.hasChanged(hashCode())

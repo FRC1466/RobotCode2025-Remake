@@ -29,11 +29,6 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
-import frc.robot.constants.FieldConstants.CoralObjective;
-import frc.robot.constants.FieldConstants.IceCreamObjective;
-import frc.robot.constants.FieldConstants.Reef;
-import frc.robot.constants.FieldConstants.ReefLevel;
-import frc.robot.util.AllianceFlipUtil;
 import frc.robot.util.AllianceUtil;
 import frc.robot.util.LoggedTracer;
 import frc.robot.util.SysIdMechanism;
@@ -434,6 +429,16 @@ public class Drive extends SubsystemBase {
     this.desiredRotationForRotationLockState = desiredRotation;
   }
 
+  public boolean isStopped() {
+    return isStopped(0.05);
+  }
+
+  public boolean isStopped(double tolerance) {
+    return Math.abs(swerveInputs.Speeds.vxMetersPerSecond) < tolerance
+        && Math.abs(swerveInputs.Speeds.vyMetersPerSecond) < tolerance
+        && Math.abs(swerveInputs.Speeds.omegaRadiansPerSecond) < tolerance;
+  }
+
   public boolean isAtDriveToPointSetpoint(
       double translationTolerance, Rotation2d rotationTolerance) {
     var translationDistance =
@@ -485,40 +490,6 @@ public class Drive extends SubsystemBase {
 
   public void setRotationVelocityCoefficient(double rotationVelocityCoefficient) {
     this.rotationVelocityCoefficient = rotationVelocityCoefficient;
-  }
-
-  public CoralObjective getClosestCoralObjective() {
-    Pose2d robotPose = AllianceFlipUtil.apply(swerveInputs.Pose);
-    CoralObjective closest = null;
-    double minDist = Double.POSITIVE_INFINITY;
-    for (int branchId = 0; branchId < Reef.branchPositions.size(); branchId++) {
-      for (ReefLevel level : ReefLevel.values()) {
-        var poseMap = Reef.branchPositions.get(branchId);
-        if (!poseMap.containsKey(level)) continue;
-        Pose2d branchPose = poseMap.get(level).toPose2d();
-        double dist = robotPose.getTranslation().getDistance(branchPose.getTranslation());
-        if (dist < minDist) {
-          minDist = dist;
-          closest = new CoralObjective(branchId, level);
-        }
-      }
-    }
-    return closest;
-  }
-
-  public IceCreamObjective getClosestIceCream() {
-    Pose2d robotPose = AllianceFlipUtil.apply(swerveInputs.Pose);
-    IceCreamObjective closest = null;
-    double minDist = Double.POSITIVE_INFINITY;
-    for (int iceCreamID = 1; iceCreamID < iceCreamPositions.size() + 1; iceCreamID++) {
-      Pose2d iceCreamPose = iceCreamPositions.get(new IceCreamObjective(iceCreamID));
-      double dist = robotPose.getTranslation().getDistance(iceCreamPose.getTranslation());
-      if (dist < minDist) {
-        minDist = dist;
-        closest = new IceCreamObjective(iceCreamID);
-      }
-    }
-    return closest;
   }
 
   public void addVisionMeasurement(

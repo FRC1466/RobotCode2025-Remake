@@ -10,8 +10,7 @@ package frc.robot.subsystems.overridePublisher;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class OverridePublisherIOReal implements OverridePublisherIO {
-  private OverridePublisherIOReal() {
-    SmartDashboard.putBoolean("Overrides/OverrideAll", false);
+  public OverridePublisherIOReal() {
     SmartDashboard.putBoolean("Overrides/ReefOverride", false);
     SmartDashboard.putBoolean("Overrides/AlgaeOverride", false);
     SmartDashboard.putBoolean("Overrides/StationOverride", false);
@@ -19,7 +18,6 @@ public class OverridePublisherIOReal implements OverridePublisherIO {
 
   @Override
   public void updateInputs(OverridePublisherIOInputs inputs) {
-    inputs.OverrideAll = SmartDashboard.getBoolean("Overrides/OverrideAll", false);
     inputs.ReefOverride = SmartDashboard.getBoolean("Overrides/ReefOverride", false);
     inputs.AlgaeOverride = SmartDashboard.getBoolean("Overrides/AlgaeOverride", false);
     inputs.StationOverride = SmartDashboard.getBoolean("Overrides/StationOverride", false);

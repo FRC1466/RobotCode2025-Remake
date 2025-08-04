@@ -12,7 +12,6 @@ import static frc.robot.subsystems.vision.VisionConstants.*;
 import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants;
-import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
@@ -28,6 +27,7 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.constants.Constants;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.SubsystemVisualizer;
+import frc.robot.subsystems.Superstructure;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.DriveIO;
 import frc.robot.subsystems.drive.DriveIOCTRE;
@@ -35,9 +35,13 @@ import frc.robot.subsystems.elevator.Elevator;
 import frc.robot.subsystems.elevator.ElevatorIO;
 import frc.robot.subsystems.elevator.ElevatorIOSim;
 import frc.robot.subsystems.intake.Intake;
+import frc.robot.subsystems.overridePublisher.OverridePublisher;
+import frc.robot.subsystems.overridePublisher.OverridePublisherIO;
+import frc.robot.subsystems.overridePublisher.OverridePublisherIOReal;
 import frc.robot.subsystems.rollers.RollerSystemIO;
 import frc.robot.subsystems.rollers.RollerSystemIOSim;
 import frc.robot.subsystems.sensors.CoralSensorIO;
+import frc.robot.subsystems.sensors.HomeSensorIO;
 import frc.robot.subsystems.vision.Vision;
 import frc.robot.subsystems.vision.VisionIO;
 import frc.robot.subsystems.vision.VisionIOPhotonVisionSim;
@@ -47,7 +51,6 @@ import frc.robot.subsystems.wrist.WristIOSim;
 import frc.robot.util.DoublePressTracker;
 import frc.robot.util.MirrorUtil;
 import frc.robot.util.TriggerUtil;
-import frc.robot.util.WristElevatorHelper;
 import lombok.Getter;
 import lombok.experimental.ExtensionMethod;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
@@ -67,6 +70,9 @@ public class RobotContainer {
   @Getter private Wrist wrist;
   @Getter private Intake intake;
   @Getter private Vision vision;
+  @Getter private OverridePublisher overridePublisher;
+
+  @Getter private Superstructure superstructure;
 
   @Getter private SubsystemVisualizer subsystemVisualizerMeasured;
   @Getter private SubsystemVisualizer subsystemVisualizerGoal;
@@ -103,6 +109,8 @@ public class RobotContainer {
               moduleConstants[0].SpeedAt12Volts
                   / Math.hypot(moduleConstants[0].LocationX, moduleConstants[0].LocationY));
 
+      overridePublisher = new OverridePublisher(new OverridePublisherIOReal());
+
       switch (Constants.getRobot()) {
         case COMPBOT -> {
           break;
@@ -111,7 +119,7 @@ public class RobotContainer {
           break;
         }
         case SIMBOT -> {
-          elevator = new Elevator(new ElevatorIOSim());
+          elevator = new Elevator(new ElevatorIOSim(), new HomeSensorIO() {});
           wrist = new Wrist(new WristIOSim());
           intake =
               new Intake(
@@ -145,7 +153,7 @@ public class RobotContainer {
                   / Math.hypot(moduleConstants[0].LocationX, moduleConstants[0].LocationY));
     }
     if (elevator == null) {
-      elevator = new Elevator(new ElevatorIO() {});
+      elevator = new Elevator(new ElevatorIO() {}, new HomeSensorIO() {});
     }
     if (wrist == null) {
       wrist = new Wrist(new WristIO() {});
@@ -159,6 +167,11 @@ public class RobotContainer {
               drive::addVisionMeasurement,
               cameras.values().stream().map(config -> new VisionIO() {}).toArray(VisionIO[]::new));
     }
+    if (overridePublisher == null) {
+      overridePublisher = new OverridePublisher(new OverridePublisherIO() {});
+    }
+
+    superstructure = new Superstructure(drive, intake, elevator, wrist, overridePublisher, vision);
 
     subsystemVisualizerMeasured =
         new SubsystemVisualizer(
@@ -216,24 +229,21 @@ public class RobotContainer {
   private void configureButtonBindings() {
     controller
         .a()
-        .onTrue(WristElevatorHelper.setBothWantedState(new Rotation2d(), 0.0).withName("Stow"));
+        .onTrue(
+            superstructure.configureButtonBinding(
+                Superstructure.WantedSuperState.SCORE_LEFT_L2,
+                Superstructure.WantedSuperState.EJECT_ALGAE,
+                Superstructure.WantedSuperState.INTAKE_CORAL_FROM_STATION))
+        .onFalse(superstructure.setStateCommand(Superstructure.WantedSuperState.DEFAULT_STATE));
 
     controller
         .b()
         .onTrue(
-            WristElevatorHelper.setBothWantedState(new Rotation2d(Math.PI - .3), 0.6096)
-                .withName("Algae Intake L2"));
-
-    controller
-        .x()
-        .onTrue(
-            WristElevatorHelper.setBothWantedState(new Rotation2d(.7), 0.8).withName("Coral L3"));
-
-    controller
-        .y()
-        .onTrue(
-            WristElevatorHelper.setBothWantedState(new Rotation2d(1.15), 1.67)
-                .withName("Coral L4"));
+            superstructure.configureButtonBinding(
+                Superstructure.WantedSuperState.SCORE_RIGHT_L4,
+                Superstructure.WantedSuperState.EJECT_ALGAE,
+                Superstructure.WantedSuperState.INTAKE_CORAL_FROM_STATION))
+        .onFalse(superstructure.setStateCommand(Superstructure.WantedSuperState.DEFAULT_STATE));
 
     // Reset gyro
     var driverStartAndBack = controller.start().and(controller.back());

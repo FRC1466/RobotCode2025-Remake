@@ -29,6 +29,7 @@ import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.constants.Constants;
 import frc.robot.constants.Constants.RobotType;
 import frc.robot.generated.TunerConstants;
+import frc.robot.subsystems.Superstructure;
 import frc.robot.util.DummyLogReceiver;
 import frc.robot.util.LoggedTracer;
 import frc.robot.util.NTClientLogger;
@@ -291,7 +292,11 @@ public class Robot extends LoggedRobot {
 
   /** This function is called once when the robot is disabled. */
   @Override
-  public void disabledInit() {}
+  public void disabledInit() {
+    robotContainer
+        .getSuperstructure()
+        .setWantedSuperState(Superstructure.WantedSuperState.DEFAULT_STATE);
+  }
 
   /** This function is called periodically when disabled. */
   @Override

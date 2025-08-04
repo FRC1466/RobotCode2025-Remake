@@ -9,7 +9,9 @@ package frc.robot.subsystems.intake;
 
 import static frc.robot.constants.IntakeConstants.*;
 
+import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.Robot;
 import frc.robot.subsystems.rollers.RollerSystemIO;
 import frc.robot.subsystems.rollers.RollerSystemIOInputsAutoLogged;
 import frc.robot.subsystems.sensors.CoralSensorIO;
@@ -85,7 +87,13 @@ public class Intake extends SubsystemBase {
   private WantedState wantedState = WantedState.OFF;
   private SystemState systemState = SystemState.OFF;
 
+  private Debouncer simIntakingTimeDebouncerCoral =
+      new Debouncer(0.5, Debouncer.DebounceType.kBoth);
+  private Debouncer simIntakingTimeDebouncerAlgae = new Debouncer(2, Debouncer.DebounceType.kBoth);
+
   private boolean hasAlgae = false;
+
+  private boolean hasCoral = false;
 
   @Override
   public void periodic() {
@@ -106,11 +114,29 @@ public class Intake extends SubsystemBase {
       hasAlgae = false;
     }
 
+    if (Robot.isReal()) {
+      hasCoral = coralSensorInputs.data.distanceMeters() < distanceThresholdCoralIntake;
+    }
+    if (systemState != SystemState.OFF
+        && systemState != SystemState.GRIPPING_CORAL
+        && systemState != SystemState.INTAKING_CORAL) {
+      hasCoral = false;
+    }
+
     // Perform state-specific actions
     if (systemState == SystemState.INTAKING_ALGAE && !hasAlgae) {
       if (endEffectorInputs.data.torqueCurrentAmps() >= currentThresholdAlgaeIntake) {
         hasAlgae = true;
         systemState = SystemState.HOLDING_ALGAE;
+      }
+    }
+
+    if (Robot.isSimulation()) {
+      if (simIntakingTimeDebouncerAlgae.calculate(systemState == SystemState.INTAKING_ALGAE)) {
+        hasAlgae = true;
+      }
+      if (simIntakingTimeDebouncerCoral.calculate(systemState == SystemState.INTAKING_CORAL)) {
+        hasCoral = true;
       }
     }
 
@@ -120,6 +146,7 @@ public class Intake extends SubsystemBase {
     Logger.recordOutput("Subsystems/Intake/SystemState", systemState);
     Logger.recordOutput("Subsystems/Intake/WantedState", wantedState);
     Logger.recordOutput("Subsystems/Intake/HasAlgae", hasAlgae);
+    Logger.recordOutput("Subsystems/Intake/HasCoral", hasCoral);
   }
 
   /**
@@ -130,7 +157,7 @@ public class Intake extends SubsystemBase {
    */
   private SystemState handleStateTransition() {
     return switch (wantedState) {
-      case INTAKE_CORAL -> SystemState.INTAKING_CORAL;
+      case INTAKE_CORAL -> hasCoral ? SystemState.OFF : SystemState.INTAKING_CORAL;
       case GRIP_CORAL -> SystemState.GRIPPING_CORAL;
       case OUTTAKE_CORAL -> SystemState.OUTTAKING_CORAL;
       case OUTTAKE_CORAL_L1 -> SystemState.OUTTAKING_CORAL_L1;
@@ -173,7 +200,7 @@ public class Intake extends SubsystemBase {
    * @return True if the sensor distance is less than the defined threshold, false otherwise.
    */
   public boolean hasCoral() {
-    return coralSensorInputs.data.distanceMeters() < distanceThresholdCoralIntake;
+    return hasCoral;
   }
 
   /**

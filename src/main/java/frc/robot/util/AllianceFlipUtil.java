@@ -14,11 +14,11 @@ import frc.robot.constants.FieldConstants;
 
 public class AllianceFlipUtil {
   public static double applyX(double x) {
-    return shouldFlip() ? FieldConstants.fieldLength - x : x;
+    return shouldFlip() ? FieldConstants.FIELD_LENGTH - x : x;
   }
 
   public static double applyY(double y) {
-    return shouldFlip() ? FieldConstants.fieldWidth - y : y;
+    return shouldFlip() ? FieldConstants.FIELD_HEIGHT - y : y;
   }
 
   public static Translation2d apply(Translation2d translation) {

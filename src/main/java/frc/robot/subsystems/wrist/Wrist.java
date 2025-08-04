@@ -185,9 +185,9 @@ public class Wrist extends SubsystemBase {
   private void logState() {
     Logger.recordOutput("Subsystems/Wrist/SystemState", systemState.name());
     Logger.recordOutput("Subsystems/Wrist/WantedState", wantedState.name());
-    Logger.recordOutput("Subsystems/Wrist/GoalPositionMeters", goalAngle);
+    Logger.recordOutput("Subsystems/Wrist/GoalAngle", goalAngle);
     Logger.recordOutput("Subsystems/Wrist/AtGoal", atGoal());
-    Logger.recordOutput("Subsystems/Wrist/PositionMeters", getAngle());
+    Logger.recordOutput("Subsystems/Wrist/Angle", getAngle());
     Logger.recordOutput("Subsystems/Wrist/VelocityMetersPerSec", getVelocity());
   }
 }

@@ -7,265 +7,282 @@
 
 package frc.robot.constants;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
+import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.wpilibj.Filesystem;
-import java.io.IOException;
-import java.nio.file.Path;
-import java.util.*;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import edu.wpi.first.wpilibj.DriverStation;
 
-/**
- * Contains various field dimensions and useful reference points. All units are in meters and poses
- * have a blue alliance origin.
- */
+@SuppressWarnings("UnusedVariable")
 public class FieldConstants {
-  public static final FieldType fieldType = FieldType.WELDED;
+  public static final AprilTagFieldLayout FIELD_LAYOUT;
 
-  public static final double fieldLength = AprilTagLayoutType.OFFICIAL.getLayout().getFieldLength();
-  public static final double fieldWidth = AprilTagLayoutType.OFFICIAL.getLayout().getFieldWidth();
-  public static final double startingLineX =
-      Units.inchesToMeters(299.438); // Measured from the inside of starting line
-  public static final double algaeDiameter = Units.inchesToMeters(16);
-  public static final double coralDiameter = Units.inchesToMeters(4.5);
-
-  public static class Processor {
-    public static final Pose2d centerFace =
-        new Pose2d(
-            AprilTagLayoutType.OFFICIAL.getLayout().getTagPose(16).get().getX(),
-            0,
-            Rotation2d.fromDegrees(90));
-    public static final Pose2d opposingCenterFace =
-        new Pose2d(
-            AprilTagLayoutType.OFFICIAL.getLayout().getTagPose(3).get().getX(),
-            fieldWidth,
-            Rotation2d.fromDegrees(-90));
+  static {
+    FIELD_LAYOUT = AprilTagFieldLayout.loadField(AprilTagFields.k2025ReefscapeWelded);
+    FIELD_LAYOUT.setOrigin(AprilTagFieldLayout.OriginPosition.kBlueAllianceWallRightSide);
   }
 
-  public static class Barge {
-    public static final double netWidth = Units.inchesToMeters(40.0);
-    public static final double netHeight = Units.inchesToMeters(88.0);
+  public static final double FIELD_HEIGHT = 8.0518;
+  public static final double FIELD_LENGTH = 17.548249;
 
-    public static final Translation2d farCage =
-        new Translation2d(Units.inchesToMeters(345.428), Units.inchesToMeters(286.779));
-    public static final Translation2d middleCage =
-        new Translation2d(Units.inchesToMeters(345.428), Units.inchesToMeters(242.855));
-    public static final Translation2d closeCage =
-        new Translation2d(Units.inchesToMeters(345.428), Units.inchesToMeters(199.947));
+  // April tag IDs
+  public static final int RED_LEFT_CORAL_STATION = 1;
+  public static final int RED_RIGHT_CORAL_STATION = 2;
+  public static final int RED_PROCESSOR = 3;
+  public static final int RED_RIGHT_NET = 4;
+  public static final int RED_LEFT_NET = 5;
+  public static final int RED_REEF_LEFT_DRIVER_STATION = 6;
+  public static final int RED_REEF_CENTER_DRIVER_STATION = 7;
+  public static final int RED_REEF_RIGHT_DRIVER_STATION = 8;
+  public static final int RED_REEF_RIGHT_BARGE = 9;
+  public static final int RED_REEF_CENTER_BARGE = 10;
+  public static final int RED_REEF_LEFT_BARGE = 11;
+  public static final int BLUE_RIGHT_CORAL_STATION = 12;
+  public static final int BLUE_LEFT_CORAL_STATION = 13;
+  public static final int BLUE_LEFT_BARGE = 14;
+  public static final int BLUE_RIGHT_BARGE = 15;
+  public static final int BLUE_PROCESSOR = 16;
+  public static final int BLUE_REEF_RIGHT_DRIVER_STATION = 17;
+  public static final int BLUE_REEF_CENTER_DRIVER_STATION = 18;
+  public static final int BLUE_REEF_LEFT_DRIVER_STATION = 19;
+  public static final int BLUE_REEF_RIGHT_BARGE = 20;
+  public static final int BLUE_REEF_CENTER_BARGE = 21;
+  public static final int BLUE_REEF_LEFT_BARGE = 22;
 
-    // Measured from floor to bottom of cage
-    public static final double deepHeight = Units.inchesToMeters(3.125);
-    public static final double shallowHeight = Units.inchesToMeters(30.125);
+  public static final Translation2d RED_MARK_1 = new Translation2d(16.329, 2.197);
+  public static final Translation2d RED_MARK_2 = new Translation2d(16.329, 4.026);
+  public static final Translation2d RED_MARK_3 = new Translation2d(16.329, 5.855);
+  public static final Translation2d BLUE_MARK_1 = new Translation2d(1.219, 5.855);
+  public static final Translation2d BLUE_MARK_2 = new Translation2d(1.219, 4.026);
+  public static final Translation2d BLUE_MARK_3 = new Translation2d(1.219, 2.197);
+
+  public static final Pose2d FAR_LEFT_STARTING_POSE_BLUE = new Pose2d(7.2, 7, Rotation2d.k180deg);
+  public static final Pose2d FAR_LEFT_STARTING_POSE_RED =
+      new Pose2d(
+          FIELD_LENGTH - FAR_LEFT_STARTING_POSE_BLUE.getX(),
+          FIELD_HEIGHT - FAR_LEFT_STARTING_POSE_BLUE.getY(),
+          Rotation2d.kZero);
+  public static final Pose2d FAR_RIGHT_STARTING_POSE_BLUE =
+      new Pose2d(
+          FAR_LEFT_STARTING_POSE_BLUE.getX(),
+          FIELD_HEIGHT - FAR_LEFT_STARTING_POSE_BLUE.getY(),
+          Rotation2d.k180deg);
+  public static final Pose2d FAR_RIGHT_STARTING_POSE_RED =
+      new Pose2d(
+          FIELD_LENGTH - FAR_RIGHT_STARTING_POSE_BLUE.getX(),
+          FIELD_HEIGHT - FAR_RIGHT_STARTING_POSE_BLUE.getY(),
+          Rotation2d.kZero);
+
+  public static final Pose2d LEFT_STARTING_POSE_BLUE =
+      new Pose2d(7.2, 6.14, Rotation2d.fromDegrees(45.0));
+  public static final Pose2d LEFT_STARTING_POSE_RED =
+      new Pose2d(
+          FIELD_LENGTH - LEFT_STARTING_POSE_BLUE.getX(),
+          FIELD_HEIGHT - LEFT_STARTING_POSE_BLUE.getY(),
+          Rotation2d.fromDegrees(-135.0)); // todo red angles are wrong
+  public static final Pose2d RIGHT_STARTING_POSE_BLUE =
+      new Pose2d(
+          LEFT_STARTING_POSE_BLUE.getX(),
+          FIELD_HEIGHT - LEFT_STARTING_POSE_BLUE.getY(),
+          Rotation2d.fromDegrees(-45.0));
+  public static final Pose2d RIGHT_STARTING_POSE_RED =
+      new Pose2d(
+          FIELD_LENGTH - RIGHT_STARTING_POSE_BLUE.getX(),
+          FIELD_HEIGHT - RIGHT_STARTING_POSE_BLUE.getY(),
+          Rotation2d.fromDegrees(135.0)); // todo red angles are wrong
+
+  public static final Pose2d LEFT_STATION_PICKUP_POSE_BLUE =
+      new Pose2d(0.6, 7.85, Rotation2d.fromDegrees(135));
+
+  public static final Pose2d LEFT_STATION_PICKUP_POSE_RED =
+      new Pose2d(
+          FIELD_LENGTH - LEFT_STATION_PICKUP_POSE_BLUE.getX(),
+          FIELD_HEIGHT - LEFT_STATION_PICKUP_POSE_BLUE.getY(),
+          Rotation2d.fromDegrees(-55));
+  public static final Pose2d RIGHT_STATION_PICKUP_POSE_BLUE =
+      new Pose2d(
+          LEFT_STATION_PICKUP_POSE_BLUE.getX(),
+          FIELD_HEIGHT - LEFT_STATION_PICKUP_POSE_BLUE.getY(),
+          Rotation2d.fromDegrees(-135));
+  public static final Pose2d RIGHT_STATION_PICKUP_POSE_RED =
+      new Pose2d(
+          FIELD_LENGTH - RIGHT_STATION_PICKUP_POSE_BLUE.getX(),
+          FIELD_HEIGHT - RIGHT_STATION_PICKUP_POSE_BLUE.getY(),
+          Rotation2d.fromDegrees(55));
+
+  public static boolean isBlueAlliance() {
+    return DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue)
+        == DriverStation.Alliance.Blue;
   }
 
-  public static class CoralStation {
-    public static final double stationLength = Units.inchesToMeters(79.750);
-    public static final Pose2d rightCenterFace =
-        new Pose2d(
-            Units.inchesToMeters(33.526),
-            Units.inchesToMeters(25.824),
-            Rotation2d.fromDegrees(144.011 - 90));
-    public static final Pose2d leftCenterFace =
-        new Pose2d(
-            rightCenterFace.getX(),
-            fieldWidth - rightCenterFace.getY(),
-            Rotation2d.fromRadians(-rightCenterFace.getRotation().getRadians()));
+  public static boolean isOnBlueAlliance(Pose2d pose) {
+    return pose.getX() < FIELD_LENGTH / 2.0;
   }
 
-  public static class Reef {
-    public static final double faceLength = Units.inchesToMeters(36.792600);
-    public static final Translation2d center =
-        new Translation2d(Units.inchesToMeters(176.746), fieldWidth / 2.0);
-    public static final double faceToZoneLine =
-        Units.inchesToMeters(12); // Side of the reef to the inside of the reef zone line
+  public static Translation2d getMark1() {
+    return isBlueAlliance() ? BLUE_MARK_1 : RED_MARK_1;
+  }
 
-    public static final Pose2d[] centerFaces =
-        new Pose2d[6]; // Starting facing the driver station in clockwise order
-    public static final List<Map<ReefLevel, Pose3d>> branchPositions =
-        new ArrayList<>(); // Starting at the right branch facing the driver station in clockwise
-    public static final List<Map<ReefLevel, Pose2d>> branchPositions2d = new ArrayList<>();
+  public static Translation2d getMark2() {
+    return isBlueAlliance() ? BLUE_MARK_2 : RED_MARK_2;
+  }
 
-    static {
-      // Initialize faces
-      var aprilTagLayout = AprilTagLayoutType.OFFICIAL.getLayout();
-      centerFaces[0] = aprilTagLayout.getTagPose(18).get().toPose2d();
-      centerFaces[1] = aprilTagLayout.getTagPose(19).get().toPose2d();
-      centerFaces[2] = aprilTagLayout.getTagPose(20).get().toPose2d();
-      centerFaces[3] = aprilTagLayout.getTagPose(21).get().toPose2d();
-      centerFaces[4] = aprilTagLayout.getTagPose(22).get().toPose2d();
-      centerFaces[5] = aprilTagLayout.getTagPose(17).get().toPose2d();
+  public static Translation2d getMark3() {
+    return isBlueAlliance() ? BLUE_MARK_3 : RED_MARK_3;
+  }
 
-      // Initialize branch positions
-      for (int face = 0; face < 6; face++) {
-        Map<ReefLevel, Pose3d> fillRight = new HashMap<>();
-        Map<ReefLevel, Pose3d> fillLeft = new HashMap<>();
-        Map<ReefLevel, Pose2d> fillRight2d = new HashMap<>();
-        Map<ReefLevel, Pose2d> fillLeft2d = new HashMap<>();
-        for (var level : ReefLevel.values()) {
-          Pose2d poseDirection = new Pose2d(center, Rotation2d.fromDegrees(180 - (60 * face)));
-          double adjustX = Units.inchesToMeters(30.738);
-          double adjustY = Units.inchesToMeters(6.469);
+  public static Pose2d getFarLeftStartingPose(DriverStation.Alliance alliance) {
+    return alliance == DriverStation.Alliance.Blue
+        ? FAR_LEFT_STARTING_POSE_BLUE
+        : FAR_LEFT_STARTING_POSE_RED;
+  }
 
-          var rightBranchPose =
-              new Pose3d(
-                  new Translation3d(
-                      poseDirection
-                          .transformBy(new Transform2d(adjustX, adjustY, Rotation2d.kZero))
-                          .getX(),
-                      poseDirection
-                          .transformBy(new Transform2d(adjustX, adjustY, Rotation2d.kZero))
-                          .getY(),
-                      level.height),
-                  new Rotation3d(
-                      0,
-                      Units.degreesToRadians(level.pitch),
-                      poseDirection.getRotation().getRadians()));
-          var leftBranchPose =
-              new Pose3d(
-                  new Translation3d(
-                      poseDirection
-                          .transformBy(new Transform2d(adjustX, -adjustY, Rotation2d.kZero))
-                          .getX(),
-                      poseDirection
-                          .transformBy(new Transform2d(adjustX, -adjustY, Rotation2d.kZero))
-                          .getY(),
-                      level.height),
-                  new Rotation3d(
-                      0,
-                      Units.degreesToRadians(level.pitch),
-                      poseDirection.getRotation().getRadians()));
+  public static Pose2d getFarRightStartingPose(DriverStation.Alliance alliance) {
+    return alliance == DriverStation.Alliance.Blue
+        ? FAR_RIGHT_STARTING_POSE_BLUE
+        : FAR_RIGHT_STARTING_POSE_RED;
+  }
 
-          fillRight.put(level, rightBranchPose);
-          fillLeft.put(level, leftBranchPose);
-          fillRight2d.put(level, rightBranchPose.toPose2d());
-          fillLeft2d.put(level, leftBranchPose.toPose2d());
-        }
-        branchPositions.add(fillRight);
-        branchPositions.add(fillLeft);
-        branchPositions2d.add(fillRight2d);
-        branchPositions2d.add(fillLeft2d);
+  public static Pose2d getLeftStartingPose(DriverStation.Alliance alliance) {
+    return alliance == DriverStation.Alliance.Blue
+        ? LEFT_STARTING_POSE_BLUE
+        : LEFT_STARTING_POSE_RED;
+  }
+
+  public static Pose2d getRightStartingPose(DriverStation.Alliance alliance) {
+    return alliance == DriverStation.Alliance.Blue
+        ? RIGHT_STARTING_POSE_BLUE
+        : RIGHT_STARTING_POSE_RED;
+  }
+
+  public static Pose2d getLeftStationPickup(DriverStation.Alliance alliance) {
+    return alliance == DriverStation.Alliance.Blue
+        ? LEFT_STATION_PICKUP_POSE_BLUE
+        : LEFT_STATION_PICKUP_POSE_RED;
+  }
+
+  public static Pose2d getRightStationPickup(DriverStation.Alliance alliance) {
+    return alliance == DriverStation.Alliance.Blue
+        ? RIGHT_STATION_PICKUP_POSE_BLUE
+        : RIGHT_STATION_PICKUP_POSE_RED;
+  }
+
+  public static Pose2d getFarLeftStartingPose() {
+    return isBlueAlliance() ? FAR_LEFT_STARTING_POSE_BLUE : FAR_LEFT_STARTING_POSE_RED;
+  }
+
+  public static Pose2d getFarRightStartingPose() {
+    return isBlueAlliance() ? FAR_RIGHT_STARTING_POSE_BLUE : FAR_RIGHT_STARTING_POSE_RED;
+  }
+
+  public static Pose2d getLeftStartingPose() {
+    return isBlueAlliance() ? LEFT_STARTING_POSE_BLUE : LEFT_STARTING_POSE_RED;
+  }
+
+  public static Pose2d getRightStartingPose() {
+    return isBlueAlliance() ? RIGHT_STARTING_POSE_BLUE : RIGHT_STARTING_POSE_RED;
+  }
+
+  public static Pose2d getLeftStationPickup() {
+    return isBlueAlliance() ? LEFT_STATION_PICKUP_POSE_BLUE : LEFT_STATION_PICKUP_POSE_RED;
+  }
+
+  public static Pose2d getRightStationPickup() {
+    return isBlueAlliance() ? RIGHT_STATION_PICKUP_POSE_BLUE : RIGHT_STATION_PICKUP_POSE_RED;
+  }
+
+  public static Pose3d getTagPose(int id) {
+    if (id < RED_LEFT_CORAL_STATION || id > BLUE_REEF_LEFT_BARGE) {
+      throw new IllegalArgumentException("id must be between 1 and 22");
+    }
+
+    return FIELD_LAYOUT
+        .getTagPose(id)
+        .orElseThrow(
+            () -> {
+              final String message = String.format("getTagPose called for unexpected tag %d", id);
+              return new RuntimeException(message);
+            });
+  }
+
+  public static Pose2d getBackoutPointToForL1Scoring(
+      int tagID, SuperstructureConstants.ScoringSide scoringSide) {
+    return getDesiredPointToDriveToForL1Scoring(
+        tagID,
+        scoringSide,
+        Units.inchesToMeters(SuperstructureConstants.xOffsetFromTagForL1BackoutInches));
+  }
+
+  public static Pose2d getDesiredPointToDriveToForL1Scoring(
+      int tagID, SuperstructureConstants.ScoringSide scoringSide) {
+    return getDesiredPointToDriveToForL1Scoring(tagID, scoringSide, 0.0);
+  }
+
+  public static Pose2d getDesiredPointToDriveToForL1Scoring(
+      int tagID,
+      SuperstructureConstants.ScoringSide scoringSide,
+      double distanceFromFinalScoringPose) {
+
+    if (tagID >= 1 && tagID <= 22) {
+      Pose2d tagPose = FieldConstants.FIELD_LAYOUT.getTagPose(tagID).get().toPose2d();
+      double xOffset =
+          Units.inchesToMeters(
+              SuperstructureConstants.xOffsetFromTagForL1TopScoringInches
+                  + Units.metersToInches(distanceFromFinalScoringPose));
+
+      double yOffset =
+          -Units.inchesToMeters(SuperstructureConstants.yOffsetFromTagForScoringL1Inches);
+      if (scoringSide == SuperstructureConstants.ScoringSide.RIGHT) {
+        yOffset *= -1;
       }
+      Translation2d offsetFromTag = new Translation2d(xOffset, yOffset);
+
+      Pose2d transformedPose =
+          tagPose.plus(
+              new Transform2d(offsetFromTag.getX(), offsetFromTag.getY(), Rotation2d.k180deg));
+
+      return transformedPose;
+    } else {
+      return Pose2d.kZero;
     }
   }
 
-  public static final Map<IceCreamObjective, Pose2d> iceCreamPositions =
-      Map.of(
-          new IceCreamObjective(1),
-              new Pose2d(
-                  Units.inchesToMeters(48),
-                  fieldWidth / 2.0 + Units.inchesToMeters(72.0),
-                  Rotation2d.kZero),
-          new IceCreamObjective(2),
-              new Pose2d(Units.inchesToMeters(48), fieldWidth / 2.0, Rotation2d.kZero),
-          new IceCreamObjective(3),
-              new Pose2d(
-                  Units.inchesToMeters(48),
-                  fieldWidth / 2.0 - Units.inchesToMeters(72.0),
-                  Rotation2d.kZero));
-
-  public enum ReefLevel {
-    L1(0, Units.inchesToMeters(25.0), 0),
-    L2(1, Units.inchesToMeters(31.875 - Math.cos(Math.toRadians(35.0)) * 0.625), -35),
-    L3(2, Units.inchesToMeters(47.625 - Math.cos(Math.toRadians(35.0)) * 0.625), -35),
-    L4(3, Units.inchesToMeters(72), -90);
-
-    ReefLevel(int levelNumber, double height, double pitch) {
-      this.levelNumber = levelNumber;
-      this.height = height;
-      this.pitch = pitch; // Degrees
-    }
-
-    public static ReefLevel fromLevel(int level) {
-      return Arrays.stream(values())
-          .filter(height -> height.ordinal() == level)
-          .findFirst()
-          .orElse(L4);
-    }
-
-    public final int levelNumber;
-    public final double height;
-    public final double pitch;
+  public static Pose2d getDesiredFinalScoringPoseForCoral(
+      int tagID, SuperstructureConstants.ScoringSide scoringSide) {
+    return getDesiredPointToDriveToForCoralScoring(tagID, scoringSide, 0.0);
   }
 
-  public static final double aprilTagWidth = Units.inchesToMeters(6.50);
-  public static final int aprilTagCount = 22;
-  public static final AprilTagLayoutType defaultAprilTagType = AprilTagLayoutType.NO_BARGE;
+  public static Pose2d getDesiredIntermediateScoringPoseForCoral(
+      int tagID, SuperstructureConstants.ScoringSide scoringSide) {
+    return getDesiredPointToDriveToForCoralScoring(tagID, scoringSide, 1);
+  }
 
-  @Getter
-  public enum AprilTagLayoutType {
-    OFFICIAL("2025-official"),
-    NO_BARGE("2025-no-barge"),
-    BLUE_REEF("2025-blue-reef"),
-    RED_REEF("2025-red-reef"),
-    FIELD_BORDER("2025-field-border");
+  public static Pose2d getDesiredPointToDriveToForCoralScoring(
+      int tagID,
+      SuperstructureConstants.ScoringSide scoringSide,
+      double distanceFromFinalScoringPoseMeters) {
 
-    AprilTagLayoutType(String name) {
-      if (Constants.disableHAL) {
-        try {
-          layout =
-              new AprilTagFieldLayout(
-                  Path.of(
-                      "src",
-                      "main",
-                      "deploy",
-                      "apriltags",
-                      fieldType.getJsonFolder(),
-                      "2025-official.json"));
-        } catch (IOException e) {
-          throw new RuntimeException(e);
-        }
-      } else {
-        try {
-          layout =
-              new AprilTagFieldLayout(
-                  Path.of(
-                      Filesystem.getDeployDirectory().getPath(),
-                      "apriltags",
-                      fieldType.getJsonFolder(),
-                      name + ".json"));
-        } catch (IOException e) {
-          throw new RuntimeException(e);
-        }
+    if (tagID >= 1 && tagID <= 22) {
+      Pose2d tagPose = FieldConstants.FIELD_LAYOUT.getTagPose(tagID).get().toPose2d();
+      double xOffset =
+          Units.inchesToMeters(
+              SuperstructureConstants.xOffsetFromTagForScoringInches
+                  + Units.metersToInches(distanceFromFinalScoringPoseMeters));
+
+      double yOffset =
+          -Units.inchesToMeters(SuperstructureConstants.yOffsetFromTagForScoringOnReefInches);
+      if (scoringSide == SuperstructureConstants.ScoringSide.RIGHT) {
+        yOffset *= -1;
       }
+      Translation2d offsetFromTag = new Translation2d(xOffset, yOffset);
 
-      try {
-        layoutString = new ObjectMapper().writeValueAsString(layout);
-      } catch (JsonProcessingException e) {
-        throw new RuntimeException(
-            "Failed to serialize AprilTag layout JSON " + toString() + "for Northstar");
-      }
+      var transformedPose =
+          tagPose.plus(
+              new Transform2d(offsetFromTag.getX(), offsetFromTag.getY(), Rotation2d.k180deg));
+
+      return transformedPose;
+    } else {
+      return Pose2d.kZero;
     }
-
-    private final AprilTagFieldLayout layout;
-    private final String layoutString;
-  }
-
-  public record CoralObjective(int branchId, ReefLevel reefLevel) {}
-
-  public record IceCreamObjective(int iceCreamPosition) {}
-
-  public record AlgaeObjective(int id, boolean low) {
-    public AlgaeObjective(int id) {
-      this(id, id % 2 == 1);
-    }
-  }
-
-  public static Pose3d getTagPose(int tagId) {
-    return AprilTagLayoutType.OFFICIAL
-        .getLayout()
-        .getTagPose(tagId)
-        .orElseThrow(() -> new IllegalArgumentException("Invalid tag ID: " + tagId));
-  }
-
-  @RequiredArgsConstructor
-  public enum FieldType {
-    ANDYMARK("andymark"),
-    WELDED("welded");
-
-    @Getter private final String jsonFolder;
   }
 }
