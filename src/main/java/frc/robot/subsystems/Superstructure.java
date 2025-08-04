@@ -654,7 +654,27 @@ public class Superstructure extends SubsystemBase {
 
   private void scoreL4Auto(ScoringSide scoringSide) {}
 
-  private void moveAlgaeToNetPosition() {}
+  private void moveAlgaeToNetPosition() {
+    Rotation2d rotation = FieldConstants.isBlueAlliance() ? Rotation2d.kZero : Rotation2d.k180deg;
+    if (Math.abs(RobotState.getInstance()
+                    .getRobotPoseFromSwerveDriveOdometry()
+                    .getRotation()
+                    .getDegrees())
+            > 90) {
+        rotation = Rotation2d.k180deg;
+    } else {
+        rotation = Rotation2d.kZero;
+    }
+
+    drive.setTargetRotation(rotation);
+
+    intake.setWantedState(Intake.WantedState.HOLD_ALGAE);
+    drive.setTeleopVelocityCoefficient(0.4);
+
+    if (drive.isAtDesiredRotation()) {
+        elevatorWristRun(ALGAE_NET_PRE);
+    }
+}
 
   private void moveAlgaeToProcessorPosition() {
     Rotation2d rotation =
@@ -665,9 +685,30 @@ public class Superstructure extends SubsystemBase {
     drive.setTargetRotation(rotation);
   }
 
-  private void scoreAlgaeNet() {}
+  private void scoreAlgaeNet() {
+    drive.setTeleopVelocityCoefficient(0.0);
+    if (drive.isAtDesiredRotation()) {
+        elevatorWristRun(ALGAE_NET_POST);
+    }
+    if (wrist.getAngle().getRadians() > (ALGAE_NET_POST.wristAngle.minus(Rotation2d.fromDegrees(60))).getRadians())
+    intake.setWantedState(Intake.WantedState.EJECT_ALGAE);
+}
 
-  private void scoreAlgaeProcessor() {}
+private void scoreAlgaeProcessor() {
+  Rotation2d rotation = FieldConstants.isBlueAlliance() ? Rotation2d.kCW_90deg : Rotation2d.kCCW_90deg;
+  if (RobotState.getInstance()
+                  .getRobotPoseFromSwerveDriveOdometry()
+                  .getRotation()
+                  .getDegrees()
+          > 0) {
+      rotation = Rotation2d.kCCW_90deg;
+  } else {
+      rotation = Rotation2d.kCW_90deg;
+  }
+  drive.setTargetRotation(rotation);
+  elevatorWristRun(ALGAE_PROCESSOR);
+  intake.setWantedState(Intake.WantedState.EJECT_ALGAE);
+}
 
   public boolean isReadyToEject() {
     return drive.isAtDriveToPointSetpoint()
