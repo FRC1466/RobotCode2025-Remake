@@ -8,7 +8,6 @@
 package frc.robot.subsystems.drive;
 
 import static edu.wpi.first.units.Units.*;
-import static frc.robot.constants.FieldConstants.*;
 import static frc.robot.constants.SysIDConstants.*;
 
 import com.ctre.phoenix6.SignalLogger;

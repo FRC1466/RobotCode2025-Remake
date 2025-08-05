@@ -183,16 +183,16 @@ public class RobotContainer {
             "Measured",
             () -> elevator.getPosition(),
             () -> wrist.getAngle().getRadians(),
-            () -> false,
-            () -> false,
+            () -> intake.hasCoral(),
+            () -> intake.hasAlgae(),
             RobotState.getInstance()::getRobotPoseFromSwerveDriveOdometry);
     subsystemVisualizerGoal =
         new SubsystemVisualizer(
             "Goal",
             () -> elevator.getGoalPosition(),
             () -> wrist.getGoalAngle().getRadians(),
-            () -> false,
-            () -> false,
+            () -> intake.hasCoral(),
+            () -> intake.hasAlgae(),
             RobotState.getInstance()::getRobotPoseFromSwerveDriveOdometry);
 
     // Set up auto routines
@@ -367,7 +367,7 @@ public class RobotContainer {
                                             .getRobotChassisSpeeds()
                                             .toTwist2d(0.75)))
                             .getY()
-                        < FieldConstants.FIELD_LENGTH / 2 - Drive.robotWidth
+                        < FieldConstants.FIELD_HEIGHT / 2 - Drive.robotWidth
                     || onOpposingSide.getAsBoolean());
 
     Container<Boolean> hasAlgae = new Container<>(false);

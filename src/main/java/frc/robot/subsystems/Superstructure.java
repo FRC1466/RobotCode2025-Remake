@@ -7,10 +7,7 @@
 
 package frc.robot.subsystems;
 
-import static frc.robot.constants.ElevatorConstants.*;
-import static frc.robot.constants.IntakeConstants.*;
 import static frc.robot.constants.SuperstructureConstants.*;
-import static frc.robot.constants.WristConstants.*;
 import static frc.robot.constants.WristElevatorPoses.*;
 
 import edu.wpi.first.math.filter.Debouncer;
@@ -691,8 +688,8 @@ public class Superstructure extends SubsystemBase {
     Rotation2d rotation =
         FieldConstants.isOnBlueAlliance(
                 RobotState.getInstance().getRobotPoseFromSwerveDriveOdometry())
-            ? Rotation2d.kCCW_90deg
-            : Rotation2d.kCW_90deg;
+            ? Rotation2d.kCW_90deg
+            : Rotation2d.kCCW_90deg;
     drive.setTargetRotation(rotation);
   }
 
