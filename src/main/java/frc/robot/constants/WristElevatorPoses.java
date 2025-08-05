@@ -24,7 +24,7 @@ public class WristElevatorPoses {
   public static final WristElevatorPose L3 = new WristElevatorPose(Rotation2d.fromDegrees(40), 0.8);
 
   public static final WristElevatorPose L4 =
-      new WristElevatorPose(Rotation2d.fromDegrees(67), 1.15);
+      new WristElevatorPose(Rotation2d.fromDegrees(67), 1.67);
 
   public static final WristElevatorPose L2_ALGAE =
       new WristElevatorPose(Rotation2d.fromRadians(Math.PI - .3), 0.6);

@@ -25,7 +25,6 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.RobotState;
 import frc.robot.constants.FieldConstants;
 import frc.robot.constants.ReefConstants;
@@ -34,9 +33,11 @@ import frc.robot.constants.WristElevatorPoses;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.elevator.Elevator;
 import frc.robot.subsystems.intake.Intake;
+import frc.robot.subsystems.intake.Intake.WantedState;
 import frc.robot.subsystems.overridePublisher.OverridePublisher;
 import frc.robot.subsystems.vision.Vision;
 import frc.robot.subsystems.wrist.Wrist;
+import java.util.function.BooleanSupplier;
 import org.littletonrobotics.junction.Logger;
 
 public class Superstructure extends SubsystemBase {
@@ -47,11 +48,12 @@ public class Superstructure extends SubsystemBase {
   private final OverridePublisher overrides;
   private final Vision vision;
 
-  private final CommandXboxController controller = new CommandXboxController(0);
-
   private static final double defaultTeleopTranslationCoeffecient = 1.0;
 
   private static final Debouncer homeDebouncer = new Debouncer(0.1, Debouncer.DebounceType.kBoth);
+
+  private static final Debouncer readyToScoreDebouncer =
+      new Debouncer(.5, Debouncer.DebounceType.kBoth);
 
   private final Timer coralL1TopTimer = new Timer();
 
@@ -135,7 +137,7 @@ public class Superstructure extends SubsystemBase {
 
   private boolean coralEject = false;
 
-  private boolean algaeEject = false;
+  private BooleanSupplier wristPastSafe = () -> false;
 
   public Superstructure(
       Drive drive,
@@ -150,6 +152,8 @@ public class Superstructure extends SubsystemBase {
     this.elevator = elevator;
     this.overrides = overrides;
     this.vision = vision;
+
+    this.wristPastSafe = () -> wrist.getAngle().getRadians() > .6;
   }
 
   @Override
@@ -425,7 +429,6 @@ public class Superstructure extends SubsystemBase {
   }
 
   private void holdingAlgae() {
-    algaeEject = false;
     hasDriveToPointSetPointBeenSet = false;
     elevatorWristRun(ALGAE_HOLD);
 
@@ -459,7 +462,11 @@ public class Superstructure extends SubsystemBase {
   private void noPiece() {
     coralL1TopTimer.stop();
     hasDriveToPointSetPointBeenSet = false;
-    elevatorWristRun(TRAVEL);
+    if (elevator.getPosition() > 0.1) {
+      elevatorWristRun(TRAVEL);
+    } else {
+      elevatorWristRun(STOW);
+    }
     intake.setWantedState(Intake.WantedState.OFF);
     drive.setWantedState(Drive.WantedState.TELEOP_DRIVE);
     drive.setTeleopVelocityCoefficient(defaultTeleopTranslationCoeffecient);
@@ -511,7 +518,7 @@ public class Superstructure extends SubsystemBase {
     var level = location.front;
 
     wrist.setWantedState(Wrist.WantedState.MOVE_TO_POSITION, WristElevatorPoses.TRAVEL.wristAngle);
-    if (wrist.atGoal()) {
+    if (wristPastSafe.getAsBoolean()) {
       elevatorWristRun(level == ReefConstants.AlgaeIntakeLocation.L2 ? L2_ALGAE : L3_ALGAE);
     }
 
@@ -524,13 +531,14 @@ public class Superstructure extends SubsystemBase {
     var ids = angleToIdMap.get(RobotState.getInstance().getClosestRotationToFaceNearestReefFace());
     var id = ids.frontId;
 
-    if (!hasDriveReachedIntermediatePoseForReefAlgaePickup && !reefTagVisible()) {
+    if (!hasDriveReachedIntermediatePoseForReefAlgaePickup) {
       drive.setDesiredPoseForDriveToPoint(getIntermediatePointToDriveToForAlgaeIntaking(id));
       if (drive.isAtDriveToPointSetpoint()) {
         hasDriveReachedIntermediatePoseForReefAlgaePickup = true;
       }
     } else if (intake.hasAlgae()) {
       drive.setDesiredPoseForDriveToPoint(getBackoutPointToDriveToForAlgaeIntaking(id));
+      elevatorWristRun(ALGAE_HOLD);
     } else {
       if (!wrist.atGoal() && !elevator.atGoal()) {
         drive.setDesiredPoseForDriveToPoint(getIntermediatePointToDriveToForAlgaeIntaking(id));
@@ -567,7 +575,8 @@ public class Superstructure extends SubsystemBase {
   private void scoreL1Teleop(ScoringSide scoringSide) {
     driveToScoringPose(scoringSide, true);
     wristRun(TRAVEL);
-    if (wrist.atGoal()) {
+
+    if (wristPastSafe.getAsBoolean()) {
       elevatorRun(L1);
       if (elevator.atGoal()) {
         elevatorWristRun(L1);
@@ -633,7 +642,8 @@ public class Superstructure extends SubsystemBase {
   private void scoreL4Teleop(ScoringSide scoringSide) {
     driveToScoringPose(scoringSide, true);
     wristRun(TRAVEL);
-    if (wrist.atGoal()) {
+    if (wristPastSafe.getAsBoolean()) {
+      intake.setWantedState(WantedState.GRIP_CORAL);
       elevatorRun(L4);
       if (elevator.atGoal()) {
         elevatorWristRun(L4);
@@ -656,14 +666,15 @@ public class Superstructure extends SubsystemBase {
 
   private void moveAlgaeToNetPosition() {
     Rotation2d rotation = FieldConstants.isBlueAlliance() ? Rotation2d.kZero : Rotation2d.k180deg;
-    if (Math.abs(RobotState.getInstance()
-                    .getRobotPoseFromSwerveDriveOdometry()
-                    .getRotation()
-                    .getDegrees())
-            > 90) {
-        rotation = Rotation2d.k180deg;
+    if (Math.abs(
+            RobotState.getInstance()
+                .getRobotPoseFromSwerveDriveOdometry()
+                .getRotation()
+                .getDegrees())
+        > 90) {
+      rotation = Rotation2d.k180deg;
     } else {
-        rotation = Rotation2d.kZero;
+      rotation = Rotation2d.kZero;
     }
 
     drive.setTargetRotation(rotation);
@@ -672,9 +683,9 @@ public class Superstructure extends SubsystemBase {
     drive.setTeleopVelocityCoefficient(0.4);
 
     if (drive.isAtDesiredRotation()) {
-        elevatorWristRun(ALGAE_NET_PRE);
+      elevatorWristRun(ALGAE_NET_PRE);
     }
-}
+  }
 
   private void moveAlgaeToProcessorPosition() {
     Rotation2d rotation =
@@ -688,34 +699,34 @@ public class Superstructure extends SubsystemBase {
   private void scoreAlgaeNet() {
     drive.setTeleopVelocityCoefficient(0.0);
     if (drive.isAtDesiredRotation()) {
-        elevatorWristRun(ALGAE_NET_POST);
+      elevatorWristRun(ALGAE_NET_POST);
     }
-    if (wrist.getAngle().getRadians() > (ALGAE_NET_POST.wristAngle.minus(Rotation2d.fromDegrees(60))).getRadians())
-    intake.setWantedState(Intake.WantedState.EJECT_ALGAE);
-}
-
-private void scoreAlgaeProcessor() {
-  Rotation2d rotation = FieldConstants.isBlueAlliance() ? Rotation2d.kCW_90deg : Rotation2d.kCCW_90deg;
-  if (RobotState.getInstance()
-                  .getRobotPoseFromSwerveDriveOdometry()
-                  .getRotation()
-                  .getDegrees()
-          > 0) {
-      rotation = Rotation2d.kCCW_90deg;
-  } else {
-      rotation = Rotation2d.kCW_90deg;
+    if (wrist.getAngle().getRadians()
+        > (ALGAE_NET_POST.wristAngle.minus(Rotation2d.fromDegrees(60))).getRadians())
+      intake.setWantedState(Intake.WantedState.EJECT_ALGAE);
   }
-  drive.setTargetRotation(rotation);
-  elevatorWristRun(ALGAE_PROCESSOR);
-  intake.setWantedState(Intake.WantedState.EJECT_ALGAE);
-}
+
+  private void scoreAlgaeProcessor() {
+    Rotation2d rotation =
+        FieldConstants.isBlueAlliance() ? Rotation2d.kCW_90deg : Rotation2d.kCCW_90deg;
+    if (RobotState.getInstance().getRobotPoseFromSwerveDriveOdometry().getRotation().getDegrees()
+        > 0) {
+      rotation = Rotation2d.kCCW_90deg;
+    } else {
+      rotation = Rotation2d.kCW_90deg;
+    }
+    drive.setTargetRotation(rotation);
+    elevatorWristRun(ALGAE_PROCESSOR);
+    intake.setWantedState(Intake.WantedState.EJECT_ALGAE);
+  }
 
   public boolean isReadyToEject() {
-    return drive.isAtDriveToPointSetpoint()
-        && drive.isAtDesiredRotation(Units.degreesToRadians(2.0))
-        && drive.isStopped()
-        && wrist.atGoal()
-        && elevator.atGoal();
+    return readyToScoreDebouncer.calculate(
+        drive.isAtDriveToPointSetpoint()
+            && drive.isAtDesiredRotation(Units.degreesToRadians(2.0))
+            && drive.isStopped()
+            && wrist.atGoal()
+            && elevator.atGoal());
   }
 
   public boolean driveToScoringPose(ScoringSide scoringSide, boolean isL1) {

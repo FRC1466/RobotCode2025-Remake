@@ -124,7 +124,7 @@ public class Intake extends SubsystemBase {
     }
 
     // Perform state-specific actions
-    if (systemState == SystemState.INTAKING_ALGAE && !hasAlgae) {
+    if (systemState == SystemState.INTAKING_ALGAE && !hasAlgae && Robot.isReal()) {
       if (endEffectorInputs.data.torqueCurrentAmps() >= currentThresholdAlgaeIntake) {
         hasAlgae = true;
         systemState = SystemState.HOLDING_ALGAE;

@@ -25,9 +25,11 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.constants.Constants;
+import frc.robot.constants.FieldConstants;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.SubsystemVisualizer;
 import frc.robot.subsystems.Superstructure;
+import frc.robot.subsystems.Superstructure.WantedSuperState;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.DriveIO;
 import frc.robot.subsystems.drive.DriveIOCTRE;
@@ -35,6 +37,7 @@ import frc.robot.subsystems.elevator.Elevator;
 import frc.robot.subsystems.elevator.ElevatorIO;
 import frc.robot.subsystems.elevator.ElevatorIOSim;
 import frc.robot.subsystems.intake.Intake;
+import frc.robot.subsystems.intake.Intake.WantedState;
 import frc.robot.subsystems.overridePublisher.OverridePublisher;
 import frc.robot.subsystems.overridePublisher.OverridePublisherIO;
 import frc.robot.subsystems.overridePublisher.OverridePublisherIOReal;
@@ -48,6 +51,8 @@ import frc.robot.subsystems.vision.VisionIOPhotonVisionSim;
 import frc.robot.subsystems.wrist.Wrist;
 import frc.robot.subsystems.wrist.WristIO;
 import frc.robot.subsystems.wrist.WristIOSim;
+import frc.robot.util.AllianceFlipUtil;
+import frc.robot.util.Container;
 import frc.robot.util.DoublePressTracker;
 import frc.robot.util.MirrorUtil;
 import frc.robot.util.TriggerUtil;
@@ -227,23 +232,212 @@ public class RobotContainer {
    * edu.wpi.first.wpilibj2.command.button.JoystickButton}.
    */
   private void configureButtonBindings() {
+    // Coral score level selection
+    final Container<Integer> selectedCoralScoreLevel = new Container<>(1);
+
+    controller.povUp().onTrue(Commands.runOnce(() -> selectedCoralScoreLevel.value = 4));
+    controller.povLeft().onTrue(Commands.runOnce(() -> selectedCoralScoreLevel.value = 3));
+    controller.povRight().onTrue(Commands.runOnce(() -> selectedCoralScoreLevel.value = 2));
+    controller.povDown().onTrue(Commands.runOnce(() -> selectedCoralScoreLevel.value = 1));
+
+    // Scoring side selection
+    final Container<Boolean> scoreOnLeft = new Container<>(true);
+    controller.x().onTrue(Commands.runOnce(() -> scoreOnLeft.value = !scoreOnLeft.value));
+
+    // Auto score
+    Container<Boolean> autoScoreRunning = new Container<>(false);
     controller
-        .a()
-        .onTrue(
-            superstructure.configureButtonBinding(
-                Superstructure.WantedSuperState.SCORE_LEFT_L2,
-                Superstructure.WantedSuperState.EJECT_ALGAE,
-                Superstructure.WantedSuperState.INTAKE_CORAL_FROM_STATION))
-        .onFalse(superstructure.setStateCommand(Superstructure.WantedSuperState.DEFAULT_STATE));
+        .rightTrigger()
+        .whileTrue(
+            Commands.defer(
+                    () -> {
+                      if (scoreOnLeft.value) {
+                        return switch (selectedCoralScoreLevel.value) {
+                          case 1 -> superstructure.setStateCommand(WantedSuperState.SCORE_LEFT_L1);
+                          case 2 -> superstructure.setStateCommand(WantedSuperState.SCORE_LEFT_L2);
+                          case 3 -> superstructure.setStateCommand(WantedSuperState.SCORE_LEFT_L3);
+                          default -> superstructure.setStateCommand(WantedSuperState.SCORE_LEFT_L4);
+                        };
+                      } else {
+                        return switch (selectedCoralScoreLevel.value) {
+                          case 1 -> superstructure.setStateCommand(WantedSuperState.SCORE_RIGHT_L1);
+                          case 2 -> superstructure.setStateCommand(WantedSuperState.SCORE_RIGHT_L2);
+                          case 3 -> superstructure.setStateCommand(WantedSuperState.SCORE_RIGHT_L3);
+                          default ->
+                              superstructure.setStateCommand(WantedSuperState.SCORE_RIGHT_L4);
+                        };
+                      }
+                    },
+                    java.util.Set.of(superstructure))
+                .deadlineWith(
+                    Commands.startEnd(
+                        () -> autoScoreRunning.value = true, () -> autoScoreRunning.value = false))
+                .withName("Auto Score Selected Level"))
+        .onFalse(superstructure.setStateCommand(WantedSuperState.DEFAULT_STATE));
+
+    // Super auto score
+    Container<Boolean> superAutoScoreExecutionTracker = new Container<>(false);
+    Container<Integer> lockedSelectedCoralScoreLevelForSuper =
+        new Container<>(selectedCoralScoreLevel.value);
+    Container<Boolean> lockedScoreOnLeftForSuper = new Container<>(scoreOnLeft.value);
 
     controller
+        .rightTrigger()
+        .doublePress()
+        .whileTrue(
+            Commands.sequence(
+                    Commands.defer(
+                        () -> {
+                          if (lockedScoreOnLeftForSuper.value) {
+                            return switch (lockedSelectedCoralScoreLevelForSuper.value) {
+                              case 1 ->
+                                  superstructure.setStateCommand(WantedSuperState.SCORE_LEFT_L1);
+                              case 2 ->
+                                  superstructure.setStateCommand(WantedSuperState.SCORE_LEFT_L2);
+                              case 3 ->
+                                  superstructure.setStateCommand(WantedSuperState.SCORE_LEFT_L3);
+                              default ->
+                                  superstructure.setStateCommand(WantedSuperState.SCORE_LEFT_L4);
+                            };
+                          } else {
+                            return switch (lockedSelectedCoralScoreLevelForSuper.value) {
+                              case 1 ->
+                                  superstructure.setStateCommand(WantedSuperState.SCORE_RIGHT_L1);
+                              case 2 ->
+                                  superstructure.setStateCommand(WantedSuperState.SCORE_RIGHT_L2);
+                              case 3 ->
+                                  superstructure.setStateCommand(WantedSuperState.SCORE_RIGHT_L3);
+                              default ->
+                                  superstructure.setStateCommand(WantedSuperState.SCORE_RIGHT_L4);
+                            };
+                          }
+                        },
+                        java.util.Set.of(superstructure)),
+                    superstructure.setStateCommand(WantedSuperState.INTAKE_ALGAE_REEF))
+                .deadlineWith(
+                    Commands.startEnd(
+                        () -> superAutoScoreExecutionTracker.value = true,
+                        () -> superAutoScoreExecutionTracker.value = false))
+                .withName("Super Auto Score"))
+        .onFalse(superstructure.setStateCommand(WantedSuperState.DEFAULT_STATE));
+
+    // Manual coral backup
+    controller
+        .rightBumper()
+        .whileTrue(Commands.runOnce(() -> intake.setWantedState(WantedState.BACKUP_CORAL)))
+        .onFalse(
+            Commands.runOnce(() -> intake.setWantedState(WantedState.OFF))
+                .withName("Manual Coral Backup"));
+
+    // Manual coral eject
+    controller
         .b()
-        .onTrue(
-            superstructure.configureButtonBinding(
-                Superstructure.WantedSuperState.SCORE_RIGHT_L4,
-                Superstructure.WantedSuperState.EJECT_ALGAE,
-                Superstructure.WantedSuperState.INTAKE_CORAL_FROM_STATION))
-        .onFalse(superstructure.setStateCommand(Superstructure.WantedSuperState.DEFAULT_STATE));
+        .doublePress()
+        .and(controller.rightTrigger().negate())
+        .whileTrue(Commands.runOnce(() -> intake.setWantedState(WantedState.OUTTAKE_CORAL)))
+        .onFalse(
+            Commands.runOnce(() -> intake.setWantedState(WantedState.OFF))
+                .withName("Manual Coral Eject"));
+
+    // Coral intake from station
+    controller
+        .leftTrigger()
+        .whileTrue(
+            superstructure
+                .setStateCommand(WantedSuperState.INTAKE_CORAL_FROM_STATION)
+                .withName("Coral Station Intake"))
+        .onFalse(superstructure.setStateCommand(WantedSuperState.DEFAULT_STATE));
+
+    // Algae triggers
+    Trigger onOpposingSide =
+        new Trigger(
+            () ->
+                AllianceFlipUtil.applyX(
+                        RobotState.getInstance().getRobotPoseFromSwerveDriveOdometry().getX())
+                    > FieldConstants.FIELD_LENGTH / 2);
+
+    Trigger shouldProcess =
+        new Trigger(
+            () ->
+                AllianceFlipUtil.apply(
+                                RobotState.getInstance()
+                                    .getRobotPoseFromSwerveDriveOdometry()
+                                    .exp(
+                                        RobotState.getInstance()
+                                            .getRobotChassisSpeeds()
+                                            .toTwist2d(0.75)))
+                            .getY()
+                        < FieldConstants.FIELD_LENGTH / 2 - Drive.robotWidth
+                    || onOpposingSide.getAsBoolean());
+
+    Container<Boolean> hasAlgae = new Container<>(false);
+    controller.leftBumper().onTrue(Commands.runOnce(() -> hasAlgae.value = intake.hasAlgae()));
+
+    // Algae reef intake
+    controller
+        .leftBumper()
+        .and(() -> !hasAlgae.value)
+        .whileTrue(
+            superstructure
+                .setStateCommand(WantedSuperState.INTAKE_ALGAE_REEF)
+                .withName("Algae Reef Intake"))
+        .onFalse(superstructure.setStateCommand(WantedSuperState.DEFAULT_STATE));
+
+    // Algae pre-processor
+    controller
+        .leftBumper()
+        .and(shouldProcess)
+        .and(() -> hasAlgae.value)
+        .and(controller.a().negate())
+        .whileTrue(
+            superstructure
+                .setStateCommand(WantedSuperState.MOVE_ALGAE_TO_PROCESSOR_POSITION)
+                .withName("Algae Pre-Processor"))
+        .onFalse(superstructure.setStateCommand(WantedSuperState.DEFAULT_STATE));
+
+    // Algae processor
+    controller
+        .leftBumper()
+        .and(shouldProcess)
+        .and(() -> hasAlgae.value)
+        .and(controller.a())
+        .whileTrue(
+            superstructure
+                .setStateCommand(WantedSuperState.SCORE_ALGAE_IN_PROCESSOR)
+                .withName("Algae Processing"))
+        .onFalse(superstructure.setStateCommand(WantedSuperState.DEFAULT_STATE));
+
+    // Algae pre-net
+    controller
+        .leftBumper()
+        .and(shouldProcess.negate())
+        .and(() -> hasAlgae.value)
+        .and(controller.a().negate())
+        .whileTrue(
+            superstructure
+                .setStateCommand(WantedSuperState.MOVE_ALGAE_TO_NET_POSITION)
+                .withName("Algae Pre-Net"))
+        .onFalse(superstructure.setStateCommand(WantedSuperState.DEFAULT_STATE));
+
+    // Algae net score
+    controller
+        .leftBumper()
+        .and(shouldProcess.negate())
+        .and(() -> hasAlgae.value)
+        .and(controller.a())
+        .whileTrue(
+            superstructure
+                .setStateCommand(WantedSuperState.SCORE_ALGAE_IN_NET)
+                .withName("Algae Net Score"))
+        .onFalse(superstructure.setStateCommand(WantedSuperState.DEFAULT_STATE));
+
+    // Algae toss
+    controller
+        .a()
+        .and(controller.leftBumper().negate())
+        .whileTrue(
+            superstructure.setStateCommand(WantedSuperState.EJECT_ALGAE).withName("Algae Toss"))
+        .onFalse(superstructure.setStateCommand(WantedSuperState.DEFAULT_STATE));
 
     // Reset gyro
     var driverStartAndBack = controller.start().and(controller.back());
