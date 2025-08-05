@@ -73,42 +73,41 @@ public class FieldConstants {
           FIELD_HEIGHT - FAR_RIGHT_STARTING_POSE_BLUE.getY(),
           Rotation2d.kZero);
 
-  public static final Pose2d LEFT_STARTING_POSE_BLUE =
-      new Pose2d(7.2, 6.14, Rotation2d.fromDegrees(45.0));
+  public static final Pose2d LEFT_STARTING_POSE_BLUE = new Pose2d(7.2, 6.14, Rotation2d.k180deg);
   public static final Pose2d LEFT_STARTING_POSE_RED =
       new Pose2d(
           FIELD_LENGTH - LEFT_STARTING_POSE_BLUE.getX(),
           FIELD_HEIGHT - LEFT_STARTING_POSE_BLUE.getY(),
-          Rotation2d.fromDegrees(-135.0)); // todo red angles are wrong
+          Rotation2d.kZero);
   public static final Pose2d RIGHT_STARTING_POSE_BLUE =
       new Pose2d(
           LEFT_STARTING_POSE_BLUE.getX(),
           FIELD_HEIGHT - LEFT_STARTING_POSE_BLUE.getY(),
-          Rotation2d.fromDegrees(-45.0));
+          Rotation2d.k180deg);
   public static final Pose2d RIGHT_STARTING_POSE_RED =
       new Pose2d(
           FIELD_LENGTH - RIGHT_STARTING_POSE_BLUE.getX(),
           FIELD_HEIGHT - RIGHT_STARTING_POSE_BLUE.getY(),
-          Rotation2d.fromDegrees(135.0)); // todo red angles are wrong
+          Rotation2d.kZero);
 
   public static final Pose2d LEFT_STATION_PICKUP_POSE_BLUE =
-      new Pose2d(0.6, 7.85, Rotation2d.fromDegrees(135));
+      new Pose2d(0.6, 7.85, Rotation2d.fromDegrees(-54));
 
   public static final Pose2d LEFT_STATION_PICKUP_POSE_RED =
       new Pose2d(
           FIELD_LENGTH - LEFT_STATION_PICKUP_POSE_BLUE.getX(),
           FIELD_HEIGHT - LEFT_STATION_PICKUP_POSE_BLUE.getY(),
-          Rotation2d.fromDegrees(-55));
+          Rotation2d.fromDegrees(126));
   public static final Pose2d RIGHT_STATION_PICKUP_POSE_BLUE =
       new Pose2d(
           LEFT_STATION_PICKUP_POSE_BLUE.getX(),
           FIELD_HEIGHT - LEFT_STATION_PICKUP_POSE_BLUE.getY(),
-          Rotation2d.fromDegrees(-135));
+          Rotation2d.fromDegrees(54));
   public static final Pose2d RIGHT_STATION_PICKUP_POSE_RED =
       new Pose2d(
           FIELD_LENGTH - RIGHT_STATION_PICKUP_POSE_BLUE.getX(),
           FIELD_HEIGHT - RIGHT_STATION_PICKUP_POSE_BLUE.getY(),
-          Rotation2d.fromDegrees(55));
+          Rotation2d.fromDegrees(-125));
 
   public static boolean isBlueAlliance() {
     return DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue)
@@ -284,5 +283,27 @@ public class FieldConstants {
     } else {
       return Pose2d.kZero;
     }
+  }
+
+  public static Pose2d getClosestStation(Pose2d robotPose) {
+    Pose2d[] stations = {
+      LEFT_STATION_PICKUP_POSE_BLUE,
+      RIGHT_STATION_PICKUP_POSE_BLUE,
+      LEFT_STATION_PICKUP_POSE_RED,
+      RIGHT_STATION_PICKUP_POSE_RED
+    };
+
+    Pose2d closestStation = stations[0];
+    double minDistance = robotPose.getTranslation().getDistance(stations[0].getTranslation());
+
+    for (int i = 1; i < stations.length; i++) {
+      double distance = robotPose.getTranslation().getDistance(stations[i].getTranslation());
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestStation = stations[i];
+      }
+    }
+
+    return closestStation;
   }
 }

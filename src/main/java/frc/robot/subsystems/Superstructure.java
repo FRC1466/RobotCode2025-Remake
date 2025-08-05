@@ -10,6 +10,7 @@ package frc.robot.subsystems;
 import static frc.robot.constants.SuperstructureConstants.*;
 import static frc.robot.constants.WristElevatorPoses.*;
 
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -22,6 +23,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.Robot;
 import frc.robot.RobotState;
 import frc.robot.constants.FieldConstants;
 import frc.robot.constants.ReefConstants;
@@ -35,6 +37,7 @@ import frc.robot.subsystems.overridePublisher.OverridePublisher;
 import frc.robot.subsystems.vision.Vision;
 import frc.robot.subsystems.wrist.Wrist;
 import java.util.function.BooleanSupplier;
+import lombok.Setter;
 import org.littletonrobotics.junction.Logger;
 
 public class Superstructure extends SubsystemBase {
@@ -48,8 +51,14 @@ public class Superstructure extends SubsystemBase {
   private static final double defaultTeleopTranslationCoeffecient = 1.0;
 
   private static final Debouncer homeDebouncer = new Debouncer(0.1, Debouncer.DebounceType.kBoth);
+  private static final Debouncer simCoralDebouncer =
+      new Debouncer(.5, Debouncer.DebounceType.kBoth);
+  private static final Debouncer simAlgaeDebouncer = new Debouncer(2, Debouncer.DebounceType.kBoth);
 
   private static final Debouncer readyToScoreDebouncer =
+      new Debouncer(.5, Debouncer.DebounceType.kBoth);
+
+  private static final Debouncer readyToScoreDebouncerAuto =
       new Debouncer(.5, Debouncer.DebounceType.kBoth);
 
   private final Timer coralL1TopTimer = new Timer();
@@ -122,7 +131,7 @@ public class Superstructure extends SubsystemBase {
 
   private boolean hasDriveReachedIntermediatePoseForReefAlgaePickup = false;
 
-  private boolean hasDriveReachedIntermediatePoseForCoralScore = false;
+  @Setter private boolean hasDriveReachedIntermediatePoseForCoralScore = false;
 
   private boolean coralEject = false;
 
@@ -446,7 +455,11 @@ public class Superstructure extends SubsystemBase {
   private void intakeCoralFromStation() {
     coralEject = false;
     if (DriverStation.isAutonomous()) {
-      elevatorWristRun(STOW);
+      if (elevator.getPosition() > 0.15) {
+        elevatorWristRun(TRAVEL);
+      } else {
+        elevatorWristRun(STOW);
+      }
       if (intake.hasCoral()) {
         elevatorWristRun(TRAVEL);
       }
@@ -465,8 +478,24 @@ public class Superstructure extends SubsystemBase {
         var angleToSnapTo = FieldConstants.isBlueAlliance() ? -54.0 : -126.0;
         drive.setTargetRotation(Rotation2d.fromDegrees(angleToSnapTo));
       }
-      elevatorWristRun(STOW);
+      if (elevator.getPosition() > 0.15) {
+        elevatorWristRun(TRAVEL);
+      } else {
+        elevatorWristRun(STOW);
+      }
       intake.setWantedState(Intake.WantedState.INTAKE_CORAL);
+    }
+    if (Robot.isSimulation()) {
+      var currentPose = RobotState.getInstance().getRobotPoseFromSwerveDriveOdometry();
+      intake.setHasCoral(
+          simCoralDebouncer.calculate(
+              isReadyToEjectInAutoPeriod()
+                  && MathUtil.isNear(
+                      currentPose.getX(), FieldConstants.getClosestStation(currentPose).getX(), 1)
+                  && MathUtil.isNear(
+                      currentPose.getY(),
+                      FieldConstants.getClosestStation(currentPose).getY(),
+                      1)));
     }
     if (homeDebouncer.calculate(elevator.getHomeSensor())) {
       elevator.resetPosition(0.0);
@@ -510,6 +539,18 @@ public class Superstructure extends SubsystemBase {
       } else {
         drive.setDesiredPoseForDriveToPoint(getDesiredPointToDriveToForAlgaeIntaking(id));
       }
+    }
+    if (Robot.isSimulation()) {
+      var currentPose = RobotState.getInstance().getRobotPoseFromSwerveDriveOdometry();
+      intake.setHasAlgae(
+          simAlgaeDebouncer.calculate(
+              MathUtil.isNear(
+                      currentPose.getX(), getDesiredPointToDriveToForAlgaeIntaking(id).getX(), 0.25)
+                  && MathUtil.isNear(
+                      currentPose.getY(), getDesiredPointToDriveToForAlgaeIntaking(id).getY(), 0.25)
+                  && drive.isAtDriveToPointSetpoint()
+                  && wrist.atGoal()
+                  && elevator.atGoal()));
     }
   }
 
@@ -742,10 +783,11 @@ public class Superstructure extends SubsystemBase {
   }
 
   public boolean isReadyToEjectInAutoPeriod() {
-    return elevator.atGoal()
-        && wrist.atGoal()
-        && drive.isAtEndOfChoreoTrajectoryOrDriveToPoint()
-        && drive.isStopped();
+    return readyToScoreDebouncerAuto.calculate(
+        elevator.atGoal()
+            && wrist.atGoal()
+            && drive.isAtEndOfChoreoTrajectoryOrDriveToPoint()
+            && drive.isStopped());
   }
 
   public boolean driveToScoringPose(ScoringSide scoringSide, boolean isL1) {
@@ -760,6 +802,35 @@ public class Superstructure extends SubsystemBase {
       Pose2d intermediatePose =
           FieldConstants.getDesiredIntermediateScoringPoseForCoral(
               RobotState.getInstance().getClosestTagId(), scoringSide);
+      drive.setDesiredPoseForDriveToPointWithMaximumAngularVelocity(intermediatePose, 3.0);
+      if (drive.isAtDriveToPointSetpoint()) {
+        hasDriveReachedIntermediatePoseForCoralScore = true;
+      }
+      Logger.recordOutput("Superstructure/DesiredPointToDriveTo", intermediatePose);
+      return true;
+    } else {
+      drive.setDesiredPoseForDriveToPointWithMaximumAngularVelocity(desiredPoseToDriveTo, 3.0);
+      hasDriveToPointSetPointBeenSet = true;
+      Logger.recordOutput("Superstructure/DesiredPointToDriveTo", desiredPoseToDriveTo);
+      return true;
+    }
+  }
+
+  public boolean driveToScoringPose(
+      ReefConstants.ReefFaces face, ScoringSide scoringSide, boolean isL1) {
+    var map =
+        FieldConstants.isBlueAlliance()
+            ? ReefConstants.blueAllianceReefFacesToIds
+            : ReefConstants.redAllianceReefFacesToIds;
+    var id = map.get(face);
+    Pose2d desiredPoseToDriveTo =
+        !isL1
+            ? FieldConstants.getDesiredFinalScoringPoseForCoral(id, scoringSide)
+            : FieldConstants.getDesiredPointToDriveToForL1Scoring(id, scoringSide);
+
+    if (!hasDriveReachedIntermediatePoseForCoralScore) {
+      Pose2d intermediatePose =
+          FieldConstants.getDesiredIntermediateScoringPoseForCoral(id, scoringSide);
       drive.setDesiredPoseForDriveToPointWithMaximumAngularVelocity(intermediatePose, 3.0);
       if (drive.isAtDriveToPointSetpoint()) {
         hasDriveReachedIntermediatePoseForCoralScore = true;

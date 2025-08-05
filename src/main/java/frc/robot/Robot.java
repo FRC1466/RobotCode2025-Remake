@@ -313,6 +313,7 @@ public class Robot extends LoggedRobot {
     robotContainer
         .getDrive()
         .resetTranslationAndRotation(autoChooser.getStartingPose().orElse(new Pose2d()));
+    robotContainer.getIntake().setHasCoral(true);
     autoChooser.getSelectedCommand().ifPresent(CommandScheduler.getInstance()::schedule);
   }
 

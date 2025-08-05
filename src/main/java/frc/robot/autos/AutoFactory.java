@@ -77,13 +77,16 @@ class AutoFactory {
     return Pair.of(
         initialPose,
         Commands.sequence(
-            followThenScore(ReefFaces.EF, Superstructure.WantedSuperState.SCORE_LEFT_L4),
+            superFollowThenScore(ReefFaces.EF, Superstructure.WantedSuperState.SCORE_LEFT_L4),
+            Commands.waitSeconds(.1),
             followThenIntakeFromStation(
                 FieldConstants.getRightStationPickup(), Units.feetToMeters(10)),
-            followThenScore(ReefFaces.CD, Superstructure.WantedSuperState.SCORE_RIGHT_L4),
+            superFollowThenScore(ReefFaces.CD, Superstructure.WantedSuperState.SCORE_RIGHT_L4),
+            Commands.waitSeconds(.1),
             followThenIntakeFromStation(
                 FieldConstants.getRightStationPickup(), Units.feetToMeters(10)),
-            followThenScore(ReefFaces.CD, Superstructure.WantedSuperState.SCORE_LEFT_L4),
+            superFollowThenScore(ReefFaces.CD, Superstructure.WantedSuperState.SCORE_LEFT_L4),
+            Commands.waitSeconds(.1),
             followThenIntakeFromStation(
                 FieldConstants.getRightStationPickup(), Units.feetToMeters(10))));
   }
@@ -276,6 +279,20 @@ class AutoFactory {
         .andThen(waitForCoralRelease().raceWith(new WaitCommand(1.0)));
   }
 
+  private Command superFollowThenScore(
+      ReefConstants.ReefFaces reefFaces, Superstructure.WantedSuperState scoreState) {
+    return Commands.sequence(
+        Commands.runOnce(
+            () ->
+                robotContainer
+                    .getSuperstructure()
+                    .setHasDriveReachedIntermediatePoseForCoralScore(false)),
+        (driveToAutoScoringPose(reefFaces, scoreState)
+                .until(() -> robotContainer.getSuperstructure().isReadyToEjectInAutoPeriod())
+                .alongWith(setState(scoreState)))
+            .andThen(waitForCoralRelease().raceWith(new WaitCommand(1.0))));
+  }
+
   private Command followThenScore(
       ReefConstants.ReefFaces reefFaces,
       Trajectory<SwerveSample> path,
@@ -302,10 +319,12 @@ class AutoFactory {
   }
 
   private Command followThenIntakeFromStation(Pose2d intakePose, double intakeVelocity) {
-    return (driveToPoint(intakePose, intakeVelocity)
-            .alongWith(setState(Superstructure.WantedSuperState.INTAKE_CORAL_FROM_STATION))
-            .andThen(Commands.waitSeconds(2.0)))
-        .raceWith(waitForCoralPickup());
+    return driveToPoint(intakePose, intakeVelocity)
+        .alongWith(setState(Superstructure.WantedSuperState.INTAKE_CORAL_FROM_STATION))
+        .andThen(
+            Commands.waitUntil(
+                () -> robotContainer.getSuperstructure().isReadyToEjectInAutoPeriod()))
+        .andThen(Commands.waitSeconds(2.0).raceWith(waitForCoralPickup()));
   }
 
   private Command waitForCoralRelease() {
@@ -330,5 +349,17 @@ class AutoFactory {
             ? SuperstructureConstants.ScoringSide.LEFT
             : SuperstructureConstants.ScoringSide.RIGHT;
     return FieldConstants.getDesiredFinalScoringPoseForCoral(id, scoringSide);
+  }
+
+  public Command driveToAutoScoringPose(
+      ReefConstants.ReefFaces reefFaces, Superstructure.WantedSuperState superState) {
+    var scoringSide =
+        (superState == Superstructure.WantedSuperState.SCORE_LEFT_L2
+                || superState == Superstructure.WantedSuperState.SCORE_LEFT_L3
+                || superState == Superstructure.WantedSuperState.SCORE_LEFT_L4)
+            ? SuperstructureConstants.ScoringSide.LEFT
+            : SuperstructureConstants.ScoringSide.RIGHT;
+    return Commands.run(
+        () -> robotContainer.getSuperstructure().driveToScoringPose(reefFaces, scoringSide, false));
   }
 }
