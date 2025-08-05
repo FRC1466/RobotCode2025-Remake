@@ -15,6 +15,7 @@ import edu.wpi.first.hal.AllianceStationID;
 import edu.wpi.first.math.MathShared;
 import edu.wpi.first.math.MathSharedStore;
 import edu.wpi.first.math.MathUsageId;
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -24,8 +25,10 @@ import edu.wpi.first.wpilibj.Threads;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.Watchdog;
 import edu.wpi.first.wpilibj.simulation.DriverStationSim;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import frc.robot.autos.AutoChooser;
 import frc.robot.constants.Constants;
 import frc.robot.constants.Constants.RobotType;
 import frc.robot.generated.TunerConstants;
@@ -34,7 +37,6 @@ import frc.robot.util.DummyLogReceiver;
 import frc.robot.util.LoggedTracer;
 import frc.robot.util.NTClientLogger;
 import frc.robot.util.PhoenixUtil;
-import frc.robot.util.WristElevatorHelper;
 import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
@@ -61,10 +63,12 @@ public class Robot extends LoggedRobot {
   private static final double lowBatteryMinCycleCount = 10;
   private static int lowBatteryCycleCount = 0;
 
-  private Command autonomousCommand;
   private RobotContainer robotContainer;
+  private AutoChooser autoChooser;
+
   private double autoStart;
   private boolean autoMessagePrinted;
+
   private final Timer canInitialErrorTimer = new Timer();
   private final Timer canErrorTimer = new Timer();
   private final Timer disabledTimer = new Timer();
@@ -220,7 +224,8 @@ public class Robot extends LoggedRobot {
     // and put our autonomous chooser on the dashboard.
     robotContainer = new RobotContainer();
 
-    WristElevatorHelper.init(robotContainer);
+    autoChooser = AutoChooser.create(robotContainer);
+    SmartDashboard.putData("Auto Program", autoChooser);
 
     // DO NOT COPY UNLESS YOU UNDERSTAND THE CONSEQUENCES
     // https://docs.advantagekit.org/getting-started/template-projects/spark-swerve-template#real-time-thread-priority
@@ -238,17 +243,14 @@ public class Robot extends LoggedRobot {
     LoggedTracer.record("Commands");
 
     // Print auto duration
-    if (autonomousCommand != null) {
-      if (!autonomousCommand.isScheduled() && !autoMessagePrinted) {
-        if (DriverStation.isAutonomousEnabled()) {
-          System.out.printf(
-              "*** Auto finished in %.2f secs ***%n", Timer.getTimestamp() - autoStart);
-        } else {
-          System.out.printf(
-              "*** Auto cancelled in %.2f secs ***%n", Timer.getTimestamp() - autoStart);
-        }
-        autoMessagePrinted = true;
+    if (!autoMessagePrinted) {
+      if (DriverStation.isAutonomousEnabled()) {
+        System.out.printf("*** Auto finished in %.2f secs ***%n", Timer.getTimestamp() - autoStart);
+      } else {
+        System.out.printf(
+            "*** Auto cancelled in %.2f secs ***%n", Timer.getTimestamp() - autoStart);
       }
+      autoMessagePrinted = true;
     }
 
     // Robot container periodic methods
@@ -300,17 +302,18 @@ public class Robot extends LoggedRobot {
 
   /** This function is called periodically when disabled. */
   @Override
-  public void disabledPeriodic() {}
+  public void disabledPeriodic() {
+    autoChooser.update();
+  }
 
   /** This autonomous runs the autonomous command selected by your {@link RobotContainer} class. */
   @Override
   public void autonomousInit() {
     autoStart = Timer.getTimestamp();
-    autonomousCommand = robotContainer.getAutonomousCommand();
-
-    if (autonomousCommand != null) {
-      autonomousCommand.schedule();
-    }
+    robotContainer
+        .getDrive()
+        .resetTranslationAndRotation(autoChooser.getStartingPose().orElse(new Pose2d()));
+    autoChooser.getSelectedCommand().ifPresent(CommandScheduler.getInstance()::schedule);
   }
 
   /** This function is called periodically during autonomous. */
@@ -319,15 +322,7 @@ public class Robot extends LoggedRobot {
 
   /** This function is called once when teleop is enabled. */
   @Override
-  public void teleopInit() {
-    // This makes sure that the autonomous stops running when
-    // teleop starts running. If you want the autonomous to
-    // continue until interrupted by another command, remove
-    // this line or comment it out.
-    if (autonomousCommand != null) {
-      autonomousCommand.cancel();
-    }
-  }
+  public void teleopInit() {}
 
   @Override
   public void teleopPeriodic() {}

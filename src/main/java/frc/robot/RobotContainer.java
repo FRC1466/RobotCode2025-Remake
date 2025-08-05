@@ -54,11 +54,9 @@ import frc.robot.subsystems.wrist.WristIOSim;
 import frc.robot.util.AllianceFlipUtil;
 import frc.robot.util.Container;
 import frc.robot.util.DoublePressTracker;
-import frc.robot.util.MirrorUtil;
 import frc.robot.util.TriggerUtil;
 import lombok.Getter;
 import lombok.experimental.ExtensionMethod;
-import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
 
 /**
@@ -82,21 +80,15 @@ public class RobotContainer {
   @Getter private SubsystemVisualizer subsystemVisualizerMeasured;
   @Getter private SubsystemVisualizer subsystemVisualizerGoal;
 
-  private Command blankAuto = Commands.none();
-
   // Controllers
   private static final CommandXboxController controller = new CommandXboxController(0);
 
   private final Alert driverDisconnected =
       new Alert("Driver controller disconnected (port 0).", AlertType.kWarning);
-  private final Alert noAuto = new Alert("Please select an auto routine.", AlertType.kWarning);
   private final LoggedNetworkNumber endgameAlert1 =
       new LoggedNetworkNumber("/SmartDashboard/Endgame Alert #1", 30.0);
   private final LoggedNetworkNumber endgameAlert2 =
       new LoggedNetworkNumber("/SmartDashboard/Endgame Alert #2", 15.0);
-
-  // Dashboard inputs
-  private final LoggedDashboardChooser<Command> autoChooser;
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
@@ -194,32 +186,6 @@ public class RobotContainer {
             () -> intake.hasCoral(),
             () -> intake.hasAlgae(),
             RobotState.getInstance()::getRobotPoseFromSwerveDriveOdometry);
-
-    // Set up auto routines
-    autoChooser = new LoggedDashboardChooser<>("Auto Choices");
-    LoggedDashboardChooser<Boolean> mirror = new LoggedDashboardChooser<>("Processor Side?");
-    mirror.addDefaultOption("Yes", false);
-    mirror.addOption("No", true);
-    LoggedDashboardChooser<Boolean> push = new LoggedDashboardChooser<>("Pushing?");
-    push.addDefaultOption("No", false);
-    push.addOption("Yes", true);
-    MirrorUtil.setMirror(mirror::get);
-
-    /* // Set up SysId routines
-    autoChooser.addOption(
-        "Drive Wheel Radius Characterization", DriveCommands.wheelRadiusCharacterization(drive));
-    autoChooser.addOption(
-        "Drive Simple FF Characterization", DriveCommands.feedforwardCharacterization(drive));
-    autoChooser.addOption(
-        "Drive SysId (Quasistatic Forward)",
-        drive.sysIdQuasistatic(SysIdRoutine.Direction.kForward));
-    autoChooser.addOption(
-        "Drive SysId (Quasistatic Reverse)",
-        drive.sysIdQuasistatic(SysIdRoutine.Direction.kReverse));
-    autoChooser.addOption(
-        "Drive SysId (Dynamic Forward)", drive.sysIdDynamic(SysIdRoutine.Direction.kForward));
-    autoChooser.addOption(
-        "Drive SysId (Dynamic Reverse)", drive.sysIdDynamic(SysIdRoutine.Direction.kReverse)); */
 
     // Configure the button bindings
     configureButtonBindings();
@@ -482,20 +448,5 @@ public class RobotContainer {
   public void updateAlerts() {
     // Controller disconnected alerts
     driverDisconnected.set(!DriverStation.isJoystickConnected(controller.getHID().getPort()));
-
-    // Auto alert
-    noAuto.set(
-        DriverStation.isAutonomous()
-            && !DriverStation.isEnabled()
-            && autoChooser.get() == blankAuto);
-  }
-
-  /**
-   * Use this to pass the autonomous command to the main {@link Robot} class.
-   *
-   * @return the command to run in autonomous
-   */
-  public Command getAutonomousCommand() {
-    return autoChooser.get();
   }
 }

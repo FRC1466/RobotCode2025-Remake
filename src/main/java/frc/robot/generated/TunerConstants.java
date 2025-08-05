@@ -61,7 +61,7 @@ public class TunerConstants {
 
   // The stator current at which the wheels start to slip;
   // This needs to be tuned to your individual robot
-  private static final Current kSlipCurrent = Amps.of(90);
+  private static final Current kSlipCurrent = Amps.of(120);
 
   // Initial configs for the drive and steer motors and the azimuth encoder; these cannot be null.
   // Some configs will be overwritten; check the `with*InitialConfigs()` API documentation.
@@ -71,7 +71,7 @@ public class TunerConstants {
   // Configs for the Pigeon 2; leave this null to skip applying Pigeon 2 configs
   private static final Pigeon2Configuration pigeonConfigs = null;
 
-  // These are 2910s limits and should be tested
+  // TODO: These are 2910s limits and should be tested
   static {
     var driveCurrentLimits = new CurrentLimitsConfigs();
     driveCurrentLimits.SupplyCurrentLimitEnable = true;

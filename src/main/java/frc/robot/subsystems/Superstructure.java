@@ -67,10 +67,6 @@ public class Superstructure extends SubsystemBase {
     SCORE_RIGHT_L2,
     SCORE_RIGHT_L3,
     SCORE_RIGHT_L4,
-    MANUAL_L4,
-    MANUAL_L3,
-    MANUAL_L2,
-    MANUAL_L1,
     INTAKE_ALGAE_REEF,
     INTAKE_ALGAE_GROUND,
     INTAKE_ALGAE_ICE_CREAM,
@@ -107,10 +103,6 @@ public class Superstructure extends SubsystemBase {
     SCORE_RIGHT_AUTO_L2,
     SCORE_RIGHT_AUTO_L3,
     SCORE_RIGHT_AUTO_L4,
-    MANUAL_L4,
-    MANUAL_L3,
-    MANUAL_L2,
-    MANUAL_L1,
     INTAKE_ALGAE_REEF,
     INTAKE_ALGAE_GROUND,
     INTAKE_ALGAE_ICE_CREAM,
@@ -241,18 +233,6 @@ public class Superstructure extends SubsystemBase {
                 ? CurrentSuperState.SCORE_RIGHT_AUTO_L4
                 : CurrentSuperState.SCORE_RIGHT_TELEOP_L4;
         break;
-      case MANUAL_L1:
-        currentSuperState = CurrentSuperState.MANUAL_L1;
-        break;
-      case MANUAL_L2:
-        currentSuperState = CurrentSuperState.MANUAL_L2;
-        break;
-      case MANUAL_L3:
-        currentSuperState = CurrentSuperState.MANUAL_L3;
-        break;
-      case MANUAL_L4:
-        currentSuperState = CurrentSuperState.MANUAL_L4;
-        break;
       case INTAKE_ALGAE_ICE_CREAM:
         currentSuperState = CurrentSuperState.INTAKE_ALGAE_ICE_CREAM;
         break;
@@ -371,18 +351,6 @@ public class Superstructure extends SubsystemBase {
         break;
       case SCORE_RIGHT_AUTO_L4:
         scoreL4Auto(ScoringSide.RIGHT);
-        break;
-      case MANUAL_L4:
-        ejectL4();
-        break;
-      case MANUAL_L3:
-        ejectL3();
-        break;
-      case MANUAL_L2:
-        ejectL2();
-        break;
-      case MANUAL_L1:
-        ejectL1();
         break;
       case INTAKE_ALGAE_ICE_CREAM:
         intakeAlgaeIceCream();
@@ -549,28 +517,10 @@ public class Superstructure extends SubsystemBase {
 
   private void intakeAlgaeIceCream() {}
 
-  private void ejectL1() {
-    elevatorWristRun(L1);
-    intake.setWantedState(Intake.WantedState.OUTTAKE_CORAL_L1);
-  }
-
-  private void ejectL2() {
-    elevatorWristRun(L2);
-    intake.setWantedState(Intake.WantedState.OUTTAKE_CORAL);
-  }
-
-  private void ejectL3() {
-    elevatorWristRun(L3);
-    intake.setWantedState(Intake.WantedState.OUTTAKE_CORAL);
-  }
-
-  private void ejectL4() {
-    elevatorWristRun(L4);
-    intake.setWantedState(Intake.WantedState.OUTTAKE_CORAL);
-  }
-
   private void scoreL1Teleop(ScoringSide scoringSide) {
-    driveToScoringPose(scoringSide, true);
+    if (!overrides.isReefOverride()) {
+      driveToScoringPose(scoringSide, true);
+    }
     wristRun(TRAVEL);
 
     if (wristPastSafe.getAsBoolean()) {
@@ -592,10 +542,28 @@ public class Superstructure extends SubsystemBase {
     }
   }
 
-  private void scoreL1Auto(ScoringSide scoringSide) {}
+  private void scoreL1Auto(ScoringSide scoringSide) {
+    wristRun(TRAVEL);
+    if (wristPastSafe.getAsBoolean()) {
+      elevatorRun(L1);
+      if (elevator.atGoal()) {
+        elevatorWristRun(L1);
+      }
+
+      if (isReadyToEjectInAutoPeriod()) {
+        coralEject = true;
+      }
+
+      if (coralEject) {
+          intake.setWantedState(Intake.WantedState.OUTTAKE_CORAL_L1);
+      }
+    }
+  }
 
   private void scoreL2Teleop(ScoringSide scoringSide) {
-    driveToScoringPose(scoringSide, false);
+    if (!overrides.isReefOverride()) {
+      driveToScoringPose(scoringSide, false);
+    }
     wristRun(TRAVEL);
     if (wrist.atGoal()) {
       elevatorWristRun(L2);
@@ -613,10 +581,25 @@ public class Superstructure extends SubsystemBase {
     }
   }
 
-  private void scoreL2Auto(ScoringSide scoringSide) {}
+  private void scoreL2Auto(ScoringSide scoringSide) {
+    wristRun(TRAVEL);
+    if (wristPastSafe.getAsBoolean()) {
+      elevatorWristRun(L2);
+
+      if (isReadyToEjectInAutoPeriod()) {
+        coralEject = true;
+      }
+
+      if (coralEject) {
+          intake.setWantedState(Intake.WantedState.OUTTAKE_CORAL);
+      }
+    }
+  }
 
   private void scoreL3Teleop(ScoringSide scoringSide) {
-    driveToScoringPose(scoringSide, true);
+    if (!overrides.isReefOverride()) {
+      driveToScoringPose(scoringSide, true);
+    }
     wristRun(TRAVEL);
     if (wrist.atGoal()) {
       elevatorWristRun(L3);
@@ -634,10 +617,25 @@ public class Superstructure extends SubsystemBase {
     }
   }
 
-  private void scoreL3Auto(ScoringSide scoringSide) {}
+  private void scoreL3Auto(ScoringSide scoringSide) {
+    wristRun(TRAVEL);
+    if (wristPastSafe.getAsBoolean()) {
+      elevatorWristRun(L3);
+
+      if (isReadyToEjectInAutoPeriod()) {
+        coralEject = true;
+      }
+
+      if (coralEject) {
+          intake.setWantedState(Intake.WantedState.OUTTAKE_CORAL);
+      }
+    }
+  }
 
   private void scoreL4Teleop(ScoringSide scoringSide) {
-    driveToScoringPose(scoringSide, true);
+    if (!overrides.isReefOverride()) {
+      driveToScoringPose(scoringSide, true);
+    }
     wristRun(TRAVEL);
     if (wristPastSafe.getAsBoolean()) {
       intake.setWantedState(WantedState.GRIP_CORAL);
@@ -659,7 +657,21 @@ public class Superstructure extends SubsystemBase {
     }
   }
 
-  private void scoreL4Auto(ScoringSide scoringSide) {}
+  private void scoreL4Auto(ScoringSide scoringSide) {
+    wristRun(TRAVEL);
+    if (wristPastSafe.getAsBoolean()) {
+      elevatorWristRun(L4);
+      intake.setWantedState(WantedState.GRIP_CORAL);
+
+      if (isReadyToEjectInAutoPeriod()) {
+        coralEject = true;
+      }
+
+      if (coralEject) {
+          intake.setWantedState(Intake.WantedState.OUTTAKE_CORAL);
+      }
+    }
+  }
 
   private void moveAlgaeToNetPosition() {
     Rotation2d rotation = FieldConstants.isBlueAlliance() ? Rotation2d.kZero : Rotation2d.k180deg;
@@ -724,6 +736,13 @@ public class Superstructure extends SubsystemBase {
             && drive.isStopped()
             && wrist.atGoal()
             && elevator.atGoal());
+  }
+
+  public boolean isReadyToEjectInAutoPeriod() {
+    return elevator.atGoal()
+        && wrist.atGoal()
+        && drive.isAtEndOfChoreoTrajectoryOrDriveToPoint()
+        && drive.isStopped();
   }
 
   public boolean driveToScoringPose(ScoringSide scoringSide, boolean isL1) {
