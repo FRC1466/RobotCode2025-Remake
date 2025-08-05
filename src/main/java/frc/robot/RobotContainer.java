@@ -299,8 +299,7 @@ public class RobotContainer {
     controller
         .b()
         .doublePress()
-        .and(controller.rightTrigger().negate())
-        .whileTrue(Commands.runOnce(() -> intake.setWantedState(WantedState.OUTTAKE_CORAL)))
+        .whileTrue(Commands.run(() -> intake.setWantedState(WantedState.OUTTAKE_CORAL)))
         .onFalse(
             Commands.runOnce(() -> intake.setWantedState(WantedState.OFF))
                 .withName("Manual Coral Eject"));

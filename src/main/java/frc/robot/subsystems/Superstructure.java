@@ -555,7 +555,7 @@ public class Superstructure extends SubsystemBase {
       }
 
       if (coralEject) {
-          intake.setWantedState(Intake.WantedState.OUTTAKE_CORAL_L1);
+        intake.setWantedState(Intake.WantedState.OUTTAKE_CORAL_L1);
       }
     }
   }
@@ -591,7 +591,7 @@ public class Superstructure extends SubsystemBase {
       }
 
       if (coralEject) {
-          intake.setWantedState(Intake.WantedState.OUTTAKE_CORAL);
+        intake.setWantedState(Intake.WantedState.OUTTAKE_CORAL);
       }
     }
   }
@@ -627,7 +627,7 @@ public class Superstructure extends SubsystemBase {
       }
 
       if (coralEject) {
-          intake.setWantedState(Intake.WantedState.OUTTAKE_CORAL);
+        intake.setWantedState(Intake.WantedState.OUTTAKE_CORAL);
       }
     }
   }
@@ -660,15 +660,18 @@ public class Superstructure extends SubsystemBase {
   private void scoreL4Auto(ScoringSide scoringSide) {
     wristRun(TRAVEL);
     if (wristPastSafe.getAsBoolean()) {
-      elevatorWristRun(L4);
+      elevatorRun(L4);
       intake.setWantedState(WantedState.GRIP_CORAL);
+      if (elevator.atGoal()) {
+        elevatorWristRun(L4);
+      }
 
       if (isReadyToEjectInAutoPeriod()) {
         coralEject = true;
       }
 
       if (coralEject) {
-          intake.setWantedState(Intake.WantedState.OUTTAKE_CORAL);
+        intake.setWantedState(Intake.WantedState.OUTTAKE_CORAL);
       }
     }
   }
