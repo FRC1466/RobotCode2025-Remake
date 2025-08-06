@@ -111,7 +111,11 @@ public class Elevator extends SubsystemBase {
    * @return True if the elevator is at the goal, false otherwise.
    */
   public boolean atGoal() {
-    return MathUtil.isNear(getPosition(), getGoalPosition(), Units.inchesToMeters(1.0));
+    return atGoal(Units.inchesToMeters(5.0));
+  }
+
+  public boolean atGoal(double toleranceMeters) {
+    return MathUtil.isNear(getPosition(), getGoalPosition(), toleranceMeters);
   }
 
   /**

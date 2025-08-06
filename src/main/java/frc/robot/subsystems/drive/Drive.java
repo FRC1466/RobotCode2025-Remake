@@ -19,6 +19,7 @@ import com.ctre.phoenix6.swerve.utility.PhoenixPIDController;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
@@ -52,6 +53,10 @@ public class Drive extends SubsystemBase {
   public static final double driveToPointStaticFrictionCompensation = 0.02;
 
   public static final double rotationLockErrorMarginDegrees = 10.0;
+
+  public final SlewRateLimiter xLimiter = new SlewRateLimiter(3.0);
+  public final SlewRateLimiter yLimiter = new SlewRateLimiter(3.0);
+  public final SlewRateLimiter thetaLimiter = new SlewRateLimiter(3.0);
 
   public double maxVelocityOutputForDriveToPoint = Units.feetToMeters(10.0);
 
@@ -423,6 +428,9 @@ public class Drive extends SubsystemBase {
     double xMagnitude = MathUtil.applyDeadband(controller.getLeftY(), controllerDeadband);
     double yMagnitude = MathUtil.applyDeadband(controller.getLeftX(), controllerDeadband);
     double angularMagnitude = MathUtil.applyDeadband(controller.getRightX(), controllerDeadband);
+
+    xMagnitude = xLimiter.calculate(xMagnitude);
+    yMagnitude = yLimiter.calculate(yMagnitude);
 
     // Commented out, enable for smoother driving
     // xMagnitude = Math.copySign(xMagnitude * xMagnitude, xMagnitude);

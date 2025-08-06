@@ -54,7 +54,7 @@ public class Superstructure extends SubsystemBase {
   private static final Debouncer simCoralDebouncer =
       new Debouncer(.5, Debouncer.DebounceType.kRising);
   private static final Debouncer simAlgaeDebouncer =
-      new Debouncer(2, Debouncer.DebounceType.kRising);
+      new Debouncer(.5, Debouncer.DebounceType.kRising);
 
   private static final Debouncer readyToScoreDebouncer =
       new Debouncer(.5, Debouncer.DebounceType.kRising);
@@ -526,25 +526,20 @@ public class Superstructure extends SubsystemBase {
       }
     } else if (intake.hasAlgae()) {
       drive.setDesiredPoseForDriveToPoint(getBackoutPointToDriveToForAlgaeIntaking(id));
-      elevatorWristRun(ALGAE_HOLD);
+      if (drive.isAtDriveToPointSetpoint()) {
+        elevatorWristRun(ALGAE_HOLD);
+      }
     } else {
-      if (!wrist.atGoal() && !elevator.atGoal()) {
+      if (!wrist.atGoal() && !elevator.atGoal(Units.inchesToMeters(1.0))) {
         drive.setDesiredPoseForDriveToPoint(getIntermediatePointToDriveToForAlgaeIntaking(id));
       } else {
         drive.setDesiredPoseForDriveToPoint(getDesiredPointToDriveToForAlgaeIntaking(id));
       }
     }
     if (Robot.isSimulation()) {
-      var currentPose = RobotState.getInstance().getRobotPoseFromSwerveDriveOdometry();
-      intake.setHasAlgae(
-          simAlgaeDebouncer.calculate(
-              MathUtil.isNear(
-                      currentPose.getX(), getDesiredPointToDriveToForAlgaeIntaking(id).getX(), 0.25)
-                  && MathUtil.isNear(
-                      currentPose.getY(), getDesiredPointToDriveToForAlgaeIntaking(id).getY(), 0.25)
-                  && drive.isAtDriveToPointSetpoint()
-                  && wrist.atGoal()
-                  && elevator.atGoal()));
+      if (simAlgaeDebouncer.calculate(allAtGoals())) {
+        intake.setHasAlgae(true);
+      }
     }
   }
 
@@ -712,8 +707,9 @@ public class Superstructure extends SubsystemBase {
   }
 
   private void moveAlgaeToNetPosition() {
-    Rotation2d rotation = FieldConstants.isBlueAlliance() ? Rotation2d.kZero : Rotation2d.k180deg;
-    if (Math.abs(
+    Rotation2d rotation = FieldConstants.isBlueAlliance() ? Rotation2d.k180deg : Rotation2d.kZero;
+    // If barging on other side, uncomment
+    /* if (Math.abs(
             RobotState.getInstance()
                 .getRobotPoseFromSwerveDriveOdometry()
                 .getRotation()
@@ -722,7 +718,7 @@ public class Superstructure extends SubsystemBase {
       rotation = Rotation2d.k180deg;
     } else {
       rotation = Rotation2d.kZero;
-    }
+    } */
 
     drive.setTargetRotation(rotation);
 
@@ -981,5 +977,13 @@ public class Superstructure extends SubsystemBase {
 
   public void wristRun(WristElevatorPoses.WristElevatorPose wristElevatorPose) {
     wrist.setWantedState(Wrist.WantedState.MOVE_TO_POSITION, wristElevatorPose.wristAngle);
+  }
+
+  public boolean allAtGoals() {
+    return wrist.atGoal() && elevator.atGoal() && drive.isAtDriveToPointSetpoint();
+  }
+
+  public boolean wristElevatorAtGoal() {
+    return wrist.atGoal() && elevator.atGoal();
   }
 }

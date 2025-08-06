@@ -194,6 +194,7 @@ public class RobotContainer {
     autoChooser.addDefaultOption("Idle", autoFactory.createIdleCommand());
     autoChooser.addOption("Taxi", autoFactory.createTaxiCommand());
     autoChooser.addOption("3x Processor Side", autoFactory.createEDCAuto());
+    autoChooser.addOption("4x Processor Side", autoFactory.createFDCEAuto());
   }
 
   /**
@@ -204,7 +205,7 @@ public class RobotContainer {
    */
   private void configureButtonBindings() {
     // Coral score level selection
-    final Container<Integer> selectedCoralScoreLevel = new Container<>(1);
+    final Container<Integer> selectedCoralScoreLevel = new Container<>(4);
 
     controller.povUp().onTrue(Commands.runOnce(() -> selectedCoralScoreLevel.value = 4));
     controller.povLeft().onTrue(Commands.runOnce(() -> selectedCoralScoreLevel.value = 3));
@@ -219,6 +220,7 @@ public class RobotContainer {
     Container<Boolean> autoScoreRunning = new Container<>(false);
     controller
         .rightTrigger()
+        .and(() -> intake.hasCoral())
         .whileTrue(
             Commands.defer(
                     () -> {
@@ -246,51 +248,12 @@ public class RobotContainer {
                 .withName("Auto Score Selected Level"))
         .onFalse(superstructure.setStateCommand(WantedSuperState.DEFAULT_STATE));
 
-    // Super auto score
-    Container<Boolean> superAutoScoreExecutionTracker = new Container<>(false);
-    Container<Integer> lockedSelectedCoralScoreLevelForSuper =
-        new Container<>(selectedCoralScoreLevel.value);
-    Container<Boolean> lockedScoreOnLeftForSuper = new Container<>(scoreOnLeft.value);
-
     controller
         .rightTrigger()
-        .doublePress()
-        .whileTrue(
-            Commands.sequence(
-                    Commands.defer(
-                        () -> {
-                          if (lockedScoreOnLeftForSuper.value) {
-                            return switch (lockedSelectedCoralScoreLevelForSuper.value) {
-                              case 1 ->
-                                  superstructure.setStateCommand(WantedSuperState.SCORE_LEFT_L1);
-                              case 2 ->
-                                  superstructure.setStateCommand(WantedSuperState.SCORE_LEFT_L2);
-                              case 3 ->
-                                  superstructure.setStateCommand(WantedSuperState.SCORE_LEFT_L3);
-                              default ->
-                                  superstructure.setStateCommand(WantedSuperState.SCORE_LEFT_L4);
-                            };
-                          } else {
-                            return switch (lockedSelectedCoralScoreLevelForSuper.value) {
-                              case 1 ->
-                                  superstructure.setStateCommand(WantedSuperState.SCORE_RIGHT_L1);
-                              case 2 ->
-                                  superstructure.setStateCommand(WantedSuperState.SCORE_RIGHT_L2);
-                              case 3 ->
-                                  superstructure.setStateCommand(WantedSuperState.SCORE_RIGHT_L3);
-                              default ->
-                                  superstructure.setStateCommand(WantedSuperState.SCORE_RIGHT_L4);
-                            };
-                          }
-                        },
-                        java.util.Set.of(superstructure)),
-                    superstructure.setStateCommand(WantedSuperState.INTAKE_ALGAE_REEF))
-                .deadlineWith(
-                    Commands.startEnd(
-                        () -> superAutoScoreExecutionTracker.value = true,
-                        () -> superAutoScoreExecutionTracker.value = false))
-                .withName("Super Auto Score"))
-        .onFalse(superstructure.setStateCommand(WantedSuperState.DEFAULT_STATE));
+        .and(controller.rightTrigger().doublePress().negate())
+        .and(() -> !intake.hasCoral())
+        .whileTrue(controllerRumbleCommand().withName("Auto Score No Coral Alert"));
+
 
     // Manual coral backup
     controller
