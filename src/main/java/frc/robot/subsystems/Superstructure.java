@@ -50,16 +50,20 @@ public class Superstructure extends SubsystemBase {
 
   private static final double defaultTeleopTranslationCoeffecient = 1.0;
 
-  private static final Debouncer homeDebouncer = new Debouncer(0.1, Debouncer.DebounceType.kBoth);
+  private static final Debouncer homeDebouncer = new Debouncer(0.1, Debouncer.DebounceType.kRising);
   private static final Debouncer simCoralDebouncer =
-      new Debouncer(.5, Debouncer.DebounceType.kBoth);
-  private static final Debouncer simAlgaeDebouncer = new Debouncer(2, Debouncer.DebounceType.kBoth);
+      new Debouncer(.5, Debouncer.DebounceType.kRising);
+  private static final Debouncer simAlgaeDebouncer =
+      new Debouncer(2, Debouncer.DebounceType.kRising);
 
   private static final Debouncer readyToScoreDebouncer =
-      new Debouncer(.5, Debouncer.DebounceType.kBoth);
+      new Debouncer(.5, Debouncer.DebounceType.kRising);
 
   private static final Debouncer readyToScoreDebouncerAuto =
-      new Debouncer(.5, Debouncer.DebounceType.kBoth);
+      new Debouncer(.5, Debouncer.DebounceType.kRising);
+
+  private static final Debouncer intakeDebouncerAuto =
+      new Debouncer(.1, Debouncer.DebounceType.kRising);
 
   private final Timer coralL1TopTimer = new Timer();
 
@@ -268,6 +272,14 @@ public class Superstructure extends SubsystemBase {
   }
 
   private void applyStates() {
+    if (previousSuperState != currentSuperState) {
+      simAlgaeDebouncer.calculate(false);
+      simCoralDebouncer.calculate(false);
+      readyToScoreDebouncer.calculate(false);
+      readyToScoreDebouncerAuto.calculate(false);
+      intakeDebouncerAuto.calculate(false);
+    }
+
     if (previousSuperState != CurrentSuperState.INTAKE_ALGAE_REEF
         && currentSuperState == CurrentSuperState.INTAKE_ALGAE_REEF) {
       hasDriveReachedIntermediatePoseForReefAlgaePickup = false;
@@ -487,15 +499,18 @@ public class Superstructure extends SubsystemBase {
     }
     if (Robot.isSimulation()) {
       var currentPose = RobotState.getInstance().getRobotPoseFromSwerveDriveOdometry();
-      intake.setHasCoral(
-          simCoralDebouncer.calculate(
-              isReadyToEjectInAutoPeriod()
-                  && MathUtil.isNear(
-                      currentPose.getX(), FieldConstants.getClosestStation(currentPose).getX(), 1)
-                  && MathUtil.isNear(
-                      currentPose.getY(),
-                      FieldConstants.getClosestStation(currentPose).getY(),
-                      1)));
+      if (intake.getSystemState() == Intake.SystemState.INTAKING_CORAL) {
+        intake.setHasCoral(
+            simCoralDebouncer.calculate(
+                wrist.atGoal()
+                    && elevator.atGoal()
+                    && MathUtil.isNear(
+                        currentPose.getX(), FieldConstants.getClosestStation(currentPose).getX(), 1)
+                    && MathUtil.isNear(
+                        currentPose.getY(),
+                        FieldConstants.getClosestStation(currentPose).getY(),
+                        1)));
+      }
     }
     if (homeDebouncer.calculate(elevator.getHomeSensor())) {
       elevator.resetPosition(0.0);
@@ -639,7 +654,7 @@ public class Superstructure extends SubsystemBase {
 
   private void scoreL3Teleop(ScoringSide scoringSide) {
     if (!overrides.isReefOverride()) {
-      driveToScoringPose(scoringSide, true);
+      driveToScoringPose(scoringSide, false);
     }
     wristRun(TRAVEL);
     if (wrist.atGoal()) {
@@ -675,7 +690,7 @@ public class Superstructure extends SubsystemBase {
 
   private void scoreL4Teleop(ScoringSide scoringSide) {
     if (!overrides.isReefOverride()) {
-      driveToScoringPose(scoringSide, true);
+      driveToScoringPose(scoringSide, false);
     }
     wristRun(TRAVEL);
     if (wristPastSafe.getAsBoolean()) {
@@ -784,6 +799,14 @@ public class Superstructure extends SubsystemBase {
 
   public boolean isReadyToEjectInAutoPeriod() {
     return readyToScoreDebouncerAuto.calculate(
+        elevator.atGoal()
+            && wrist.atGoal()
+            && drive.isAtEndOfChoreoTrajectoryOrDriveToPoint()
+            && drive.isStopped());
+  }
+
+  public boolean isReadyToIntakeCountdown() {
+    return intakeDebouncerAuto.calculate(
         elevator.atGoal()
             && wrist.atGoal()
             && drive.isAtEndOfChoreoTrajectoryOrDriveToPoint()
@@ -910,10 +933,6 @@ public class Superstructure extends SubsystemBase {
 
   public boolean hasCoral() {
     return intake.hasCoral();
-  }
-
-  public boolean hasCollectedPieceInAuto() {
-    return false;
   }
 
   public void setWantedSuperState(WantedSuperState superState) {

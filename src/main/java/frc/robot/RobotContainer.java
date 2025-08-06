@@ -12,10 +12,13 @@ import static frc.robot.subsystems.vision.VisionConstants.*;
 import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants;
+import edu.wpi.first.math.Pair;
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.GenericHID.RumbleType;
 import edu.wpi.first.wpilibj.XboxController;
@@ -24,6 +27,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
+import frc.robot.autos.AutoFactory;
 import frc.robot.constants.Constants;
 import frc.robot.constants.FieldConstants;
 import frc.robot.generated.TunerConstants;
@@ -47,7 +51,6 @@ import frc.robot.subsystems.sensors.CoralSensorIO;
 import frc.robot.subsystems.sensors.HomeSensorIO;
 import frc.robot.subsystems.vision.Vision;
 import frc.robot.subsystems.vision.VisionIO;
-import frc.robot.subsystems.vision.VisionIOPhotonVisionSim;
 import frc.robot.subsystems.wrist.Wrist;
 import frc.robot.subsystems.wrist.WristIO;
 import frc.robot.subsystems.wrist.WristIOSim;
@@ -55,8 +58,10 @@ import frc.robot.util.AllianceFlipUtil;
 import frc.robot.util.Container;
 import frc.robot.util.DoublePressTracker;
 import frc.robot.util.TriggerUtil;
+import java.util.Optional;
 import lombok.Getter;
 import lombok.experimental.ExtensionMethod;
+import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
 
 /**
@@ -79,6 +84,13 @@ public class RobotContainer {
 
   @Getter private SubsystemVisualizer subsystemVisualizerMeasured;
   @Getter private SubsystemVisualizer subsystemVisualizerGoal;
+
+  @Getter
+  private AutoFactory autoFactory =
+      new AutoFactory(DriverStation.getAlliance().orElse(Alliance.Blue), this);
+
+  private final LoggedDashboardChooser<Pair<Pose2d, Command>> autoChooser =
+      new LoggedDashboardChooser<>("Auto");
 
   // Controllers
   private static final CommandXboxController controller = new CommandXboxController(0);
@@ -123,17 +135,6 @@ public class RobotContainer {
                   new RollerSystemIOSim(DCMotor.getKrakenX60(1), 1, 1),
                   new RollerSystemIOSim(DCMotor.getNeoVortex(1), 1, 1),
                   new CoralSensorIO() {});
-          vision =
-              new Vision(
-                  drive::addVisionMeasurement,
-                  simCameras.values().stream()
-                      .map(
-                          config ->
-                              new VisionIOPhotonVisionSim(
-                                  config.name(),
-                                  config.robotToCamera(),
-                                  RobotState.getInstance()::getRobotPoseFromSwerveDriveOdometry))
-                      .toArray(VisionIO[]::new));
           break;
         }
       }
@@ -189,6 +190,10 @@ public class RobotContainer {
 
     // Configure the button bindings
     configureButtonBindings();
+
+    autoChooser.addDefaultOption("Idle", autoFactory.createIdleCommand());
+    autoChooser.addOption("Taxi", autoFactory.createTaxiCommand());
+    autoChooser.addOption("3x Processor Side", autoFactory.createEDCAuto());
   }
 
   /**
@@ -447,5 +452,13 @@ public class RobotContainer {
   public void updateAlerts() {
     // Controller disconnected alerts
     driverDisconnected.set(!DriverStation.isJoystickConnected(controller.getHID().getPort()));
+  }
+
+  public Command getAutonomousCommand() {
+    return autoChooser.get().getSecond();
+  }
+
+  public Optional<Pose2d> getAutonomousStartingPose() {
+    return Optional.of(autoChooser.get().getFirst());
   }
 }

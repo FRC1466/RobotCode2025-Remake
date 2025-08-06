@@ -27,7 +27,7 @@ import frc.robot.subsystems.Superstructure;
 
 /** A factory for creating autonomous programs for a given {@link Auto} */
 @SuppressWarnings("unused")
-class AutoFactory {
+public class AutoFactory {
   private final DriverStation.Alliance alliance;
 
   private final RobotContainer robotContainer;
@@ -41,7 +41,7 @@ class AutoFactory {
    *
    * @param robotContainer The {@link RobotContainer}
    */
-  AutoFactory(final DriverStation.Alliance alliance, final RobotContainer robotContainer) {
+  public AutoFactory(final DriverStation.Alliance alliance, final RobotContainer robotContainer) {
     this.alliance = alliance;
     this.robotContainer = robotContainer;
 
@@ -58,11 +58,11 @@ class AutoFactory {
    */
   private static final Command idleCommand = Commands.idle();
 
-  Pair<Pose2d, Command> createIdleCommand() {
+  public Pair<Pose2d, Command> createIdleCommand() {
     return Pair.of(FieldConstants.getFarLeftStartingPose(alliance), idleCommand);
   }
 
-  Pair<Pose2d, Command> createTaxiCommand() {
+  public Pair<Pose2d, Command> createTaxiCommand() {
     Pose2d initialPose = RobotState.getInstance().getRobotPoseFromSwerveDriveOdometry();
     var targetPose =
         FieldConstants.isBlueAlliance()
@@ -72,7 +72,7 @@ class AutoFactory {
     return Pair.of(initialPose, driveToPoint(finalPose, 1.0));
   }
 
-  Pair<Pose2d, Command> createEDCAuto() {
+  public Pair<Pose2d, Command> createEDCAuto() {
     var initialPose = FieldConstants.getRightStartingPose(alliance);
     return Pair.of(
         initialPose,
@@ -91,7 +91,7 @@ class AutoFactory {
                 FieldConstants.getRightStationPickup(), Units.feetToMeters(10))));
   }
 
-  Pair<Pose2d, Command> createIKLJAuto() {
+  public Pair<Pose2d, Command> createIKLJAuto() {
     var offsetID =
         alliance == DriverStation.Alliance.Blue
             ? ReefConstants.blueAllianceReefFacesToIds.get(ReefConstants.ReefFaces.IJ)
@@ -139,7 +139,7 @@ class AutoFactory {
             setState(Superstructure.WantedSuperState.DEFAULT_STATE)));
   }
 
-  Pair<Pose2d, Command> createFDCEAuto() {
+  public Pair<Pose2d, Command> createFDCEAuto() {
     var offsetID =
         alliance == DriverStation.Alliance.Blue
             ? ReefConstants.blueAllianceReefFacesToIds.get(ReefConstants.ReefFaces.EF)
@@ -237,7 +237,7 @@ class AutoFactory {
                             robotContainer.getDrive().getDistanceFromDriveToPointSetpoint()
                                 < distanceFromEndOfPathtoMoveArmUp)
                     .andThen(setState(scoreState)))))
-        .andThen(waitForCoralRelease().raceWith(new WaitCommand(1.0)));
+        .andThen(waitForCoralRelease().deadlineFor(new WaitCommand(1.0)));
   }
 
   private Command followThenScore(
@@ -322,9 +322,8 @@ class AutoFactory {
     return driveToPoint(intakePose, intakeVelocity)
         .alongWith(setState(Superstructure.WantedSuperState.INTAKE_CORAL_FROM_STATION))
         .andThen(
-            Commands.waitUntil(
-                () -> robotContainer.getSuperstructure().isReadyToEjectInAutoPeriod()))
-        .andThen(Commands.waitSeconds(2.0).raceWith(waitForCoralPickup()));
+            Commands.waitUntil(() -> robotContainer.getSuperstructure().isReadyToIntakeCountdown()))
+        .andThen(waitForCoralPickup().raceWith(Commands.waitSeconds(2.0)));
   }
 
   private Command waitForCoralRelease() {
@@ -332,7 +331,7 @@ class AutoFactory {
   }
 
   private Command waitForCoralPickup() {
-    return new WaitUntilCommand(() -> robotContainer.getSuperstructure().hasCollectedPieceInAuto());
+    return new WaitUntilCommand(() -> robotContainer.getSuperstructure().hasCoral());
   }
 
   public Pose2d getAutoScoringPose(

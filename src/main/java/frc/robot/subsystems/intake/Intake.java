@@ -16,6 +16,7 @@ import frc.robot.subsystems.rollers.RollerSystemIOInputsAutoLogged;
 import frc.robot.subsystems.sensors.CoralSensorIO;
 import frc.robot.subsystems.sensors.CoralSensorIOInputsAutoLogged;
 import frc.robot.util.LoggedTracer;
+import lombok.Getter;
 import lombok.Setter;
 import org.littletonrobotics.junction.Logger;
 
@@ -56,7 +57,7 @@ public class Intake extends SubsystemBase {
    * Represents the actual, internal state of the Intake subsystem. This state is determined by the
    * subsystem's logic in the periodic loop, based on the wantedState and sensor feedback.
    */
-  private enum SystemState {
+  public enum SystemState {
     INTAKING_CORAL,
     GRIPPING_CORAL,
     OUTTAKING_CORAL,
@@ -85,8 +86,8 @@ public class Intake extends SubsystemBase {
     this.coralSensorIO = coralSensorIO;
   }
 
-  private WantedState wantedState = WantedState.OFF;
-  private SystemState systemState = SystemState.OFF;
+  @Getter private WantedState wantedState = WantedState.OFF;
+  @Getter private SystemState systemState = SystemState.OFF;
 
   @Setter private boolean hasAlgae = false;
 

@@ -25,10 +25,8 @@ import edu.wpi.first.wpilibj.Threads;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.Watchdog;
 import edu.wpi.first.wpilibj.simulation.DriverStationSim;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
-import frc.robot.autos.AutoChooser;
 import frc.robot.constants.Constants;
 import frc.robot.constants.Constants.RobotType;
 import frc.robot.generated.TunerConstants;
@@ -64,7 +62,8 @@ public class Robot extends LoggedRobot {
   private static int lowBatteryCycleCount = 0;
 
   private RobotContainer robotContainer;
-  private AutoChooser autoChooser;
+
+  private Command autoCommand;
 
   private double autoStart;
   private boolean autoMessagePrinted;
@@ -224,9 +223,6 @@ public class Robot extends LoggedRobot {
     // and put our autonomous chooser on the dashboard.
     robotContainer = new RobotContainer();
 
-    autoChooser = AutoChooser.create(robotContainer);
-    SmartDashboard.putData("Auto Program", autoChooser);
-
     // DO NOT COPY UNLESS YOU UNDERSTAND THE CONSEQUENCES
     // https://docs.advantagekit.org/getting-started/template-projects/spark-swerve-template#real-time-thread-priority
     Threads.setCurrentThreadPriority(true, 1);
@@ -243,14 +239,17 @@ public class Robot extends LoggedRobot {
     LoggedTracer.record("Commands");
 
     // Print auto duration
-    if (!autoMessagePrinted) {
-      if (DriverStation.isAutonomousEnabled()) {
-        System.out.printf("*** Auto finished in %.2f secs ***%n", Timer.getTimestamp() - autoStart);
-      } else {
-        System.out.printf(
-            "*** Auto cancelled in %.2f secs ***%n", Timer.getTimestamp() - autoStart);
+    if (autoCommand != null) {
+      if (!autoMessagePrinted && !autoCommand.isScheduled()) {
+        if (DriverStation.isAutonomousEnabled()) {
+          System.out.printf(
+              "*** Auto finished in %.2f secs ***%n", Timer.getTimestamp() - autoStart);
+        } else {
+          System.out.printf(
+              "*** Auto cancelled in %.2f secs ***%n", Timer.getTimestamp() - autoStart);
+        }
+        autoMessagePrinted = true;
       }
-      autoMessagePrinted = true;
     }
 
     // Robot container periodic methods
@@ -302,9 +301,7 @@ public class Robot extends LoggedRobot {
 
   /** This function is called periodically when disabled. */
   @Override
-  public void disabledPeriodic() {
-    autoChooser.update();
-  }
+  public void disabledPeriodic() {}
 
   /** This autonomous runs the autonomous command selected by your {@link RobotContainer} class. */
   @Override
@@ -312,9 +309,11 @@ public class Robot extends LoggedRobot {
     autoStart = Timer.getTimestamp();
     robotContainer
         .getDrive()
-        .resetTranslationAndRotation(autoChooser.getStartingPose().orElse(new Pose2d()));
+        .resetTranslationAndRotation(
+            robotContainer.getAutonomousStartingPose().orElse(new Pose2d()));
     robotContainer.getIntake().setHasCoral(true);
-    autoChooser.getSelectedCommand().ifPresent(CommandScheduler.getInstance()::schedule);
+    autoCommand = robotContainer.getAutonomousCommand();
+    autoCommand.schedule();
   }
 
   /** This function is called periodically during autonomous. */
@@ -323,7 +322,11 @@ public class Robot extends LoggedRobot {
 
   /** This function is called once when teleop is enabled. */
   @Override
-  public void teleopInit() {}
+  public void teleopInit() {
+    if (autoCommand != null) {
+      autoCommand.cancel();
+    }
+  }
 
   @Override
   public void teleopPeriodic() {}

@@ -474,7 +474,7 @@ public class Drive extends SubsystemBase {
   }
 
   public boolean isStopped() {
-    return isStopped(0.05);
+    return isStopped(0.01);
   }
 
   public boolean isStopped(double tolerance) {
