@@ -278,31 +278,10 @@ public class Superstructure extends SubsystemBase {
       readyToScoreDebouncer.calculate(false);
       readyToScoreDebouncerAuto.calculate(false);
       intakeDebouncerAuto.calculate(false);
-    }
-
-    if (previousSuperState != CurrentSuperState.INTAKE_ALGAE_REEF
-        && currentSuperState == CurrentSuperState.INTAKE_ALGAE_REEF) {
+      hasDriveReachedIntermediatePoseForCoralScore = false;
       hasDriveReachedIntermediatePoseForReefAlgaePickup = false;
     }
 
-    if ((previousSuperState != CurrentSuperState.SCORE_LEFT_TELEOP_L1
-            && previousSuperState != CurrentSuperState.SCORE_RIGHT_TELEOP_L1
-            && previousSuperState != CurrentSuperState.SCORE_LEFT_TELEOP_L2
-            && previousSuperState != CurrentSuperState.SCORE_RIGHT_TELEOP_L2
-            && previousSuperState != CurrentSuperState.SCORE_LEFT_TELEOP_L3
-            && previousSuperState != CurrentSuperState.SCORE_RIGHT_TELEOP_L3
-            && previousSuperState != CurrentSuperState.SCORE_LEFT_TELEOP_L4
-            && previousSuperState != CurrentSuperState.SCORE_RIGHT_TELEOP_L4)
-        && (currentSuperState == CurrentSuperState.SCORE_LEFT_TELEOP_L1
-            || currentSuperState == CurrentSuperState.SCORE_RIGHT_TELEOP_L1
-            || currentSuperState == CurrentSuperState.SCORE_LEFT_TELEOP_L2
-            || currentSuperState == CurrentSuperState.SCORE_RIGHT_TELEOP_L2
-            || currentSuperState == CurrentSuperState.SCORE_LEFT_TELEOP_L3
-            || currentSuperState == CurrentSuperState.SCORE_RIGHT_TELEOP_L3
-            || currentSuperState == CurrentSuperState.SCORE_LEFT_TELEOP_L4
-            || currentSuperState == CurrentSuperState.SCORE_RIGHT_TELEOP_L4)) {
-      hasDriveReachedIntermediatePoseForCoralScore = false;
-    }
     switch (currentSuperState) {
       case HOME:
         home();
@@ -690,7 +669,7 @@ public class Superstructure extends SubsystemBase {
 
   private void scoreL4Teleop(ScoringSide scoringSide) {
     if (!overrides.isReefOverride()) {
-      driveToScoringPose(scoringSide, false);
+      driveToScoringPoseL4(scoringSide);
     }
     wristRun(TRAVEL);
     if (wristPastSafe.getAsBoolean()) {
@@ -835,6 +814,38 @@ public class Superstructure extends SubsystemBase {
       drive.setDesiredPoseForDriveToPointWithMaximumAngularVelocity(desiredPoseToDriveTo, 3.0);
       hasDriveToPointSetPointBeenSet = true;
       Logger.recordOutput("Superstructure/DesiredPointToDriveTo", desiredPoseToDriveTo);
+      return true;
+    }
+  }
+
+  public boolean driveToScoringPoseL4(ScoringSide scoringSide) {
+    Pose2d desiredPoseToDriveTo =
+        FieldConstants.getDesiredFinalScoringPoseForCoral(
+            RobotState.getInstance().getClosestTagId(), scoringSide);
+    Pose2d intermediatePose =
+        FieldConstants.getDesiredIntermediateScoringPoseForCoral(
+            RobotState.getInstance().getClosestTagId(), scoringSide);
+
+    Pose2d preL4Pose =
+        FieldConstants.getDesiredPointToDriveToForCoralScoring(
+            RobotState.getInstance().getClosestTagId(), scoringSide, 0.15);
+
+    if (!hasDriveReachedIntermediatePoseForCoralScore) {
+      drive.setDesiredPoseForDriveToPointWithMaximumAngularVelocity(intermediatePose, 3.0);
+      if (drive.isAtDriveToPointSetpoint()) {
+        hasDriveReachedIntermediatePoseForCoralScore = true;
+      }
+      Logger.recordOutput("Superstructure/DesiredPointToDriveTo", intermediatePose);
+      return true;
+    } else {
+      if (elevator.atGoal()) {
+        drive.setDesiredPoseForDriveToPointWithConstraints(desiredPoseToDriveTo, 0.5, 3.0);
+        hasDriveToPointSetPointBeenSet = true;
+        Logger.recordOutput("Superstructure/DesiredPointToDriveTo", desiredPoseToDriveTo);
+      } else {
+        drive.setDesiredPoseForDriveToPointWithMaximumAngularVelocity(preL4Pose, 3.0);
+        Logger.recordOutput("Superstructure/DesiredPointToDriveTo", preL4Pose);
+      }
       return true;
     }
   }
