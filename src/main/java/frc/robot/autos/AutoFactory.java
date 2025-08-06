@@ -187,13 +187,6 @@ public class AutoFactory {
             setState(Superstructure.WantedSuperState.DEFAULT_STATE)));
   }
 
-  private String trajectoryName(final Location start, final Location end) {
-    var name = "%S_TO_%S".formatted(start, end);
-    var x = "%S_%S".formatted(alliance, name);
-    System.out.println("%S_%S".formatted(alliance, name));
-    return x;
-  }
-
   Command setState(Superstructure.WantedSuperState state) {
     return robotContainer.getSuperstructure().setStateCommand(state);
   }
