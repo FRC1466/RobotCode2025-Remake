@@ -220,7 +220,6 @@ public class RobotContainer {
     Container<Boolean> autoScoreRunning = new Container<>(false);
     controller
         .rightTrigger()
-        .and(() -> intake.hasCoral())
         .whileTrue(
             Commands.defer(
                     () -> {
@@ -247,13 +246,6 @@ public class RobotContainer {
                         () -> autoScoreRunning.value = true, () -> autoScoreRunning.value = false))
                 .withName("Auto Score Selected Level"))
         .onFalse(superstructure.setStateCommand(WantedSuperState.DEFAULT_STATE));
-
-    controller
-        .rightTrigger()
-        .and(controller.rightTrigger().doublePress().negate())
-        .and(() -> !intake.hasCoral())
-        .whileTrue(controllerRumbleCommand().withName("Auto Score No Coral Alert"));
-
 
     // Manual coral backup
     controller
