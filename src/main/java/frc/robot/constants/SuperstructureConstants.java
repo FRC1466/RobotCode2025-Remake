@@ -8,8 +8,8 @@
 package frc.robot.constants;
 
 public class SuperstructureConstants {
-  public static final double xOffsetFromTagForL1BaseScoringInches = 22.0;
-  public static final double xOffsetFromTagForL1TopScoringInches = 19.25;
+  // public static final double xOffsetFromTagForL1BaseScoringInches = 22.0;
+  public static final double xOffsetFromTagForL1TopScoringInches = 25;
 
   public static final double xOffsetFromTagForScoringInches = 18.0;
   public static final double xOffsetFromTagForIntakingAlgaeInches = 18.0;
@@ -18,7 +18,7 @@ public class SuperstructureConstants {
   public static final double xOffsetFromTagForL1BackoutInches = 10.0;
 
   public static final double yOffsetFromTagForScoringOnReefInches = 6.5;
-  public static final double yOffsetFromTagForScoringL1Inches = 9.0;
+  public static final double yOffsetFromTagForScoringL1Inches = 0;
 
   public enum ScoringSide {
     RIGHT,

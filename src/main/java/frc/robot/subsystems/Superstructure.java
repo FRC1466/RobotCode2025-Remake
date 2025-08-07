@@ -564,10 +564,7 @@ public class Superstructure extends SubsystemBase {
     }
     if (coralEject) {
       if (overrides.isReefOverride() == false) {
-        intake.setWantedState(Intake.WantedState.OUTTAKE_CORAL);
-      }
-      if (!hasCoral()) {
-        setWantedSuperState(WantedSuperState.DEFAULT_STATE);
+        intake.setWantedState(Intake.WantedState.OUTTAKE_CORAL_L1);
       }
     }
   }
@@ -605,9 +602,6 @@ public class Superstructure extends SubsystemBase {
       if (overrides.isReefOverride() == false) {
         intake.setWantedState(Intake.WantedState.OUTTAKE_CORAL);
       }
-      if (!hasCoral()) {
-        setWantedSuperState(WantedSuperState.DEFAULT_STATE);
-      }
     }
   }
 
@@ -639,9 +633,6 @@ public class Superstructure extends SubsystemBase {
       if (coralEject) {
         if (overrides.isReefOverride() == false) {
           intake.setWantedState(Intake.WantedState.OUTTAKE_CORAL);
-        }
-        if (!hasCoral()) {
-          setWantedSuperState(WantedSuperState.DEFAULT_STATE);
         }
       }
     }
@@ -680,9 +671,6 @@ public class Superstructure extends SubsystemBase {
     if (coralEject) {
       if (overrides.isReefOverride() == false) {
         intake.setWantedState(Intake.WantedState.OUTTAKE_CORAL);
-      }
-      if (!hasCoral()) {
-        setWantedSuperState(WantedSuperState.DEFAULT_STATE);
       }
     }
   }

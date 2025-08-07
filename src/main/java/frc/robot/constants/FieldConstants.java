@@ -232,15 +232,17 @@ public class FieldConstants {
       double yOffset =
           -Units.inchesToMeters(SuperstructureConstants.yOffsetFromTagForScoringL1Inches);
 
-      Rotation2d thetaOffset = Rotation2d.fromDegrees(72);
+      Rotation2d thetaOffset = Rotation2d.fromDegrees(30);
       if (scoringSide == SuperstructureConstants.ScoringSide.RIGHT) {
         yOffset *= -1;
         thetaOffset = thetaOffset.times(-1);
       }
-      Transform2d offsetFromTag =
-          new Transform2d(xOffset, yOffset, Rotation2d.k180deg.plus(thetaOffset));
+      Transform2d offsetFromTag = new Transform2d(xOffset, yOffset, Rotation2d.k180deg);
 
       Pose2d transformedPose = tagPose.plus(offsetFromTag);
+      transformedPose =
+          transformedPose.rotateAround(
+              new Translation2d(transformedPose.getX(), transformedPose.getY()), thetaOffset);
 
       return transformedPose;
     } else {
