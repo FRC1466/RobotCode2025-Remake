@@ -31,10 +31,14 @@ import frc.robot.constants.Constants;
 import frc.robot.constants.Constants.RobotType;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.Superstructure;
+import frc.robot.subsystems.elevator.Elevator;
+import frc.robot.subsystems.slapdown.Slapdown;
+import frc.robot.subsystems.wrist.Wrist;
 import frc.robot.util.DummyLogReceiver;
 import frc.robot.util.LoggedTracer;
 import frc.robot.util.NTClientLogger;
 import frc.robot.util.PhoenixUtil;
+import frc.robot.util.SuperstructurePositionChooser;
 import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
@@ -329,7 +333,23 @@ public class Robot extends LoggedRobot {
   }
 
   @Override
-  public void teleopPeriodic() {}
+  public void teleopPeriodic() {
+    robotContainer
+        .getElevator()
+        .setWantedState(
+            Elevator.WantedState.MOVE_TO_POSITION,
+            SuperstructurePositionChooser.getSelected().elevatorHeightMeters());
+    robotContainer
+        .getWrist()
+        .setWantedState(
+            Wrist.WantedState.MOVE_TO_POSITION,
+            SuperstructurePositionChooser.getSelected().wristAngle());
+    robotContainer
+        .getSlapdown()
+        .setWantedState(
+            Slapdown.WantedState.MOVE_TO_POSITION,
+            SuperstructurePositionChooser.getSelected().slapdownAngle());
+  }
 
   /** This function is called once when test mode is enabled. */
   @Override

@@ -106,7 +106,7 @@ public class Intake extends SubsystemBase {
     // Handle state transitions and logic
     systemState = handleStateTransition();
 
-    // Reset hasAlgae flag unless transitioning to a state that holds algae
+    /* // Reset hasAlgae flag unless transitioning to a state that holds algae
     if (systemState != SystemState.HOLDING_ALGAE
         && systemState != SystemState.HOLDING_ALGAE_HARDER) {
       hasAlgae = false;
@@ -119,7 +119,7 @@ public class Intake extends SubsystemBase {
         && systemState != SystemState.GRIPPING_CORAL
         && systemState != SystemState.INTAKING_CORAL) {
       hasCoral = false;
-    }
+    } */
 
     // Perform state-specific actions
     if (systemState == SystemState.INTAKING_ALGAE && !hasAlgae && Robot.isReal()) {

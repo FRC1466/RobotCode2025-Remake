@@ -60,6 +60,8 @@ public class ElevatorConstants {
         * elevatorGearRatio;
   }
 
+  public static final double maxHeightMeters = 1.507;
+
   public static final LoggedTunableNumber stowed =
       new LoggedTunableNumber("Elevator/StowedPosition", elevatorRotationsToMeters(0.1));
 }

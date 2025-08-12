@@ -17,10 +17,19 @@ public class SuperstructureConstants {
   public static final double xOffsetFromTagForBackoutIntakingAlgaeInches = 50.0;
   public static final double xOffsetFromTagForL1BackoutInches = 10.0;
 
-  public static final double yOffsetFromTagForScoringOnReefInches = 6.5;
+  public static final double yOffsetFromTagForScoringOnReefInchesBase = 6.5;
+  public static final double yOffsetFromTagForScoringOnReefInchesLeft =
+      yOffsetFromTagForScoringOnReefInchesBase + 9.500533;
+  public static final double yOffsetFromTagForScoringOnReefInchesRight =
+      yOffsetFromTagForScoringOnReefInchesBase - 9.500533;
   public static final double yOffsetFromTagForScoringL1Inches = 0;
 
   public enum ScoringSide {
+    RIGHT,
+    LEFT
+  }
+
+  public enum ScoringDirection {
     RIGHT,
     LEFT
   }

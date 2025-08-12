@@ -273,7 +273,7 @@ public class FieldConstants {
                   + Units.metersToInches(distanceFromFinalScoringPoseMeters));
 
       double yOffset =
-          -Units.inchesToMeters(SuperstructureConstants.yOffsetFromTagForScoringOnReefInches);
+          -Units.inchesToMeters(SuperstructureConstants.yOffsetFromTagForScoringOnReefInchesLeft);
       if (scoringSide == SuperstructureConstants.ScoringSide.RIGHT) {
         yOffset *= -1;
       }
