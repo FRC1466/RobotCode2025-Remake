@@ -27,11 +27,14 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.autos.AutoFactory;
 import frc.robot.constants.Constants;
+import frc.robot.constants.FieldConstants;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.SubsystemVisualizer;
 import frc.robot.subsystems.Superstructure;
+import frc.robot.subsystems.Superstructure.WantedSuperState;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.DriveIO;
 import frc.robot.subsystems.drive.DriveIOCTRE;
@@ -39,6 +42,7 @@ import frc.robot.subsystems.elevator.Elevator;
 import frc.robot.subsystems.elevator.ElevatorIO;
 import frc.robot.subsystems.elevator.ElevatorIOSim;
 import frc.robot.subsystems.intake.Intake;
+import frc.robot.subsystems.intake.Intake.WantedState;
 import frc.robot.subsystems.overridePublisher.OverridePublisher;
 import frc.robot.subsystems.overridePublisher.OverridePublisherIO;
 import frc.robot.subsystems.overridePublisher.OverridePublisherIOReal;
@@ -52,14 +56,16 @@ import frc.robot.subsystems.slapdown.SlapdownIOSim;
 import frc.robot.subsystems.vision.Vision;
 import frc.robot.subsystems.vision.VisionIO;
 import frc.robot.subsystems.wrist.Wrist;
+import frc.robot.subsystems.wrist.Wrist.ForceDirection;
 import frc.robot.subsystems.wrist.WristIO;
 import frc.robot.subsystems.wrist.WristIOSim;
+import frc.robot.util.AllianceFlipUtil;
+import frc.robot.util.Container;
 import frc.robot.util.DoublePressTracker;
 import frc.robot.util.TriggerUtil;
 import java.util.Optional;
 import lombok.Getter;
 import lombok.experimental.ExtensionMethod;
-import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 import org.littletonrobotics.junction.networktables.LoggedNetworkBoolean;
 import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
@@ -94,6 +100,16 @@ public class RobotContainer {
       new LoggedNetworkBoolean("/SmartDashboard/Sim/SlapdownDeployed", false);
   private final LoggedNetworkBoolean coralInIntake =
       new LoggedNetworkBoolean("/SmartDashboard/Sim/CoralInIntake", true);
+  private final LoggedNetworkBoolean exactWristPosition =
+      new LoggedNetworkBoolean("/SmartDashboard/Sim/exactWristPosition", false);
+  private final LoggedNetworkBoolean useDashboardValues =
+      new LoggedNetworkBoolean("/SmartDashboard/Sim/UseDashboardValues", true);
+  private final LoggedDashboardChooser<Wrist.ForceDirection> wristForceDirectionChooser =
+      new LoggedDashboardChooser<>("/SmartDashboard/Sim/WristForceDirection");
+
+  public boolean useDashboardValues() {
+    return useDashboardValues.get();
+  }
 
   public double getElevatorHeightMeters() {
     return elevatorHeightMetersNT.get();
@@ -107,8 +123,16 @@ public class RobotContainer {
     return slapdownDeployed.get();
   }
 
+  public boolean isExactAngle() {
+    return exactWristPosition.get();
+  }
+
   public boolean isCoralInIntake() {
     return coralInIntake.get();
+  }
+
+  public Wrist.ForceDirection getWristForceDirection() {
+    return wristForceDirectionChooser.get();
   }
 
   public void resetDashboardMechanismPositions() {
@@ -161,7 +185,7 @@ public class RobotContainer {
         }
         case SIMBOT -> {
           elevator = new Elevator(new ElevatorIOSim(), new HomeSensorIO() {});
-          wrist = new Wrist(new WristIOSim());
+          wrist = new Wrist(new WristIOSim(), elevator::getPosition);
           slapdown = new Slapdown(new SlapdownIOSim());
           intake =
               new Intake(
@@ -187,7 +211,7 @@ public class RobotContainer {
       elevator = new Elevator(new ElevatorIO() {}, new HomeSensorIO() {});
     }
     if (wrist == null) {
-      wrist = new Wrist(new WristIO() {});
+      wrist = new Wrist(new WristIO() {}, elevator::getPosition);
     }
     if (slapdown == null) {
       slapdown = new Slapdown(new SlapdownIO() {});
@@ -205,7 +229,8 @@ public class RobotContainer {
       overridePublisher = new OverridePublisher(new OverridePublisherIO() {});
     }
 
-    superstructure = new Superstructure(drive, intake, elevator, wrist, overridePublisher, vision);
+    superstructure =
+        new Superstructure(drive, intake, elevator, wrist, slapdown, overridePublisher, vision);
 
     subsystemVisualizerMeasured =
         new SubsystemVisualizer(
@@ -213,9 +238,9 @@ public class RobotContainer {
             () -> elevator.getPosition(),
             () -> wrist.getAngle().getRadians(),
             () -> slapdown.getAngle().getRadians(),
-            () -> intake.hasCoral(),
+            () -> intake.hasCoralClaw() || intake.hasCoralSlapdown(),
             () -> intake.hasAlgae(),
-            () -> isCoralInIntake(),
+            () -> intake.hasCoralSlapdown(),
             RobotState.getInstance()::getRobotPoseFromSwerveDriveOdometry);
     subsystemVisualizerGoal =
         new SubsystemVisualizer(
@@ -223,9 +248,9 @@ public class RobotContainer {
             () -> elevator.getGoalPosition(),
             () -> wrist.getGoalAngle().getRadians(),
             () -> slapdown.getGoalAngle().getRadians(),
-            () -> intake.hasCoral(),
+            () -> intake.hasCoralClaw() || intake.hasCoralSlapdown(),
             () -> intake.hasAlgae(),
-            () -> isCoralInIntake(),
+            () -> intake.hasCoralSlapdown(),
             RobotState.getInstance()::getRobotPoseFromSwerveDriveOdometry);
 
     // Configure the button bindings
@@ -235,6 +260,10 @@ public class RobotContainer {
     autoChooser.addOption("Taxi", autoFactory.createTaxiCommand());
     autoChooser.addOption("3x Processor Side", autoFactory.createEDCAuto());
     autoChooser.addOption("4x Processor Side", autoFactory.createFDCEAuto());
+
+    wristForceDirectionChooser.addOption("Clockwise", ForceDirection.CLOCKWISE);
+    wristForceDirectionChooser.addOption("Counter-Clockwise", ForceDirection.COUNTERCLOCKWISE);
+    wristForceDirectionChooser.addDefaultOption("Shortest", ForceDirection.SHORTEST);
   }
 
   /**
@@ -244,7 +273,7 @@ public class RobotContainer {
    * edu.wpi.first.wpilibj2.command.button.JoystickButton}.
    */
   private void configureButtonBindings() {
-    controller
+    /*controller
         .start()
         .onTrue(
             Commands.runOnce(
@@ -276,9 +305,8 @@ public class RobotContainer {
         .povRight()
         .onTrue(
             Commands.runOnce(() -> intake.setHasCoral(!intake.hasCoral()))
-                .withName("Toggle Has Coral"));
+                .withName("Toggle Has Coral")); */
 
-    /*
     // Coral score level selection
     final Container<Integer> selectedCoralScoreLevel = new Container<>(4);
 
@@ -322,14 +350,6 @@ public class RobotContainer {
                 .withName("Auto Score Selected Level"))
         .onFalse(superstructure.setStateCommand(WantedSuperState.DEFAULT_STATE));
 
-    // Manual coral backup
-    controller
-        .rightBumper()
-        .whileTrue(Commands.runOnce(() -> intake.setWantedState(WantedState.BACKUP_CORAL)))
-        .onFalse(
-            Commands.runOnce(() -> intake.setWantedState(WantedState.OFF))
-                .withName("Manual Coral Backup"));
-
     // Manual coral eject
     controller
         .b()
@@ -339,13 +359,13 @@ public class RobotContainer {
             Commands.runOnce(() -> intake.setWantedState(WantedState.OFF))
                 .withName("Manual Coral Eject"));
 
-    // Coral intake from station
+    // Coral intake from ground
     controller
         .leftTrigger()
         .whileTrue(
             superstructure
-                .setStateCommand(WantedSuperState.INTAKE_CORAL_FROM_STATION)
-                .withName("Coral Station Intake"))
+                .setStateCommand(WantedSuperState.INTAKE_CORAL_FROM_GROUND)
+                .withName("Coral Ground Intake"))
         .onFalse(superstructure.setStateCommand(WantedSuperState.DEFAULT_STATE));
 
     // Algae triggers
@@ -460,7 +480,6 @@ public class RobotContainer {
                     && DriverStation.getMatchTime() <= Math.round(endgameAlert2.get()))
         .onTrue(
             controllerRumbleCommand().withName("Controller Endgame Alert 2")); // Rumble three times
-            */
   }
 
   // Creates controller rumble command

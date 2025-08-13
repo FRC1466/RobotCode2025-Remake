@@ -8,17 +8,21 @@
 package frc.robot.constants;
 
 public class IntakeConstants {
-  // Coral operations
-  public static final RollerVoltages coralIntake = new RollerVoltages(-1.25, -4);
-  public static final RollerVoltages coralGrip = new RollerVoltages(0.2, 0);
-  public static final RollerVoltages coralOuttake = new RollerVoltages(-10, 0);
-  public static final RollerVoltages coralOuttakeL1 = new RollerVoltages(4, 0);
-  public static final RollerVoltages coralBackup = new RollerVoltages(0.5, 0);
+  // Coral operations. Because this is a theoretical voltage, voltage is purely positive or
+  // negative. Positive is intake, negative is outtake.
+  public static final RollerVoltages coralIntake =
+      new RollerVoltages(1, 1); // Pick coral off ground : slapdown
+  public static final RollerVoltages coralGrip =
+      new RollerVoltages(1, 1); // Hold coral : either mechanism
+  public static final RollerVoltages coralHandoff =
+      new RollerVoltages(1, -1); // Coral transfer : slapdown -> claw
+  public static final RollerVoltages coralOuttake =
+      new RollerVoltages(-1, -1); // Eject coral : either mechanism
 
   // Algae operations
-  public static final RollerVoltages algaeIntake = new RollerVoltages(3.0, 0);
-  public static final RollerVoltages algaeHold = new RollerVoltages(0.4, 0);
-  public static final RollerVoltages algaeEject = new RollerVoltages(-2.5, 0);
+  public static final RollerVoltages algaeIntake = new RollerVoltages(1, 0); // Claw
+  public static final RollerVoltages algaeHold = new RollerVoltages(1, 0); // Claw
+  public static final RollerVoltages algaeEject = new RollerVoltages(-1, 0); // Claw
 
   public static final double currentThresholdAlgaeIntake = 10.0;
   public static final double currentThresholdAlgaeHold = -80.0;
@@ -26,12 +30,12 @@ public class IntakeConstants {
   public static final double distanceThresholdCoralIntake = 0.06;
 
   public static final class RollerVoltages {
-    public final double endEffectorVoltage;
-    public final double starWheelVoltage;
+    public final double clawVoltage;
+    public final double slapdownVoltage;
 
-    public RollerVoltages(double endEffectorVoltage, double starWheelVoltage) {
-      this.endEffectorVoltage = endEffectorVoltage;
-      this.starWheelVoltage = starWheelVoltage;
+    public RollerVoltages(double clawVoltage, double slapdownVoltage) {
+      this.clawVoltage = clawVoltage;
+      this.slapdownVoltage = slapdownVoltage;
     }
   }
 }

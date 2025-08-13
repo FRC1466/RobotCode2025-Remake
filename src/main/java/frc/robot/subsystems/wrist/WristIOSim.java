@@ -24,8 +24,8 @@ import edu.wpi.first.wpilibj.simulation.SingleJointedArmSim;
  * https://docs.wpilib.org/en/stable/docs/software/wpilib-tools/robot-simulation/physics-sim.html
  */
 public class WristIOSim implements WristIO {
-  private static final double minAngleRads = 0.0;
-  private static final double maxAngleRads = Math.PI * 2;
+  private static final double minAngleDegrees = -540;
+  private static final double maxAngleDegrees = 540;
   private static final double armLength = 0.4;
   private static final double massKg = 4;
 
@@ -35,8 +35,8 @@ public class WristIOSim implements WristIO {
           wristReduction,
           SingleJointedArmSim.estimateMOI(armLength, massKg),
           armLength,
-          minAngleRads,
-          maxAngleRads,
+          Math.toRadians(minAngleDegrees),
+          Math.toRadians(maxAngleDegrees),
           false,
           0);
 
@@ -80,7 +80,10 @@ public class WristIOSim implements WristIO {
   @Override
   public void setTargetAngle(Rotation2d target) {
     closedLoop = true;
-    pid.setGoal(Math.max(minAngleRads, Math.min(maxAngleRads, target.getRadians())));
+    pid.setGoal(
+        Math.max(
+            Math.toRadians(minAngleDegrees),
+            Math.min(Math.toRadians(maxAngleDegrees), target.getRadians())));
   }
 
   @Override

@@ -41,22 +41,25 @@ public class ElevatorConstants {
   public static final LoggedTunableNumber velocityConstraintAlgae =
       new LoggedTunableNumber("Elevator/VelocityConstraintAlgae", 2.8);
 
-  public static final double cascadeCarriageMultiplier = 2.0;
-  public static final double pulleyRadiusInches = 1.0;
-  public static final double elevatorGearRatio = 3.0 * 4.0;
+  // Pulley specs
+  public static final double pulleyTeeth = 24.0;
+  public static final double beltPitchMm = 5.0; // HTD-5mm
+
+  // Derived pitch radius in inches
+  public static final double pulleyRadiusInches =
+      ((pulleyTeeth * (beltPitchMm / 25.4)) / Math.PI) / 2.0; // (PD in inches) / 2
+
+  // Gear ratio: motor revs per pulley rev
+  public static final double elevatorGearRatio = 36.0 / 9.0; // 4.0
 
   public static final double elevatorRotationsToMeters(double rotations) {
     return (rotations / elevatorGearRatio)
-        * cascadeCarriageMultiplier
         * (2 * Math.PI)
         * Units.inchesToMeters(pulleyRadiusInches);
   }
 
   public static final double elevatorMetersToRotations(double meters) {
-    return (meters
-            / (cascadeCarriageMultiplier
-                * (2 * Math.PI)
-                * Units.inchesToMeters(pulleyRadiusInches)))
+    return (meters / ((2 * Math.PI) * Units.inchesToMeters(pulleyRadiusInches)))
         * elevatorGearRatio;
   }
 

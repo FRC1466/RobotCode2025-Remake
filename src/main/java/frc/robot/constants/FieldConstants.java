@@ -12,6 +12,7 @@ import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
+import frc.robot.constants.SuperstructureConstants.ScoringDirection;
 
 @SuppressWarnings("UnusedVariable")
 public class FieldConstants {
@@ -232,17 +233,9 @@ public class FieldConstants {
       double yOffset =
           -Units.inchesToMeters(SuperstructureConstants.yOffsetFromTagForScoringL1Inches);
 
-      Rotation2d thetaOffset = Rotation2d.fromDegrees(30);
-      if (scoringSide == SuperstructureConstants.ScoringSide.RIGHT) {
-        yOffset *= -1;
-        thetaOffset = thetaOffset.times(-1);
-      }
       Transform2d offsetFromTag = new Transform2d(xOffset, yOffset, Rotation2d.k180deg);
 
       Pose2d transformedPose = tagPose.plus(offsetFromTag);
-      transformedPose =
-          transformedPose.rotateAround(
-              new Translation2d(transformedPose.getX(), transformedPose.getY()), thetaOffset);
 
       return transformedPose;
     } else {
@@ -251,18 +244,23 @@ public class FieldConstants {
   }
 
   public static Pose2d getDesiredFinalScoringPoseForCoral(
-      int tagID, SuperstructureConstants.ScoringSide scoringSide) {
-    return getDesiredPointToDriveToForCoralScoring(tagID, scoringSide, 0.0);
+      int tagID,
+      SuperstructureConstants.ScoringSide scoringSide,
+      SuperstructureConstants.ScoringDirection scoringDirection) {
+    return getDesiredPointToDriveToForCoralScoring(tagID, scoringSide, scoringDirection, 0.0);
   }
 
   public static Pose2d getDesiredIntermediateScoringPoseForCoral(
-      int tagID, SuperstructureConstants.ScoringSide scoringSide) {
-    return getDesiredPointToDriveToForCoralScoring(tagID, scoringSide, 1);
+      int tagID,
+      SuperstructureConstants.ScoringSide scoringSide,
+      SuperstructureConstants.ScoringDirection scoringDirection) {
+    return getDesiredPointToDriveToForCoralScoring(tagID, scoringSide, scoringDirection, 1);
   }
 
   public static Pose2d getDesiredPointToDriveToForCoralScoring(
       int tagID,
       SuperstructureConstants.ScoringSide scoringSide,
+      SuperstructureConstants.ScoringDirection scoringDirection,
       double distanceFromFinalScoringPoseMeters) {
 
     if (tagID >= 1 && tagID <= 22) {
@@ -279,9 +277,16 @@ public class FieldConstants {
       }
       Translation2d offsetFromTag = new Translation2d(xOffset, yOffset);
 
+      Rotation2d rotation = new Rotation2d();
+
+      if (scoringDirection == ScoringDirection.LEFT) {
+        rotation = Rotation2d.kCW_90deg;
+      } else {
+        rotation = Rotation2d.kCCW_90deg;
+      }
+
       var transformedPose =
-          tagPose.plus(
-              new Transform2d(offsetFromTag.getX(), offsetFromTag.getY(), Rotation2d.k180deg));
+          tagPose.plus(new Transform2d(offsetFromTag.getX(), offsetFromTag.getY(), rotation));
 
       return transformedPose;
     } else {

@@ -12,6 +12,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import frc.robot.constants.FieldConstants;
 import frc.robot.constants.ReefConstants;
+import frc.robot.constants.SuperstructureConstants;
 import java.util.List;
 import java.util.Map;
 import org.littletonrobotics.junction.AutoLogOutput;
@@ -108,5 +109,27 @@ public class RobotState {
     }
 
     return correctTagID;
+  }
+
+  public SuperstructureConstants.ScoringDirection getFacingSideRelativeToClosestTag() {
+    int tagId = getClosestTagId();
+    Pose2d tagPose = FieldConstants.getTagPose(tagId).toPose2d();
+    Pose2d robotPose = getRobotPoseFromSwerveDriveOdometry();
+
+    // Positive means tag rotation is CCW from robot rotation
+    double difference = tagPose.getRotation().minus(robotPose.getRotation()).getDegrees();
+    // Normalize to [-180,180)
+    difference = ((difference + 180) % 360 + 360) % 360 - 180;
+    Logger.recordOutput("RobotState/TagRotationDelta", difference);
+
+    // Decide shortest turn direction (LEFT = counter-clockwise, RIGHT = clockwise)
+    if (Math.abs(difference) < 1.0) {
+      // Already effectively aligned; pick an arbitrary stable direction (adjust if you add an
+      // ALIGNED state)
+      return SuperstructureConstants.ScoringDirection.LEFT;
+    }
+    return difference > 0
+        ? SuperstructureConstants.ScoringDirection.LEFT
+        : SuperstructureConstants.ScoringDirection.RIGHT;
   }
 }

@@ -23,6 +23,7 @@ import frc.robot.constants.FieldConstants;
 import frc.robot.constants.ReefConstants;
 import frc.robot.constants.ReefConstants.ReefFaces;
 import frc.robot.constants.SuperstructureConstants;
+import frc.robot.constants.SuperstructureConstants.ScoringDirection;
 import frc.robot.subsystems.Superstructure;
 
 /** A factory for creating autonomous programs for a given {@link Auto} */
@@ -125,6 +126,7 @@ public class AutoFactory {
                     FieldConstants.getDesiredPointToDriveToForCoralScoring(
                         offsetID,
                         SuperstructureConstants.ScoringSide.RIGHT,
+                        SuperstructureConstants.ScoringDirection.LEFT,
                         Units.inchesToMeters(30.0)),
                     15.0)
                 .until(
@@ -173,6 +175,7 @@ public class AutoFactory {
                     FieldConstants.getDesiredPointToDriveToForCoralScoring(
                         offsetID,
                         SuperstructureConstants.ScoringSide.LEFT,
+                        ScoringDirection.LEFT,
                         Units.inchesToMeters(30.0)),
                     15.0)
                 .until(
@@ -320,11 +323,11 @@ public class AutoFactory {
   }
 
   private Command waitForCoralRelease() {
-    return new WaitUntilCommand(() -> !robotContainer.getSuperstructure().hasCoral());
+    return new WaitUntilCommand(() -> !robotContainer.getIntake().hasCoralClaw());
   }
 
   private Command waitForCoralPickup() {
-    return new WaitUntilCommand(() -> robotContainer.getSuperstructure().hasCoral());
+    return new WaitUntilCommand(() -> robotContainer.getIntake().hasCoralSlapdown());
   }
 
   public Pose2d getAutoScoringPose(
@@ -340,7 +343,8 @@ public class AutoFactory {
                 || superState == Superstructure.WantedSuperState.SCORE_LEFT_L4)
             ? SuperstructureConstants.ScoringSide.LEFT
             : SuperstructureConstants.ScoringSide.RIGHT;
-    return FieldConstants.getDesiredFinalScoringPoseForCoral(id, scoringSide);
+    return FieldConstants.getDesiredFinalScoringPoseForCoral(
+        id, scoringSide, ScoringDirection.LEFT);
   }
 
   public Command driveToAutoScoringPose(
