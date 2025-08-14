@@ -22,6 +22,7 @@ public class SuperstructureConstants {
       yOffsetFromTagForScoringOnReefInchesBase + 9.500533;
   public static final double yOffsetFromTagForScoringOnReefInchesRight =
       yOffsetFromTagForScoringOnReefInchesBase - 9.500533;
+  public static final double yOffsetFromPoleForLeft = 9.500533;
   public static final double yOffsetFromTagForScoringL1Inches = 0;
 
   public enum ScoringSide {

@@ -330,8 +330,8 @@ public class Robot extends LoggedRobot {
 
   @Override
   public void teleopPeriodic() {
-    /* robotContainer.getWrist().setForceDirection(robotContainer.getWristForceDirection());
-    robotContainer.getWrist().setExactAngle(robotContainer.isExactAngle());
+    // robotContainer.getWrist().setForceDirection(robotContainer.getWristForceDirection());
+    /* robotContainer.getWrist().setExactAngle(robotContainer.isExactAngle());
     if (robotContainer.useDashboardValues()) {
       robotContainer
           .getElevator()

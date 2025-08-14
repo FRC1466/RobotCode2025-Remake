@@ -278,11 +278,6 @@ public class AutoFactory {
   private Command superFollowThenScore(
       ReefConstants.ReefFaces reefFaces, Superstructure.WantedSuperState scoreState) {
     return Commands.sequence(
-        Commands.runOnce(
-            () ->
-                robotContainer
-                    .getSuperstructure()
-                    .setHasDriveReachedIntermediatePoseForCoralScore(false)),
         (driveToAutoScoringPose(reefFaces, scoreState)
                 .until(() -> robotContainer.getSuperstructure().isReadyToEjectInAutoPeriod())
                 .alongWith(setState(scoreState)))

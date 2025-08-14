@@ -61,7 +61,7 @@ public class Wrist extends SubsystemBase {
   private SystemState systemState = SystemState.IDLING;
 
   @Getter private Rotation2d goalAngle;
-  @Getter private ForceDirection forceDirection = ForceDirection.SHORTEST;
+  @Setter @Getter private ForceDirection forceDirection = ForceDirection.SHORTEST;
   @Setter private boolean exactAngle = false;
 
   public Wrist(WristIO io, DoubleSupplier elevatorHeightMeters) {
@@ -97,7 +97,7 @@ public class Wrist extends SubsystemBase {
     double elevatorHeight = elevatorHeightMeters.getAsDouble();
 
     // If elevatorHeight >= max required (0.82), all angles are safe
-    if (elevatorHeight >= 0.80) {
+    if (elevatorHeight >= 0.81) {
       return desiredRadians;
     }
 
@@ -157,11 +157,6 @@ public class Wrist extends SubsystemBase {
 
   public double getAcceleration() {
     return inputs.wristAngularAccelerationRadPerSecSquared;
-  }
-
-  /** Set movement direction preference. */
-  public void setForceDirection(ForceDirection forceDirection) {
-    this.forceDirection = forceDirection == null ? ForceDirection.SHORTEST : forceDirection;
   }
 
   /** Return to normal shortest-path behavior. */

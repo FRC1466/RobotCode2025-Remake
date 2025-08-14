@@ -271,10 +271,16 @@ public class FieldConstants {
                   + Units.metersToInches(distanceFromFinalScoringPoseMeters));
 
       double yOffset =
-          -Units.inchesToMeters(SuperstructureConstants.yOffsetFromTagForScoringOnReefInchesLeft);
+          -Units.inchesToMeters(SuperstructureConstants.yOffsetFromTagForScoringOnReefInchesBase);
       if (scoringSide == SuperstructureConstants.ScoringSide.RIGHT) {
         yOffset *= -1;
       }
+      if (scoringDirection == SuperstructureConstants.ScoringDirection.LEFT) {
+        yOffset += Units.inchesToMeters(SuperstructureConstants.yOffsetFromPoleForLeft);
+      } else {
+        yOffset -= Units.inchesToMeters(SuperstructureConstants.yOffsetFromPoleForLeft);
+      }
+
       Translation2d offsetFromTag = new Translation2d(xOffset, yOffset);
 
       Rotation2d rotation = new Rotation2d();
