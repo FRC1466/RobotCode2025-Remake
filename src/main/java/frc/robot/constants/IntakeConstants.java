@@ -16,6 +16,8 @@ public class IntakeConstants {
       new RollerVoltages(1, 1); // Hold coral : either mechanism
   public static final RollerVoltages coralHandoff =
       new RollerVoltages(1, -1); // Coral transfer : slapdown -> claw
+  public static final RollerVoltages coralReturn =
+      new RollerVoltages(-1, 1); // Coral transfer : claw -> slapdown
   public static final RollerVoltages coralOuttake =
       new RollerVoltages(-1, -1); // Eject coral : either mechanism
 

@@ -18,7 +18,7 @@ public class SuperstructurePositions {
   public static final Position CORAL_HANDOFF = Position.fromDegrees(0, 180, 0.82);
 
   // Because L1 is one side I put it here
-  public static final Position L1 = Position.fromDegrees(60, 0, 0);
+  public static final Position L1 = Position.fromDegrees(60, 180, 0.82);
 
   // Reef levels (LEFT side) - HOLD and SCORE positions
   public static final Position L2_LEFT_HOLD = Position.fromDegrees(0, 320, 0.3);

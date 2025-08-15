@@ -97,7 +97,7 @@ public class Wrist extends SubsystemBase {
     double elevatorHeight = elevatorHeightMeters.getAsDouble();
 
     // If elevatorHeight >= max required (0.82), all angles are safe
-    if (elevatorHeight >= 0.81) {
+    if (elevatorHeight >= 0.8) {
       return desiredRadians;
     }
 

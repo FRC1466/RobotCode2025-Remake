@@ -9,6 +9,7 @@ package frc.robot.subsystems.intake;
 
 import static frc.robot.constants.IntakeConstants.*;
 
+import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Robot;
 import frc.robot.subsystems.rollers.RollerSystemIO;
@@ -43,6 +44,7 @@ public class Intake extends SubsystemBase {
     INTAKE_CORAL,
     HOLD_CORAL,
     HANDOFF_CORAL,
+    RETURN_CORAL,
     OUTTAKE_CORAL,
     INTAKE_ALGAE,
     HOLD_ALGAE,
@@ -59,6 +61,7 @@ public class Intake extends SubsystemBase {
     INTAKING_CORAL,
     HOLDING_CORAL,
     HANDING_OFF_CORAL,
+    RETURNING_CORAL,
     OUTTAKING_CORAL,
     INTAKING_ALGAE,
     HOLDING_ALGAE,
@@ -82,6 +85,8 @@ public class Intake extends SubsystemBase {
 
   @Getter private WantedState wantedState = WantedState.OFF;
   @Getter private SystemState systemState = SystemState.OFF;
+
+  private Debouncer ejectDebouncer = new Debouncer(.1);
 
   @Setter private boolean hasAlgae = false;
 
@@ -110,13 +115,28 @@ public class Intake extends SubsystemBase {
     if (Robot.isReal()) {
       hasCoralSlapdown = coralSensorInputs.data.distanceMeters() < distanceThresholdCoralIntake;
     }
+
+    if (systemState == SystemState.OUTTAKING_CORAL) {
+      if (ejectDebouncer.calculate(true)) {
+        setHasCoralClaw(false);
+        setHasCoralSlapdown(false);
+      }
+    } else {
+      ejectDebouncer.calculate(false);
+    }
+    /* if (systemState != SystemState.OFF
+        && systemState != SystemState.HOLDING_CORAL
+        && systemState != SystemState.INTAKING_CORAL
+        && systemState != SystemState.RETURNING_CORAL) {
+      hasCoralSlapdown = false;
+    }
+
     if (systemState != SystemState.OFF
         && systemState != SystemState.HOLDING_CORAL
         && systemState != SystemState.INTAKING_CORAL
         && systemState != SystemState.HANDING_OFF_CORAL) {
-      hasCoralSlapdown = false;
       hasCoralClaw = false;
-    }
+    } */
 
     // Perform state-specific actions
     if (systemState == SystemState.INTAKING_ALGAE && !hasAlgae && Robot.isReal()) {
@@ -151,6 +171,8 @@ public class Intake extends SubsystemBase {
       case HOLD_CORAL -> SystemState.HOLDING_CORAL;
       case HANDOFF_CORAL ->
           hasCoralClaw ? SystemState.HOLDING_CORAL : SystemState.HANDING_OFF_CORAL;
+      case RETURN_CORAL ->
+          hasCoralSlapdown ? SystemState.HOLDING_CORAL : SystemState.RETURNING_CORAL;
       case OUTTAKE_CORAL -> SystemState.OUTTAKING_CORAL;
       case INTAKE_ALGAE -> hasAlgae ? SystemState.HOLDING_ALGAE : SystemState.INTAKING_ALGAE;
       case HOLD_ALGAE -> SystemState.HOLDING_ALGAE;
@@ -171,6 +193,7 @@ public class Intake extends SubsystemBase {
       case INTAKING_CORAL -> voltages = coralIntake;
       case HOLDING_CORAL -> voltages = coralGrip;
       case HANDING_OFF_CORAL -> voltages = coralHandoff;
+      case RETURNING_CORAL -> voltages = coralReturn;
       case OUTTAKING_CORAL -> voltages = coralOuttake;
       case INTAKING_ALGAE -> voltages = algaeIntake;
       case HOLDING_ALGAE -> voltages = algaeHold;
