@@ -465,6 +465,7 @@ public class Superstructure extends SubsystemBase {
 
   private void intakeCoralFromGround() {
     subsystemsRun(CORAL_INTAKE);
+    wristRunExact(CORAL_INTAKE);
     intake.setWantedState(Intake.WantedState.INTAKE_CORAL);
     if (simCoralDebouncer.calculate(mechanismsAtGoals())) {
       intake.setHasCoralSlapdown(true);
@@ -632,11 +633,11 @@ public class Superstructure extends SubsystemBase {
           } else {
             subsystemsRun(L3_RIGHT_SCORE);
           }
-          handleCoralLocationTransitions();
+          intake.setWantedState(Intake.WantedState.OUTTAKE_CORAL);
         }
       }
     } else {
-      currentSuperState = CurrentSuperState.HOLDING_CORAL_TELEOP;
+      handleCoralLocationTransitions();
     }
   }
 
@@ -1060,9 +1061,10 @@ public class Superstructure extends SubsystemBase {
   private void handleCoralLocationTransitions() {
     switch (wantedCoralLocation) {
       case SLAPDOWN:
-        if (!intake.hasCoralSlapdown()) {
+        if (!intake.hasCoralSlapdown() && intake.hasCoralClaw()) {
+          subsystemsRun(CORAL_HANDOFF);
           wristRunExact(CORAL_HANDOFF);
-          if (allAtGoals()) {
+          if (mechanismsAtGoals()) {
             intake.setWantedState(Intake.WantedState.RETURN_CORAL);
             if (Robot.isSimulation()) {
               intake.setHasCoralSlapdown(simCoralDebouncer.calculate(true));
@@ -1072,9 +1074,9 @@ public class Superstructure extends SubsystemBase {
         }
         break;
       case CLAW:
-        if (!intake.hasCoralClaw()) {
+        if (!intake.hasCoralClaw() && intake.hasCoralSlapdown()) {
           wristRunExact(CORAL_HANDOFF);
-          if (allAtGoals()) {
+          if (mechanismsAtGoals()) {
             intake.setWantedState(Intake.WantedState.HANDOFF_CORAL);
             if (Robot.isSimulation()) {
               intake.setHasCoralSlapdown(!simCoralDebouncer.calculate(true));

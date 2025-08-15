@@ -7,6 +7,7 @@
 
 package frc.robot.constants;
 
+import edu.wpi.first.math.util.Units;
 import frc.robot.util.LoggedTunableNumber;
 
 public class WristConstants {
@@ -18,15 +19,15 @@ public class WristConstants {
   public static final double statorCurrentLimit = 80.0;
 
   // PID Constants
-  public static final LoggedTunableNumber kP = new LoggedTunableNumber("Wrist/kP", 8);
+  public static final LoggedTunableNumber kP = new LoggedTunableNumber("Wrist/kP", 5);
   public static final LoggedTunableNumber kI = new LoggedTunableNumber("Wrist/kI", 0.0);
   public static final LoggedTunableNumber kD = new LoggedTunableNumber("Wrist/kD", 0.0);
   public static final LoggedTunableNumber kG = new LoggedTunableNumber("Wrist/kG", 0.0);
   public static final LoggedTunableNumber kS = new LoggedTunableNumber("Wrist/kS", 0.0);
 
-  // Motion Magic Constants, in mechanism rotations
-  public static final double accelerationConstraint = 80;
-  public static final double velocityConstraint = 35;
+  // Motion Magic Constants, in rotations
+  public static final double accelerationConstraint = Units.rotationsToRadians(10);
+  public static final double velocityConstraint = Units.rotationsToRadians(2);
 
   // Gear Ratio
   public static final double wristReduction = (58.0 / 10.0) * (58.0 / 18.0);
