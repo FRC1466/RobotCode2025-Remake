@@ -14,7 +14,6 @@ import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants;
 import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
@@ -56,7 +55,6 @@ import frc.robot.subsystems.slapdown.SlapdownIOSim;
 import frc.robot.subsystems.vision.Vision;
 import frc.robot.subsystems.vision.VisionIO;
 import frc.robot.subsystems.wrist.Wrist;
-import frc.robot.subsystems.wrist.Wrist.ForceDirection;
 import frc.robot.subsystems.wrist.WristIO;
 import frc.robot.subsystems.wrist.WristIOSim;
 import frc.robot.util.AllianceFlipUtil;
@@ -64,10 +62,10 @@ import frc.robot.util.Container;
 import frc.robot.util.DoublePressTracker;
 import frc.robot.util.TriggerUtil;
 import java.util.Optional;
+import java.util.Set;
 import lombok.Getter;
 import lombok.experimental.ExtensionMethod;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
-import org.littletonrobotics.junction.networktables.LoggedNetworkBoolean;
 import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
 
 /**
@@ -91,55 +89,6 @@ public class RobotContainer {
 
   @Getter private SubsystemVisualizer subsystemVisualizerMeasured;
   @Getter private SubsystemVisualizer subsystemVisualizerGoal;
-
-  private final LoggedNetworkNumber elevatorHeightMetersNT =
-      new LoggedNetworkNumber("/SmartDashboard/Sim/ElevatorHeightMeters", 0.0);
-  private final LoggedNetworkNumber wristAngleDegreesNT =
-      new LoggedNetworkNumber("/SmartDashboard/Sim/WristAngleDegrees", 0.0);
-  private final LoggedNetworkBoolean slapdownDeployed =
-      new LoggedNetworkBoolean("/SmartDashboard/Sim/SlapdownDeployed", false);
-  private final LoggedNetworkBoolean coralInIntake =
-      new LoggedNetworkBoolean("/SmartDashboard/Sim/CoralInIntake", true);
-  private final LoggedNetworkBoolean exactWristPosition =
-      new LoggedNetworkBoolean("/SmartDashboard/Sim/exactWristPosition", false);
-  private final LoggedNetworkBoolean useDashboardValues =
-      new LoggedNetworkBoolean("/SmartDashboard/Sim/UseDashboardValues", true);
-  private final LoggedDashboardChooser<Wrist.ForceDirection> wristForceDirectionChooser =
-      new LoggedDashboardChooser<>("/SmartDashboard/Sim/WristForceDirection");
-
-  public boolean useDashboardValues() {
-    return useDashboardValues.get();
-  }
-
-  public double getElevatorHeightMeters() {
-    return elevatorHeightMetersNT.get();
-  }
-
-  public Rotation2d getWristAngle() {
-    return Rotation2d.fromDegrees(wristAngleDegreesNT.get());
-  }
-
-  public boolean isSlapdownDeployed() {
-    return slapdownDeployed.get();
-  }
-
-  public boolean isExactAngle() {
-    return exactWristPosition.get();
-  }
-
-  public boolean isCoralInIntake() {
-    return coralInIntake.get();
-  }
-
-  public Wrist.ForceDirection getWristForceDirection() {
-    return wristForceDirectionChooser.get();
-  }
-
-  public void resetDashboardMechanismPositions() {
-    elevatorHeightMetersNT.set(0.0);
-    wristAngleDegreesNT.set(0.0);
-    slapdownDeployed.set(false);
-  }
 
   @Getter
   private AutoFactory autoFactory =
@@ -260,10 +209,6 @@ public class RobotContainer {
     autoChooser.addOption("Taxi", autoFactory.createTaxiCommand());
     autoChooser.addOption("3x Processor Side", autoFactory.createEDCAuto());
     autoChooser.addOption("4x Processor Side", autoFactory.createFDCEAuto());
-
-    wristForceDirectionChooser.addOption("Clockwise", ForceDirection.CLOCKWISE);
-    wristForceDirectionChooser.addOption("Counter-Clockwise", ForceDirection.COUNTERCLOCKWISE);
-    wristForceDirectionChooser.addDefaultOption("Shortest", ForceDirection.SHORTEST);
   }
 
   /**
@@ -273,40 +218,6 @@ public class RobotContainer {
    * edu.wpi.first.wpilibj2.command.button.JoystickButton}.
    */
   private void configureButtonBindings() {
-    /*controller
-        .start()
-        .onTrue(
-            Commands.runOnce(
-                    () -> {
-                      double[] positions = {
-                        elevatorHeightMetersNT.get(), // meters
-                        wristAngleDegreesNT.get(), // wrist deg
-                        slapdownDeployed.get() ? 1.0 : 0.0 // slapdown deployed (1 or 0)
-                      };
-                      Logger.recordOutput("LoggedPositions, elevator wrist slapdown", positions);
-                    })
-                .withName("Log Mechanism Positions"));
-
-    controller
-        .back()
-        .onTrue(
-            Commands.runOnce(() -> resetDashboardMechanismPositions())
-                .withName("Reset Mechanism Positions"));
-
-    // D-Pad left: Toggle simulated algae possession
-    controller
-        .povLeft()
-        .onTrue(
-            Commands.runOnce(() -> intake.setHasAlgae(!intake.hasAlgae()))
-                .withName("Toggle Has Algae"));
-
-    // D-Pad right: Toggle simulated coral possession
-    controller
-        .povRight()
-        .onTrue(
-            Commands.runOnce(() -> intake.setHasCoral(!intake.hasCoral()))
-                .withName("Toggle Has Coral")); */
-
     // Coral score level selection
     final Container<Integer> selectedCoralScoreLevel = new Container<>(4);
 
@@ -320,7 +231,6 @@ public class RobotContainer {
     controller.x().onTrue(Commands.runOnce(() -> scoreOnLeft.value = !scoreOnLeft.value));
 
     // Auto score
-    Container<Boolean> autoScoreRunning = new Container<>(false);
     controller
         .rightTrigger()
         .whileTrue(
@@ -343,10 +253,7 @@ public class RobotContainer {
                         };
                       }
                     },
-                    java.util.Set.of(superstructure))
-                .deadlineWith(
-                    Commands.startEnd(
-                        () -> autoScoreRunning.value = true, () -> autoScoreRunning.value = false))
+                    Set.of(superstructure))
                 .withName("Auto Score Selected Level"))
         .onFalse(superstructure.setStateCommand(WantedSuperState.DEFAULT_STATE));
 
@@ -500,7 +407,6 @@ public class RobotContainer {
   }
 
   public void updateAlerts() {
-    // Controller disconnected alerts
     driverDisconnected.set(!DriverStation.isJoystickConnected(controller.getHID().getPort()));
   }
 

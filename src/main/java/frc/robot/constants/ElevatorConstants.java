@@ -29,17 +29,12 @@ public class ElevatorConstants {
   public static final LoggedTunableNumber kS = new LoggedTunableNumber("Elevator/kS", 0.0);
 
   // Motion Magic Constants
-  public static final LoggedTunableNumber accelerationConstraint =
-      new LoggedTunableNumber("Elevator/AccelerationConstraint", 8);
-  public static final LoggedTunableNumber accelerationConstraintAlgae =
-      new LoggedTunableNumber("Elevator/AccelerationConstraintAlgae", 6);
-  public static final LoggedTunableNumber accelerationConstraintDown =
-      new LoggedTunableNumber("Elevator/AccelerationConstraintDown", 6);
+  public static final double accelerationConstraint = 8.0;
+  public static final double accelerationConstraintAlgae = 6.0;
+  public static final double accelerationConstraintDown = 6.0;
 
-  public static final LoggedTunableNumber velocityConstraint =
-      new LoggedTunableNumber("Elevator/VelocityConstraint", 3);
-  public static final LoggedTunableNumber velocityConstraintAlgae =
-      new LoggedTunableNumber("Elevator/VelocityConstraintAlgae", 2.8);
+  public static final double velocityConstraint = 3.0;
+  public static final double velocityConstraintAlgae = 2.8;
 
   // Pulley specs
   public static final double pulleyTeeth = 24.0;

@@ -65,9 +65,9 @@ public class ElevatorIOTalonFX implements ElevatorIO {
     config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
 
     config.MotionMagic.MotionMagicAcceleration =
-        ElevatorConstants.elevatorMetersToRotations(ElevatorProfile.DEFAULT.acceleration.get());
+        ElevatorConstants.elevatorMetersToRotations(ElevatorProfile.DEFAULT.acceleration);
     config.MotionMagic.MotionMagicCruiseVelocity =
-        ElevatorConstants.elevatorMetersToRotations(ElevatorProfile.DEFAULT.velocity.get());
+        ElevatorConstants.elevatorMetersToRotations(ElevatorProfile.DEFAULT.velocity);
 
     config.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
 
@@ -152,10 +152,9 @@ public class ElevatorIOTalonFX implements ElevatorIO {
         .apply(
             new MotionMagicConfigs()
                 .withMotionMagicCruiseVelocity(
-                    ElevatorConstants.elevatorMetersToRotations(elevatorProfile.velocity.get()))
+                    ElevatorConstants.elevatorMetersToRotations(elevatorProfile.velocity))
                 .withMotionMagicAcceleration(
-                    ElevatorConstants.elevatorMetersToRotations(
-                        elevatorProfile.acceleration.get())));
+                    ElevatorConstants.elevatorMetersToRotations(elevatorProfile.acceleration)));
   }
 
   @Override

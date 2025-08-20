@@ -8,9 +8,6 @@
 package frc.robot;
 
 import com.ctre.phoenix6.SignalLogger;
-import com.ctre.phoenix6.swerve.SwerveModuleConstants;
-import com.ctre.phoenix6.swerve.SwerveModuleConstants.DriveMotorArrangement;
-import com.ctre.phoenix6.swerve.SwerveModuleConstants.SteerMotorArrangement;
 import edu.wpi.first.hal.AllianceStationID;
 import edu.wpi.first.math.MathShared;
 import edu.wpi.first.math.MathSharedStore;
@@ -29,7 +26,6 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.constants.Constants;
 import frc.robot.constants.Constants.RobotType;
-import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.Superstructure;
 import frc.robot.util.DummyLogReceiver;
 import frc.robot.util.LoggedTracer;
@@ -190,22 +186,6 @@ public class Robot extends LoggedRobot {
     CommandScheduler.getInstance()
         .onCommandInterrupt((Command command) -> logCommandFunction.accept(command, false));
 
-    // Check for valid swerve config
-    var modules =
-        new SwerveModuleConstants[] {
-          TunerConstants.FrontLeft,
-          TunerConstants.FrontRight,
-          TunerConstants.BackLeft,
-          TunerConstants.BackRight
-        };
-    for (var constants : modules) {
-      if (constants.DriveMotorType != DriveMotorArrangement.TalonFX_Integrated
-          || constants.SteerMotorType != SteerMotorArrangement.TalonFX_Integrated) {
-        throw new RuntimeException(
-            "You are using an unsupported swerve configuration, which this template does not support without manual customization. The 2025 release of Phoenix supports some swerve configurations which were not available during 2025 beta testing, preventing any development and support from the AdvantageKit developers.");
-      }
-    }
-
     // Reset alert timers
     canInitialErrorTimer.restart();
     canErrorTimer.restart();
@@ -329,42 +309,7 @@ public class Robot extends LoggedRobot {
   }
 
   @Override
-  public void teleopPeriodic() {
-    // robotContainer.getWrist().setForceDirection(robotContainer.getWristForceDirection());
-    /* robotContainer.getWrist().setExactAngle(robotContainer.isExactAngle());
-    if (robotContainer.useDashboardValues()) {
-      robotContainer
-          .getElevator()
-          .setWantedState(
-              Elevator.WantedState.MOVE_TO_POSITION, robotContainer.getElevatorHeightMeters());
-      robotContainer
-          .getWrist()
-          .setWantedState(Wrist.WantedState.MOVE_TO_POSITION, robotContainer.getWristAngle());
-      robotContainer
-          .getSlapdown()
-          .setWantedState(
-              Slapdown.WantedState.MOVE_TO_POSITION,
-              robotContainer.isSlapdownDeployed()
-                  ? Rotation2d.fromRadians(SlapdownConstants.intakePosition.get())
-                  : Rotation2d.fromRadians(SlapdownConstants.stowedPosition.get()));
-    } else {
-      robotContainer
-          .getElevator()
-          .setWantedState(
-              Elevator.WantedState.MOVE_TO_POSITION,
-              SuperstructurePositionChooser.getSelected().elevatorHeightMeters());
-      robotContainer
-          .getWrist()
-          .setWantedState(
-              Wrist.WantedState.MOVE_TO_POSITION,
-              SuperstructurePositionChooser.getSelected().wristAngle());
-      robotContainer
-          .getSlapdown()
-          .setWantedState(
-              Slapdown.WantedState.MOVE_TO_POSITION,
-              SuperstructurePositionChooser.getSelected().slapdownAngle());
-    } */
-  }
+  public void teleopPeriodic() {}
 
   /** This function is called once when test mode is enabled. */
   @Override
