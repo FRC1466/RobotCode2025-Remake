@@ -31,7 +31,6 @@ import frc.robot.autos.AutoFactory;
 import frc.robot.constants.Constants;
 import frc.robot.constants.FieldConstants;
 import frc.robot.generated.TunerConstants;
-import frc.robot.subsystems.SubsystemVisualizer;
 import frc.robot.subsystems.Superstructure;
 import frc.robot.subsystems.Superstructure.WantedSuperState;
 import frc.robot.subsystems.drive.Drive;
@@ -86,9 +85,6 @@ public class RobotContainer {
   @Getter private OverridePublisher overridePublisher;
 
   @Getter private Superstructure superstructure;
-
-  @Getter private SubsystemVisualizer subsystemVisualizerMeasured;
-  @Getter private SubsystemVisualizer subsystemVisualizerGoal;
 
   @Getter
   private AutoFactory autoFactory =
@@ -180,27 +176,6 @@ public class RobotContainer {
 
     superstructure =
         new Superstructure(drive, intake, elevator, wrist, slapdown, overridePublisher, vision);
-
-    subsystemVisualizerMeasured =
-        new SubsystemVisualizer(
-            "Measured",
-            () -> elevator.getPosition(),
-            () -> wrist.getAngle().getRadians(),
-            () -> slapdown.getAngle().getRadians(),
-            () -> intake.hasCoralClaw() || intake.hasCoralSlapdown(),
-            () -> intake.hasAlgae(),
-            () -> intake.hasCoralSlapdown(),
-            RobotState.getInstance()::getRobotPoseFromSwerveDriveOdometry);
-    subsystemVisualizerGoal =
-        new SubsystemVisualizer(
-            "Goal",
-            () -> elevator.getGoalPosition(),
-            () -> wrist.getGoalAngle().getRadians(),
-            () -> slapdown.getGoalAngle().getRadians(),
-            () -> intake.hasCoralClaw() || intake.hasCoralSlapdown(),
-            () -> intake.hasAlgae(),
-            () -> intake.hasCoralSlapdown(),
-            RobotState.getInstance()::getRobotPoseFromSwerveDriveOdometry);
 
     // Configure the button bindings
     configureButtonBindings();
