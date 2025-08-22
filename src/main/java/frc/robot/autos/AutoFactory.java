@@ -91,6 +91,25 @@ public class AutoFactory {
                 FieldConstants.getRightStationPickup(), Units.feetToMeters(10))));
   }
 
+  public Pair<Pose2d, Command> createJKLAuto() {
+    var initialPose = FieldConstants.getLeftStartingPose(alliance);
+    return Pair.of(
+        initialPose,
+        Commands.sequence(
+            superFollowThenScore(ReefFaces.IJ, Superstructure.WantedSuperState.SCORE_RIGHT_L4),
+            Commands.waitSeconds(.1),
+            followThenIntakeFromStation(
+                FieldConstants.getLeftStationPickup(), Units.feetToMeters(10)),
+            superFollowThenScore(ReefFaces.KL, Superstructure.WantedSuperState.SCORE_LEFT_L4),
+            Commands.waitSeconds(.1),
+            followThenIntakeFromStation(
+                FieldConstants.getLeftStationPickup(), Units.feetToMeters(10)),
+            superFollowThenScore(ReefFaces.KL, Superstructure.WantedSuperState.SCORE_RIGHT_L4),
+            Commands.waitSeconds(.1),
+            followThenIntakeFromStation(
+                FieldConstants.getLeftStationPickup(), Units.feetToMeters(10))));
+  }
+
   public Pair<Pose2d, Command> createIKLJAuto() {
     var offsetID =
         alliance == DriverStation.Alliance.Blue

@@ -194,6 +194,7 @@ public class RobotContainer {
     autoChooser.addDefaultOption("Idle", autoFactory.createIdleCommand());
     autoChooser.addOption("Taxi", autoFactory.createTaxiCommand());
     autoChooser.addOption("3x Processor Side", autoFactory.createEDCAuto());
+    autoChooser.addOption("3x Not Processor Side", autoFactory.createJKLAuto());
     autoChooser.addOption("4x Processor Side", autoFactory.createFDCEAuto());
   }
 

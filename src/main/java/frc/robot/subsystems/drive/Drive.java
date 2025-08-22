@@ -429,8 +429,8 @@ public class Drive extends SubsystemBase {
     double yMagnitude = MathUtil.applyDeadband(controller.getLeftX(), controllerDeadband);
     double angularMagnitude = MathUtil.applyDeadband(controller.getRightX(), controllerDeadband);
 
-    xMagnitude = xLimiter.calculate(xMagnitude);
-    yMagnitude = yLimiter.calculate(yMagnitude);
+    // xMagnitude = xLimiter.calculate(xMagnitude);
+    // yMagnitude = yLimiter.calculate(yMagnitude);
 
     // Commented out, enable for smoother driving
     // xMagnitude = Math.copySign(xMagnitude * xMagnitude, xMagnitude);

@@ -849,14 +849,14 @@ public class Superstructure extends SubsystemBase {
     if (!hasDriveReachedIntermediatePoseForCoralScore) {
       Pose2d intermediatePose =
           FieldConstants.getDesiredIntermediateScoringPoseForCoral(id, scoringSide);
-      drive.setDesiredPoseForDriveToPointWithMaximumAngularVelocity(intermediatePose, 3.0);
+      drive.setDesiredPoseForDriveToPointWithMaximumAngularVelocity(intermediatePose, 1);
       if (drive.isAtDriveToPointSetpoint()) {
         hasDriveReachedIntermediatePoseForCoralScore = true;
       }
       Logger.recordOutput("Superstructure/DesiredPointToDriveTo", intermediatePose);
       return true;
     } else {
-      drive.setDesiredPoseForDriveToPointWithMaximumAngularVelocity(desiredPoseToDriveTo, 3.0);
+      drive.setDesiredPoseForDriveToPointWithMaximumAngularVelocity(desiredPoseToDriveTo, 1);
       hasDriveToPointSetPointBeenSet = true;
       Logger.recordOutput("Superstructure/DesiredPointToDriveTo", desiredPoseToDriveTo);
       return true;
