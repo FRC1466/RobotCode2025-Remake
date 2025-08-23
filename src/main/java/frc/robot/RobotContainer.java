@@ -15,6 +15,7 @@ import com.ctre.phoenix6.swerve.SwerveModuleConstants;
 import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.system.plant.DCMotor;
+import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -31,6 +32,7 @@ import frc.robot.autos.AutoFactory;
 import frc.robot.constants.Constants;
 import frc.robot.constants.FieldConstants;
 import frc.robot.generated.TunerConstants;
+import frc.robot.subsystems.MechanismVisualizer;
 import frc.robot.subsystems.Superstructure;
 import frc.robot.subsystems.Superstructure.WantedSuperState;
 import frc.robot.subsystems.drive.Drive;
@@ -83,6 +85,7 @@ public class RobotContainer {
   @Getter private Intake intake;
   @Getter private Vision vision;
   @Getter private OverridePublisher overridePublisher;
+  @Getter private MechanismVisualizer mechanismVisualizer;
 
   @Getter private Superstructure superstructure;
 
@@ -173,9 +176,14 @@ public class RobotContainer {
     if (overridePublisher == null) {
       overridePublisher = new OverridePublisher(new OverridePublisherIO() {});
     }
+    final var table = NetworkTableInstance.getDefault().getTable("AdvantageScope");
+    mechanismVisualizer = new MechanismVisualizer(table);
 
     superstructure =
         new Superstructure(drive, intake, elevator, wrist, slapdown, overridePublisher, vision);
+
+    mechanismVisualizer.setStageTravel(new double[] {0.3, 0.297078, 0.297078, 0.296373});
+    mechanismVisualizer.setStageZeroOffsets(new double[] {0.0, 0.0, 0.0, 0.0});
 
     // Configure the button bindings
     configureButtonBindings();

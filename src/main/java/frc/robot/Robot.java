@@ -218,6 +218,54 @@ public class Robot extends LoggedRobot {
     CommandScheduler.getInstance().run();
     LoggedTracer.record("Commands");
 
+    // Publish and read values from SmartDashboard (NetworkTables)
+    double ntSlapdownCoral =
+        edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.getNumber(
+            "MechanismViz/SlapdownCoral", 0.0);
+    edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.putNumber(
+        "MechanismViz/SlapdownCoral", ntSlapdownCoral);
+
+    double ntSlapdownAlgae =
+        edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.getNumber(
+            "MechanismViz/SlapdownAlgae", 0.0);
+    edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.putNumber(
+        "MechanismViz/SlapdownAlgae", ntSlapdownAlgae);
+
+    double ntDiffPivot =
+        edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.getNumber(
+            "MechanismViz/DiffPivot", 0.0);
+    edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.putNumber(
+        "MechanismViz/DiffPivot", ntDiffPivot);
+
+    double ntDiffRotation =
+        edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.getNumber(
+            "MechanismViz/DiffRotation", 0.0);
+    edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.putNumber(
+        "MechanismViz/DiffRotation", ntDiffRotation);
+
+    double ntElevatorHeight =
+        edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.getNumber(
+            "MechanismViz/ElevatorHeight", 0.0);
+    edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.putNumber(
+        "MechanismViz/ElevatorHeight", ntElevatorHeight);
+
+    double ntElevatorRotation =
+        edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.getNumber(
+            "MechanismViz/ElevatorRotation", 0.0);
+    edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.putNumber(
+        "MechanismViz/ElevatorRotation", ntElevatorRotation);
+
+    robotContainer
+        .getMechanismVisualizer()
+        .update(
+            RobotState.getInstance().getRobotPoseFromSwerveDriveOdometry(),
+            ntSlapdownCoral,
+            ntSlapdownAlgae,
+            ntDiffRotation,
+            ntDiffPivot,
+            ntElevatorHeight,
+            ntElevatorRotation);
+
     // Print auto duration
     if (autoCommand != null) {
       if (!autoMessagePrinted && !autoCommand.isScheduled()) {

@@ -241,6 +241,7 @@ public class Drive extends SubsystemBase {
 
     Logger.recordOutput("Subsystems/Drive/SystemState", systemState);
     Logger.recordOutput("Subsystems/Drive/DesiredState", wantedState);
+    Logger.recordOutput("Subsystems/Drive/Pose", swerveInputs.Pose);
     applyStates();
 
     // Record cycle time

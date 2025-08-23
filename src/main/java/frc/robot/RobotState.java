@@ -15,7 +15,6 @@ import frc.robot.constants.ReefConstants;
 import frc.robot.constants.SuperstructureConstants;
 import java.util.List;
 import java.util.Map;
-import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
 public class RobotState {
@@ -28,7 +27,7 @@ public class RobotState {
     return instance;
   }
 
-  @AutoLogOutput private Pose2d robotToFieldFromSwerveDriveOdometry = new Pose2d();
+  private Pose2d robotToFieldFromSwerveDriveOdometry = new Pose2d();
   private ChassisSpeeds robotChassisSpeeds = new ChassisSpeeds();
 
   public record SwerveDriveObservation(Pose2d robotPose, ChassisSpeeds robotSpeeds) {}

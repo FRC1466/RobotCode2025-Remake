@@ -1,3 +1,10 @@
+// Copyright (c) 2025 FRC 1466
+// http://github.com/FRC1466
+//
+// Use of this source code is governed by an MIT-style
+// license that can be found in the LICENSE file at
+// the root directory of this project.
+
 package frc.robot.subsystems;
 
 import edu.wpi.first.math.geometry.Pose2d;
@@ -16,7 +23,8 @@ public class MechanismVisualizer implements AutoCloseable {
   // Geometry (robot frame)
   private static final Translation3d coralPivotAnchor = new Translation3d(0.330007, 0.0, 0.215652);
   private static final Translation3d algaePivotAnchor = new Translation3d(0.330007, 0.0, 0.215652);
-  private static final Translation3d elevatorBaseAnchor = new Translation3d(-0.179166, 0.0, 0.279399);
+  private static final Translation3d elevatorBaseAnchor =
+      new Translation3d(-0.179166, 0.0, 0.279399);
 
   // Diff mount relative to elevator base frame (when height=0, rotation=0)
   private static final Translation3d diffMountOffsetLocal =
@@ -29,7 +37,7 @@ public class MechanismVisualizer implements AutoCloseable {
   private static final double defaultPerStageTravel = defaultTotalMaxTravel / movingStages;
 
   // Per-stage motion
-  private final double[] perStageTravel = new double[movingStages];         // top-most first
+  private final double[] perStageTravel = new double[movingStages]; // top-most first
   private final double[] stageZeroOffsets = new double[elevatorStageCount]; // top-most first
 
   public MechanismVisualizer(NetworkTable table) {
@@ -66,8 +74,8 @@ public class MechanismVisualizer implements AutoCloseable {
     Pose3d diffBasePose = elevBasePose.transformBy(new Transform3d(diffLocal, new Rotation3d()));
 
     // Differential rotations: elevator tilt -> pivot -> wrist spin
-    Rotation3d diffBaseRot = rotElev.rotateBy(new Rotation3d(0, diffPivot, 0));
-    Rotation3d wristRot = diffBaseRot.rotateBy(new Rotation3d(0, 0, diffRotation));
+    Rotation3d diffBaseRot = new Rotation3d(0, diffPivot, 0).rotateBy(rotElev);
+    Rotation3d wristRot = new Rotation3d(0, 0, diffRotation).rotateBy(diffBaseRot);
 
     poses[2] = new Pose3d(diffBasePose.getTranslation(), diffBaseRot);
     poses[3] = new Pose3d(diffBasePose.getTranslation(), wristRot);
@@ -97,7 +105,9 @@ public class MechanismVisualizer implements AutoCloseable {
         }
         stageZ = stageZeroOffsets[i] + sum;
       }
-      Pose3d stagePose = elevBasePose.transformBy(new Transform3d(new Translation3d(0, 0, stageZ), new Rotation3d()));
+      Pose3d stagePose =
+          elevBasePose.transformBy(
+              new Transform3d(new Translation3d(0, 0, stageZ), new Rotation3d()));
       poses[4 + i] = stagePose;
     }
 
@@ -105,14 +115,17 @@ public class MechanismVisualizer implements AutoCloseable {
     poses[4 + elevatorStageCount - 1] = new Pose3d(elevatorBaseAnchor, rotElev);
 
     // Convert robot-local to field
-    Pose3d robotPose3d = new Pose3d(
-        robotPose.getX(),
-        robotPose.getY(),
-        0.0,
-        new Rotation3d(0, 0, robotPose.getRotation().getRadians()));
+    Pose3d robotPose3d =
+        new Pose3d(
+            robotPose.getX(),
+            robotPose.getY(),
+            0.0,
+            new Rotation3d(0, 0, robotPose.getRotation().getRadians()));
 
     for (int i = 0; i < poses.length; i++) {
-      poses[i] = robotPose3d.transformBy(new Transform3d(poses[i].getTranslation(), poses[i].getRotation()));
+      poses[i] =
+          robotPose3d.transformBy(
+              new Transform3d(poses[i].getTranslation(), poses[i].getRotation()));
     }
 
     mechanismPosesPublisher.set(poses);
@@ -120,11 +133,13 @@ public class MechanismVisualizer implements AutoCloseable {
 
   public void setStageTravel(double[] perStageTravelMeters) {
     if (perStageTravelMeters == null || perStageTravelMeters.length != movingStages) return;
-    for (int i = 0; i < movingStages; i++) perStageTravel[i] = Math.max(0.0, perStageTravelMeters[i]);
+    for (int i = 0; i < movingStages; i++)
+      perStageTravel[i] = Math.max(0.0, perStageTravelMeters[i]);
   }
 
   public void setStageZeroOffsets(double[] stageZeroOffsetsMeters) {
-    if (stageZeroOffsetsMeters == null || stageZeroOffsetsMeters.length != elevatorStageCount) return;
+    if (stageZeroOffsetsMeters == null || stageZeroOffsetsMeters.length != elevatorStageCount)
+      return;
     for (int i = 0; i < elevatorStageCount; i++) stageZeroOffsets[i] = stageZeroOffsetsMeters[i];
   }
 
@@ -136,6 +151,7 @@ public class MechanismVisualizer implements AutoCloseable {
   public void close() {
     try {
       mechanismPosesPublisher.close();
-    } catch (Exception ignored) {}
+    } catch (Exception ignored) {
+    }
   }
 }
