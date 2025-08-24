@@ -32,9 +32,9 @@ import frc.robot.autos.AutoFactory;
 import frc.robot.constants.Constants;
 import frc.robot.constants.FieldConstants;
 import frc.robot.generated.TunerConstants;
+import frc.robot.subsystems.Choreographer;
+import frc.robot.subsystems.Choreographer.WantedChoreography;
 import frc.robot.subsystems.MechanismVisualizer;
-import frc.robot.subsystems.Superstructure;
-import frc.robot.subsystems.Superstructure.WantedSuperState;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.DriveIO;
 import frc.robot.subsystems.drive.DriveIOCTRE;
@@ -87,7 +87,7 @@ public class RobotContainer {
   @Getter private OverridePublisher overridePublisher;
   @Getter private MechanismVisualizer mechanismVisualizer;
 
-  @Getter private Superstructure superstructure;
+  @Getter private Choreographer superstructure;
 
   @Getter
   private AutoFactory autoFactory =
@@ -180,7 +180,7 @@ public class RobotContainer {
     mechanismVisualizer = new MechanismVisualizer(table);
 
     superstructure =
-        new Superstructure(drive, intake, elevator, wrist, slapdown, overridePublisher, vision);
+        new Choreographer(drive, intake, elevator, wrist, slapdown, overridePublisher, vision);
 
     mechanismVisualizer.setStageTravel(new double[] {0.3, 0.297078, 0.297078, 0.296373});
     mechanismVisualizer.setStageZeroOffsets(new double[] {0.0, 0.0, 0.0, 0.0});
@@ -210,8 +210,7 @@ public class RobotContainer {
     controller.povDown().onTrue(Commands.runOnce(() -> selectedCoralScoreLevel.value = 1));
 
     // Scoring side selection
-    final Container<Boolean> scoreOnLeft = new Container<>(true);
-    controller.x().onTrue(Commands.runOnce(() -> scoreOnLeft.value = !scoreOnLeft.value));
+    controller.x().onTrue(superstructure.flipScoringSideCommand());
 
     // Auto score
     controller
@@ -219,26 +218,20 @@ public class RobotContainer {
         .whileTrue(
             Commands.defer(
                     () -> {
-                      if (scoreOnLeft.value) {
-                        return switch (selectedCoralScoreLevel.value) {
-                          case 1 -> superstructure.setStateCommand(WantedSuperState.SCORE_LEFT_L1);
-                          case 2 -> superstructure.setStateCommand(WantedSuperState.SCORE_LEFT_L2);
-                          case 3 -> superstructure.setStateCommand(WantedSuperState.SCORE_LEFT_L3);
-                          default -> superstructure.setStateCommand(WantedSuperState.SCORE_LEFT_L4);
-                        };
-                      } else {
-                        return switch (selectedCoralScoreLevel.value) {
-                          case 1 -> superstructure.setStateCommand(WantedSuperState.SCORE_RIGHT_L1);
-                          case 2 -> superstructure.setStateCommand(WantedSuperState.SCORE_RIGHT_L2);
-                          case 3 -> superstructure.setStateCommand(WantedSuperState.SCORE_RIGHT_L3);
-                          default ->
-                              superstructure.setStateCommand(WantedSuperState.SCORE_RIGHT_L4);
-                        };
-                      }
+                      return switch (selectedCoralScoreLevel.value) {
+                        case 1 ->
+                            superstructure.setChoreographyCommand(WantedChoreography.SCORE_L1);
+                        case 2 ->
+                            superstructure.setChoreographyCommand(WantedChoreography.SCORE_L2);
+                        case 3 ->
+                            superstructure.setChoreographyCommand(WantedChoreography.SCORE_L3);
+                        default ->
+                            superstructure.setChoreographyCommand(WantedChoreography.SCORE_L4);
+                      };
                     },
                     Set.of(superstructure))
                 .withName("Auto Score Selected Level"))
-        .onFalse(superstructure.setStateCommand(WantedSuperState.DEFAULT_STATE));
+        .onFalse(superstructure.setChoreographyCommand(WantedChoreography.DEFAULT_STATE));
 
     // Manual coral eject
     controller
@@ -254,9 +247,9 @@ public class RobotContainer {
         .leftTrigger()
         .whileTrue(
             superstructure
-                .setStateCommand(WantedSuperState.INTAKE_CORAL_FROM_GROUND)
+                .setChoreographyCommand(WantedChoreography.INTAKE_CORAL_FROM_GROUND)
                 .withName("Coral Ground Intake"))
-        .onFalse(superstructure.setStateCommand(WantedSuperState.DEFAULT_STATE));
+        .onFalse(superstructure.setChoreographyCommand(WantedChoreography.DEFAULT_STATE));
 
     // Algae triggers
     Trigger onOpposingSide =
@@ -289,9 +282,9 @@ public class RobotContainer {
         .and(() -> !hasAlgae.value)
         .whileTrue(
             superstructure
-                .setStateCommand(WantedSuperState.INTAKE_ALGAE_REEF)
+                .setChoreographyCommand(WantedChoreography.INTAKE_ALGAE_REEF)
                 .withName("Algae Reef Intake"))
-        .onFalse(superstructure.setStateCommand(WantedSuperState.DEFAULT_STATE));
+        .onFalse(superstructure.setChoreographyCommand(WantedChoreography.DEFAULT_STATE));
 
     // Algae pre-processor
     controller
@@ -301,9 +294,9 @@ public class RobotContainer {
         .and(controller.a().negate())
         .whileTrue(
             superstructure
-                .setStateCommand(WantedSuperState.MOVE_ALGAE_TO_PROCESSOR_POSITION)
+                .setChoreographyCommand(WantedChoreography.MOVE_ALGAE_TO_PROCESSOR_POSITION)
                 .withName("Algae Pre-Processor"))
-        .onFalse(superstructure.setStateCommand(WantedSuperState.DEFAULT_STATE));
+        .onFalse(superstructure.setChoreographyCommand(WantedChoreography.DEFAULT_STATE));
 
     // Algae processor
     controller
@@ -313,9 +306,9 @@ public class RobotContainer {
         .and(controller.a())
         .whileTrue(
             superstructure
-                .setStateCommand(WantedSuperState.SCORE_ALGAE_IN_PROCESSOR)
+                .setChoreographyCommand(WantedChoreography.SCORE_ALGAE_IN_PROCESSOR)
                 .withName("Algae Processing"))
-        .onFalse(superstructure.setStateCommand(WantedSuperState.DEFAULT_STATE));
+        .onFalse(superstructure.setChoreographyCommand(WantedChoreography.DEFAULT_STATE));
 
     // Algae pre-net
     controller
@@ -325,9 +318,9 @@ public class RobotContainer {
         .and(controller.a().negate())
         .whileTrue(
             superstructure
-                .setStateCommand(WantedSuperState.MOVE_ALGAE_TO_NET_POSITION)
+                .setChoreographyCommand(WantedChoreography.MOVE_ALGAE_TO_NET_POSITION)
                 .withName("Algae Pre-Net"))
-        .onFalse(superstructure.setStateCommand(WantedSuperState.DEFAULT_STATE));
+        .onFalse(superstructure.setChoreographyCommand(WantedChoreography.DEFAULT_STATE));
 
     // Algae net score
     controller
@@ -337,17 +330,19 @@ public class RobotContainer {
         .and(controller.a())
         .whileTrue(
             superstructure
-                .setStateCommand(WantedSuperState.SCORE_ALGAE_IN_NET)
+                .setChoreographyCommand(WantedChoreography.SCORE_ALGAE_IN_NET)
                 .withName("Algae Net Score"))
-        .onFalse(superstructure.setStateCommand(WantedSuperState.DEFAULT_STATE));
+        .onFalse(superstructure.setChoreographyCommand(WantedChoreography.DEFAULT_STATE));
 
     // Algae toss
     controller
         .a()
         .and(controller.leftBumper().negate())
         .whileTrue(
-            superstructure.setStateCommand(WantedSuperState.EJECT_ALGAE).withName("Algae Toss"))
-        .onFalse(superstructure.setStateCommand(WantedSuperState.DEFAULT_STATE));
+            superstructure
+                .setChoreographyCommand(WantedChoreography.EJECT_ALGAE)
+                .withName("Algae Toss"))
+        .onFalse(superstructure.setChoreographyCommand(WantedChoreography.DEFAULT_STATE));
 
     // Reset gyro
     var driverStartAndBack = controller.start().and(controller.back());

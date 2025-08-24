@@ -40,7 +40,7 @@ import frc.robot.util.Position;
 import lombok.Setter;
 import org.littletonrobotics.junction.Logger;
 
-public class Superstructure extends SubsystemBase {
+public class Choreographer extends SubsystemBase {
   private final Drive drive;
   private final Intake intake;
   private final Wrist wrist;
@@ -49,21 +49,19 @@ public class Superstructure extends SubsystemBase {
   private final OverridePublisher overrides;
   private final Vision vision;
 
-  private static final double defaultTeleopTranslationCoeffecient = 1.0;
+  private static final double defaultTeleopTranslationCoefficient = 1.0;
 
-  private static final Debouncer simCoralDebouncer =
-      new Debouncer(.5, Debouncer.DebounceType.kRising);
-  private static final Debouncer simAlgaeDebouncer =
-      new Debouncer(.5, Debouncer.DebounceType.kRising);
+  // Debouncers
+  private final Debouncer simCoralDebouncer = new Debouncer(0.5, Debouncer.DebounceType.kRising);
+  private final Debouncer simAlgaeDebouncer = new Debouncer(0.5, Debouncer.DebounceType.kRising);
 
-  private static final Debouncer readyToScoreDebouncer =
-      new Debouncer(.5, Debouncer.DebounceType.kRising);
+  private final Debouncer readyToScoreDebouncer =
+      new Debouncer(0.5, Debouncer.DebounceType.kRising);
 
-  private static final Debouncer readyToScoreDebouncerAuto =
-      new Debouncer(.5, Debouncer.DebounceType.kRising);
+  private final Debouncer readyToScoreDebouncerAuto =
+      new Debouncer(0.5, Debouncer.DebounceType.kRising);
 
-  private static final Debouncer intakeDebouncerAuto =
-      new Debouncer(.1, Debouncer.DebounceType.kRising);
+  private final Debouncer intakeDebouncerAuto = new Debouncer(0.1, Debouncer.DebounceType.kRising);
 
   private final Timer coralL1TopTimer = new Timer();
 
@@ -78,12 +76,16 @@ public class Superstructure extends SubsystemBase {
     NONE
   }
 
-  public enum WantedSuperState {
+  public enum WantedChoreography {
     HOME,
     STOPPED,
     DEFAULT_STATE,
     INTAKE_CORAL_FROM_STATION,
     INTAKE_CORAL_FROM_GROUND,
+    SCORE_L1,
+    SCORE_L2,
+    SCORE_L3,
+    SCORE_L4,
     SCORE_LEFT_L1,
     SCORE_LEFT_L2,
     SCORE_LEFT_L3,
@@ -103,32 +105,18 @@ public class Superstructure extends SubsystemBase {
     EJECT_CORAL
   }
 
-  public enum CurrentSuperState {
+  public enum CurrentChoreography {
     HOME,
     STOPPED,
-    NO_PIECE_TELEOP,
-    HOLDING_CORAL_TELEOP,
-    NO_PIECE_AUTO,
-    HOLDING_CORAL_AUTO,
+    NO_PIECE,
+    HOLDING_CORAL,
     HOLDING_ALGAE,
     INTAKE_CORAL_FROM_STATION,
     INTAKE_CORAL_FROM_GROUND,
-    SCORE_LEFT_TELEOP_L1,
-    SCORE_LEFT_TELEOP_L2,
-    SCORE_LEFT_TELEOP_L3,
-    SCORE_LEFT_TELEOP_L4,
-    SCORE_RIGHT_TELEOP_L1,
-    SCORE_RIGHT_TELEOP_L2,
-    SCORE_RIGHT_TELEOP_L3,
-    SCORE_RIGHT_TELEOP_L4,
-    SCORE_LEFT_AUTO_L1,
-    SCORE_LEFT_AUTO_L2,
-    SCORE_LEFT_AUTO_L3,
-    SCORE_LEFT_AUTO_L4,
-    SCORE_RIGHT_AUTO_L1,
-    SCORE_RIGHT_AUTO_L2,
-    SCORE_RIGHT_AUTO_L3,
-    SCORE_RIGHT_AUTO_L4,
+    SCORE_L1,
+    SCORE_L2,
+    SCORE_L3,
+    SCORE_L4,
     INTAKE_ALGAE_REEF,
     INTAKE_ALGAE_GROUND,
     INTAKE_ALGAE_ICE_CREAM,
@@ -140,19 +128,20 @@ public class Superstructure extends SubsystemBase {
     EJECT_CORAL
   }
 
-  private WantedSuperState wantedSuperState = WantedSuperState.STOPPED;
-  private CurrentSuperState currentSuperState = CurrentSuperState.STOPPED;
-  private CurrentSuperState previousSuperState;
+  private WantedChoreography wantedChoreography = WantedChoreography.STOPPED;
+  private CurrentChoreography currentChoreography = CurrentChoreography.STOPPED;
+  private CurrentChoreography previousChoreography;
 
   @Setter private WantedCoralLocation wantedCoralLocation = WantedCoralLocation.CLAW;
 
   private ScoringDirection scoringDirection = ScoringDirection.LEFT;
+  private ScoringSide targetScoringSide = ScoringSide.LEFT;
 
   private boolean hasDriveReachedIntermediatePoseForReefAlgaePickup = false;
 
   private boolean coralEject = false;
 
-  public Superstructure(
+  public Choreographer(
       Drive drive,
       Intake intake,
       Elevator elevator,
@@ -171,206 +160,170 @@ public class Superstructure extends SubsystemBase {
 
   @Override
   public void periodic() {
-    Logger.recordOutput("Superstructure/WantedSuperState", wantedSuperState);
-    Logger.recordOutput("Superstructure/CurrentSuperState", currentSuperState);
-    Logger.recordOutput("Superstructure/PreviousSuperState", previousSuperState);
+    Logger.recordOutput("Choreographer/Wanted", wantedChoreography);
+    Logger.recordOutput("Choreographer/Current", currentChoreography);
+    Logger.recordOutput("Choreographer/Previous", previousChoreography);
 
-    Logger.recordOutput("Superstructure/WantedCoralLocation", wantedCoralLocation);
+    Logger.recordOutput("Choreographer/WantedCoralLocation", wantedCoralLocation);
+    Logger.recordOutput("Choreographer/TargetScoringSide", targetScoringSide);
 
-    currentSuperState = handStateTransitions();
-    applyStates();
+    currentChoreography = computeChoreography();
+    applyChoreography();
   }
 
-  private CurrentSuperState handStateTransitions() {
-    previousSuperState = currentSuperState;
-    switch (wantedSuperState) {
+  private CurrentChoreography computeChoreography() {
+    previousChoreography = currentChoreography;
+    switch (wantedChoreography) {
       default:
-        currentSuperState = CurrentSuperState.STOPPED;
+        currentChoreography = CurrentChoreography.STOPPED;
         break;
       case HOME:
-        currentSuperState = CurrentSuperState.HOME;
+        currentChoreography = CurrentChoreography.HOME;
         break;
       case INTAKE_CORAL_FROM_STATION:
-        currentSuperState = CurrentSuperState.INTAKE_CORAL_FROM_STATION;
+        currentChoreography = CurrentChoreography.INTAKE_CORAL_FROM_STATION;
         break;
       case INTAKE_CORAL_FROM_GROUND:
-        currentSuperState = CurrentSuperState.INTAKE_CORAL_FROM_GROUND;
+        currentChoreography = CurrentChoreography.INTAKE_CORAL_FROM_GROUND;
         break;
       case DEFAULT_STATE:
         if (intake.hasCoralClaw() || intake.hasCoralSlapdown()) {
-          if (DriverStation.isAutonomous()) {
-            currentSuperState = CurrentSuperState.HOLDING_CORAL_AUTO;
-          } else {
-            currentSuperState = CurrentSuperState.HOLDING_CORAL_TELEOP;
-          }
+          currentChoreography = CurrentChoreography.HOLDING_CORAL;
         } else if (intake.hasAlgae()) {
-          currentSuperState = CurrentSuperState.HOLDING_ALGAE;
+          currentChoreography = CurrentChoreography.HOLDING_ALGAE;
         } else {
-          if (DriverStation.isAutonomous()) {
-            currentSuperState = CurrentSuperState.NO_PIECE_AUTO;
-          } else {
-            currentSuperState = CurrentSuperState.NO_PIECE_TELEOP;
-          }
+          currentChoreography = CurrentChoreography.NO_PIECE;
         }
         break;
+      case SCORE_L1:
+        currentChoreography = CurrentChoreography.SCORE_L1;
+        break;
+      case SCORE_L2:
+        currentChoreography = CurrentChoreography.SCORE_L2;
+        break;
+      case SCORE_L3:
+        currentChoreography = CurrentChoreography.SCORE_L3;
+        break;
+      case SCORE_L4:
+        currentChoreography = CurrentChoreography.SCORE_L4;
+        break;
       case SCORE_LEFT_L1:
-        currentSuperState =
-            DriverStation.isAutonomous()
-                ? CurrentSuperState.SCORE_LEFT_AUTO_L1
-                : CurrentSuperState.SCORE_LEFT_TELEOP_L1;
+        targetScoringSide = ScoringSide.LEFT;
+        currentChoreography = CurrentChoreography.SCORE_L1;
         break;
       case SCORE_LEFT_L2:
-        currentSuperState =
-            DriverStation.isAutonomous()
-                ? CurrentSuperState.SCORE_LEFT_AUTO_L2
-                : CurrentSuperState.SCORE_LEFT_TELEOP_L2;
+        targetScoringSide = ScoringSide.LEFT;
+        currentChoreography = CurrentChoreography.SCORE_L2;
         break;
       case SCORE_LEFT_L3:
-        currentSuperState =
-            DriverStation.isAutonomous()
-                ? CurrentSuperState.SCORE_LEFT_AUTO_L3
-                : CurrentSuperState.SCORE_LEFT_TELEOP_L3;
+        targetScoringSide = ScoringSide.LEFT;
+        currentChoreography = CurrentChoreography.SCORE_L3;
         break;
       case SCORE_LEFT_L4:
-        currentSuperState =
-            DriverStation.isAutonomous()
-                ? CurrentSuperState.SCORE_LEFT_AUTO_L4
-                : CurrentSuperState.SCORE_LEFT_TELEOP_L4;
+        targetScoringSide = ScoringSide.LEFT;
+        currentChoreography = CurrentChoreography.SCORE_L4;
         break;
       case SCORE_RIGHT_L1:
-        currentSuperState =
-            DriverStation.isAutonomous()
-                ? CurrentSuperState.SCORE_RIGHT_AUTO_L1
-                : CurrentSuperState.SCORE_RIGHT_TELEOP_L1;
+        targetScoringSide = ScoringSide.RIGHT;
+        currentChoreography = CurrentChoreography.SCORE_L1;
         break;
       case SCORE_RIGHT_L2:
-        currentSuperState =
-            DriverStation.isAutonomous()
-                ? CurrentSuperState.SCORE_RIGHT_AUTO_L2
-                : CurrentSuperState.SCORE_RIGHT_TELEOP_L2;
+        targetScoringSide = ScoringSide.RIGHT;
+        currentChoreography = CurrentChoreography.SCORE_L2;
         break;
       case SCORE_RIGHT_L3:
-        currentSuperState =
-            DriverStation.isAutonomous()
-                ? CurrentSuperState.SCORE_RIGHT_AUTO_L3
-                : CurrentSuperState.SCORE_RIGHT_TELEOP_L3;
+        targetScoringSide = ScoringSide.RIGHT;
+        currentChoreography = CurrentChoreography.SCORE_L3;
         break;
       case SCORE_RIGHT_L4:
-        currentSuperState =
-            DriverStation.isAutonomous()
-                ? CurrentSuperState.SCORE_RIGHT_AUTO_L4
-                : CurrentSuperState.SCORE_RIGHT_TELEOP_L4;
+        targetScoringSide = ScoringSide.RIGHT;
+        currentChoreography = CurrentChoreography.SCORE_L4;
         break;
       case INTAKE_ALGAE_ICE_CREAM:
-        currentSuperState = CurrentSuperState.INTAKE_ALGAE_ICE_CREAM;
+        currentChoreography = CurrentChoreography.INTAKE_ALGAE_ICE_CREAM;
         break;
       case INTAKE_ALGAE_REEF:
-        currentSuperState = CurrentSuperState.INTAKE_ALGAE_REEF;
+        currentChoreography = CurrentChoreography.INTAKE_ALGAE_REEF;
         break;
       case INTAKE_ALGAE_GROUND:
-        currentSuperState = CurrentSuperState.INTAKE_ALGAE_GROUND;
+        currentChoreography = CurrentChoreography.INTAKE_ALGAE_GROUND;
         break;
       case MOVE_ALGAE_TO_NET_POSITION:
-        currentSuperState = CurrentSuperState.MOVE_ALGAE_TO_NET_POSITION;
+        currentChoreography = CurrentChoreography.MOVE_ALGAE_TO_NET_POSITION;
         break;
       case MOVE_ALGAE_TO_PROCESSOR_POSITION:
-        currentSuperState = CurrentSuperState.MOVE_ALGAE_TO_PROCESSOR_POSITION;
+        currentChoreography = CurrentChoreography.MOVE_ALGAE_TO_PROCESSOR_POSITION;
         break;
       case SCORE_ALGAE_IN_NET:
-        currentSuperState = CurrentSuperState.SCORE_ALGAE_IN_NET;
+        currentChoreography = CurrentChoreography.SCORE_ALGAE_IN_NET;
         break;
       case SCORE_ALGAE_IN_PROCESSOR:
-        currentSuperState = CurrentSuperState.SCORE_ALGAE_IN_PROCESSOR;
+        currentChoreography = CurrentChoreography.SCORE_ALGAE_IN_PROCESSOR;
         break;
     }
-    return currentSuperState;
+    return currentChoreography;
   }
 
-  private void applyStates() {
+  private void applyChoreography() {
     scoringDirection = RobotState.getInstance().getFacingSideRelativeToClosestTag();
-    Logger.recordOutput("Superstructure/ScoringDirection", scoringDirection);
-    if (previousSuperState != currentSuperState) {
+    Logger.recordOutput("Choreographer/ScoringDirection", scoringDirection);
+    if (previousChoreography != currentChoreography) {
       wrist.clearForceDirection();
-      simAlgaeDebouncer.calculate(false);
-      simCoralDebouncer.calculate(false);
-      readyToScoreDebouncer.calculate(false);
-      readyToScoreDebouncerAuto.calculate(false);
-      intakeDebouncerAuto.calculate(false);
+      resetDebouncers();
       hasDriveReachedIntermediatePoseForReefAlgaePickup = false;
     }
 
-    switch (currentSuperState) {
+    switch (currentChoreography) {
       case HOME:
         home();
-        break;
-      case INTAKE_CORAL_FROM_STATION:
-        // intakeCoralFromStation();
         break;
       case INTAKE_CORAL_FROM_GROUND:
         intakeCoralFromGround();
         break;
-      case NO_PIECE_TELEOP:
-        noPiece();
+      case NO_PIECE:
+        if (DriverStation.isAutonomous()) {
+          noPieceAuto();
+        } else {
+          noPiece();
+        }
         break;
-      case NO_PIECE_AUTO:
-        noPieceAuto();
-        break;
-      case HOLDING_CORAL_AUTO:
-        holdingCoralAuto();
-        break;
-      case HOLDING_CORAL_TELEOP:
-        holdingCoral();
+      case HOLDING_CORAL:
+        if (DriverStation.isAutonomous()) {
+          holdingCoralAuto();
+        } else {
+          holdingCoral();
+        }
         break;
       case HOLDING_ALGAE:
         holdingAlgae();
         break;
-      case SCORE_LEFT_TELEOP_L1:
-        scoreL1Teleop(ScoringSide.LEFT);
+      case SCORE_L1:
+        if (DriverStation.isAutonomous()) {
+          scoreL1Auto(targetScoringSide);
+        } else {
+          scoreL1Teleop(targetScoringSide);
+        }
         break;
-      case SCORE_LEFT_TELEOP_L2:
-        scoreL2Teleop(ScoringSide.LEFT);
+      case SCORE_L2:
+        if (DriverStation.isAutonomous()) {
+          scoreL2Auto(targetScoringSide);
+        } else {
+          scoreL2Teleop(targetScoringSide);
+        }
         break;
-      case SCORE_LEFT_TELEOP_L3:
-        scoreL3Teleop(ScoringSide.LEFT);
+      case SCORE_L3:
+        if (DriverStation.isAutonomous()) {
+          scoreL3Auto(targetScoringSide);
+        } else {
+          scoreL3Teleop(targetScoringSide);
+        }
         break;
-      case SCORE_LEFT_TELEOP_L4:
-        scoreL4Teleop(ScoringSide.LEFT);
-        break;
-      case SCORE_RIGHT_TELEOP_L1:
-        scoreL1Teleop(ScoringSide.RIGHT);
-        break;
-      case SCORE_RIGHT_TELEOP_L2:
-        scoreL2Teleop(ScoringSide.RIGHT);
-        break;
-      case SCORE_RIGHT_TELEOP_L3:
-        scoreL3Teleop(ScoringSide.RIGHT);
-        break;
-      case SCORE_RIGHT_TELEOP_L4:
-        scoreL4Teleop(ScoringSide.RIGHT);
-        break;
-      case SCORE_LEFT_AUTO_L1:
-        scoreL1Auto(ScoringSide.LEFT);
-        break;
-      case SCORE_LEFT_AUTO_L2:
-        scoreL2Auto(ScoringSide.LEFT);
-        break;
-      case SCORE_LEFT_AUTO_L3:
-        scoreL3Auto(ScoringSide.LEFT);
-        break;
-      case SCORE_LEFT_AUTO_L4:
-        scoreL4Auto(ScoringSide.LEFT);
-        break;
-      case SCORE_RIGHT_AUTO_L1:
-        scoreL1Auto(ScoringSide.RIGHT);
-        break;
-      case SCORE_RIGHT_AUTO_L2:
-        scoreL2Auto(ScoringSide.RIGHT);
-        break;
-      case SCORE_RIGHT_AUTO_L3:
-        scoreL3Auto(ScoringSide.RIGHT);
-        break;
-      case SCORE_RIGHT_AUTO_L4:
-        scoreL4Auto(ScoringSide.RIGHT);
+      case SCORE_L4:
+        if (DriverStation.isAutonomous()) {
+          scoreL4Auto(targetScoringSide);
+        } else {
+          scoreL4Teleop(targetScoringSide);
+        }
         break;
       case INTAKE_ALGAE_ICE_CREAM:
         intakeAlgaeIceCream();
@@ -405,6 +358,14 @@ public class Superstructure extends SubsystemBase {
     }
   }
 
+  private void resetDebouncers() {
+    simAlgaeDebouncer.calculate(false);
+    simCoralDebouncer.calculate(false);
+    readyToScoreDebouncer.calculate(false);
+    readyToScoreDebouncerAuto.calculate(false);
+    intakeDebouncerAuto.calculate(false);
+  }
+
   private void home() {}
 
   private void stopped() {
@@ -417,7 +378,7 @@ public class Superstructure extends SubsystemBase {
     subsystemsRun(ALGAE_STOW);
 
     drive.setWantedState(Drive.WantedState.TELEOP_DRIVE);
-    drive.setTeleopVelocityCoefficient(defaultTeleopTranslationCoeffecient);
+    drive.setTeleopVelocityCoefficient(defaultTeleopTranslationCoefficient);
     drive.setRotationVelocityCoefficient(1.0);
 
     intake.setWantedState(
@@ -433,9 +394,9 @@ public class Superstructure extends SubsystemBase {
     wristRunExact(CORAL_STOW);
     intake.setWantedState(Intake.WantedState.HOLD_CORAL);
     drive.setWantedState(Drive.WantedState.TELEOP_DRIVE);
-    drive.setTeleopVelocityCoefficient(defaultTeleopTranslationCoeffecient);
+    drive.setTeleopVelocityCoefficient(defaultTeleopTranslationCoefficient);
     drive.setRotationVelocityCoefficient(1.0);
-    handleCoralLocationTransitions();
+    handleCoralLocationChoreography();
   }
 
   private void holdingCoralAuto() {
@@ -443,7 +404,7 @@ public class Superstructure extends SubsystemBase {
     subsystemsRun(CORAL_STOW);
     wristRunExact(CORAL_STOW);
     intake.setWantedState(Intake.WantedState.HOLD_CORAL);
-    handleCoralLocationTransitions();
+    handleCoralLocationChoreography();
   }
 
   private void noPiece() {
@@ -453,7 +414,7 @@ public class Superstructure extends SubsystemBase {
     wristRunExact(CORAL_STOW);
     intake.setWantedState(Intake.WantedState.OFF);
     drive.setWantedState(Drive.WantedState.TELEOP_DRIVE);
-    drive.setTeleopVelocityCoefficient(defaultTeleopTranslationCoeffecient);
+    drive.setTeleopVelocityCoefficient(defaultTeleopTranslationCoefficient);
     drive.setRotationVelocityCoefficient(1.0);
   }
 
@@ -541,7 +502,7 @@ public class Superstructure extends SubsystemBase {
         intake.setWantedState(Intake.WantedState.OUTTAKE_CORAL);
       }
     } else {
-      handleCoralLocationTransitions();
+      handleCoralLocationChoreography();
     }
   }
 
@@ -585,7 +546,7 @@ public class Superstructure extends SubsystemBase {
         }
       }
     } else {
-      handleCoralLocationTransitions();
+      handleCoralLocationChoreography();
     }
   }
 
@@ -637,7 +598,7 @@ public class Superstructure extends SubsystemBase {
         }
       }
     } else {
-      handleCoralLocationTransitions();
+      handleCoralLocationChoreography();
     }
   }
 
@@ -689,7 +650,7 @@ public class Superstructure extends SubsystemBase {
         }
       }
     } else {
-      handleCoralLocationTransitions();
+      handleCoralLocationChoreography();
     }
   }
 
@@ -855,7 +816,7 @@ public class Superstructure extends SubsystemBase {
                 RobotState.getInstance().getClosestTagId(), scoringSide);
 
     drive.setDesiredPoseForDriveToPointWithMaximumAngularVelocity(desiredPoseToDriveTo, 3.0);
-    Logger.recordOutput("Superstructure/DesiredPointToDriveTo", desiredPoseToDriveTo);
+    Logger.recordOutput("Choreographer/DesiredPointToDriveTo", desiredPoseToDriveTo);
     return true;
   }
 
@@ -865,7 +826,7 @@ public class Superstructure extends SubsystemBase {
             RobotState.getInstance().getClosestTagId(), scoringSide, scoringDirection);
 
     drive.setDesiredPoseForDriveToPointWithConstraints(desiredPoseToDriveTo, 0.5, 3.0);
-    Logger.recordOutput("Superstructure/DesiredPointToDriveTo", desiredPoseToDriveTo);
+    Logger.recordOutput("Choreographer/DesiredPointToDriveTo", desiredPoseToDriveTo);
     return true;
   }
 
@@ -882,7 +843,7 @@ public class Superstructure extends SubsystemBase {
             : FieldConstants.getDesiredPointToDriveToForL1Scoring(id, scoringSide);
 
     drive.setDesiredPoseForDriveToPointWithMaximumAngularVelocity(desiredPoseToDriveTo, 3.0);
-    Logger.recordOutput("Superstructure/DesiredPointToDriveTo", desiredPoseToDriveTo);
+    Logger.recordOutput("Choreographer/DesiredPointToDriveTo", desiredPoseToDriveTo);
     return true;
   }
 
@@ -902,7 +863,7 @@ public class Superstructure extends SubsystemBase {
             : FieldConstants.getDesiredPointToDriveToForL1Scoring(id, scoringSide);
 
     drive.setDesiredPoseForDriveToPointWithMaximumAngularVelocity(desiredPoseToDriveTo, 3.0);
-    Logger.recordOutput("Superstructure/DesiredPointToDriveTo", desiredPoseToDriveTo);
+    Logger.recordOutput("Choreographer/DesiredPointToDriveTo", desiredPoseToDriveTo);
     return true;
   }
 
@@ -1013,13 +974,35 @@ public class Superstructure extends SubsystemBase {
     }
   }
 
-  public void setWantedSuperState(WantedSuperState superState) {
-    this.wantedSuperState = superState;
+  public void setWantedChoreography(WantedChoreography choreography) {
+    this.wantedChoreography = choreography;
   }
 
-  public Command setStateCommand(WantedSuperState superState) {
-    Command commandToReturn = new InstantCommand(() -> setWantedSuperState(superState));
+  public Command setChoreographyCommand(WantedChoreography choreography) {
+    Command commandToReturn = new InstantCommand(() -> setWantedChoreography(choreography));
     return commandToReturn;
+  }
+
+  // Scoring side API: set explicitly or flip current
+  public void setScoringSide(ScoringSide side) {
+    this.targetScoringSide = side;
+  }
+
+  public void flipScoringSide() {
+    this.targetScoringSide =
+        (this.targetScoringSide == ScoringSide.LEFT) ? ScoringSide.RIGHT : ScoringSide.LEFT;
+  }
+
+  public Command setScoringSideCommand(ScoringSide side) {
+    return new InstantCommand(() -> setScoringSide(side));
+  }
+
+  public Command flipScoringSideCommand() {
+    return new InstantCommand(this::flipScoringSide);
+  }
+
+  public ScoringSide getScoringSide() {
+    return this.targetScoringSide;
   }
 
   public void subsystemsRun(Position position) {
@@ -1058,7 +1041,7 @@ public class Superstructure extends SubsystemBase {
     return wrist.atGoal() && elevator.atGoal() && slapdown.atGoal();
   }
 
-  private void handleCoralLocationTransitions() {
+  private void handleCoralLocationChoreography() {
     switch (wantedCoralLocation) {
       case SLAPDOWN:
         if (!intake.hasCoralSlapdown() && intake.hasCoralClaw()) {

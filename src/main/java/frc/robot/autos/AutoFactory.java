@@ -24,7 +24,7 @@ import frc.robot.constants.ReefConstants;
 import frc.robot.constants.ReefConstants.ReefFaces;
 import frc.robot.constants.SuperstructureConstants;
 import frc.robot.constants.SuperstructureConstants.ScoringDirection;
-import frc.robot.subsystems.Superstructure;
+import frc.robot.subsystems.Choreographer;
 
 /** A factory for creating autonomous programs for a given {@link Auto} */
 @SuppressWarnings("unused")
@@ -78,15 +78,33 @@ public class AutoFactory {
     return Pair.of(
         initialPose,
         Commands.sequence(
-            superFollowThenScore(ReefFaces.EF, Superstructure.WantedSuperState.SCORE_LEFT_L4),
+            new InstantCommand(
+                    () ->
+                        robotContainer
+                            .getSuperstructure()
+                            .setScoringSide(SuperstructureConstants.ScoringSide.LEFT))
+                .andThen(
+                    superFollowThenScore(ReefFaces.EF, Choreographer.WantedChoreography.SCORE_L4)),
             Commands.waitSeconds(.1),
             followThenIntakeFromStation(
                 FieldConstants.getRightStationPickup(), Units.feetToMeters(10)),
-            superFollowThenScore(ReefFaces.CD, Superstructure.WantedSuperState.SCORE_RIGHT_L4),
+            new InstantCommand(
+                    () ->
+                        robotContainer
+                            .getSuperstructure()
+                            .setScoringSide(SuperstructureConstants.ScoringSide.RIGHT))
+                .andThen(
+                    superFollowThenScore(ReefFaces.CD, Choreographer.WantedChoreography.SCORE_L4)),
             Commands.waitSeconds(.1),
             followThenIntakeFromStation(
                 FieldConstants.getRightStationPickup(), Units.feetToMeters(10)),
-            superFollowThenScore(ReefFaces.CD, Superstructure.WantedSuperState.SCORE_LEFT_L4),
+            new InstantCommand(
+                    () ->
+                        robotContainer
+                            .getSuperstructure()
+                            .setScoringSide(SuperstructureConstants.ScoringSide.LEFT))
+                .andThen(
+                    superFollowThenScore(ReefFaces.CD, Choreographer.WantedChoreography.SCORE_L4)),
             Commands.waitSeconds(.1),
             followThenIntakeFromStation(
                 FieldConstants.getRightStationPickup(), Units.feetToMeters(10))));
@@ -101,25 +119,43 @@ public class AutoFactory {
     return Pair.of(
         initialPose,
         Commands.sequence(
-            followThenScore(
-                ReefConstants.ReefFaces.IJ,
-                Superstructure.WantedSuperState.SCORE_LEFT_L4,
-                Units.inchesToMeters(72.0),
-                Units.feetToMeters(8.0)),
+            new InstantCommand(
+                    () ->
+                        robotContainer
+                            .getSuperstructure()
+                            .setScoringSide(SuperstructureConstants.ScoringSide.LEFT))
+                .andThen(
+                    followThenScore(
+                        ReefConstants.ReefFaces.IJ,
+                        Choreographer.WantedChoreography.SCORE_L4,
+                        Units.inchesToMeters(72.0),
+                        Units.feetToMeters(8.0))),
             followThenIntakeFromStation(
                 FieldConstants.getLeftStationPickup(alliance), Units.feetToMeters(10.0)),
-            followThenScore(
-                ReefConstants.ReefFaces.KL,
-                Superstructure.WantedSuperState.SCORE_LEFT_L4,
-                Units.inchesToMeters(72.0),
-                Units.feetToMeters(10.0)),
+            new InstantCommand(
+                    () ->
+                        robotContainer
+                            .getSuperstructure()
+                            .setScoringSide(SuperstructureConstants.ScoringSide.LEFT))
+                .andThen(
+                    followThenScore(
+                        ReefConstants.ReefFaces.KL,
+                        Choreographer.WantedChoreography.SCORE_L4,
+                        Units.inchesToMeters(72.0),
+                        Units.feetToMeters(10.0))),
             followThenIntakeFromStation(
                 FieldConstants.getLeftStationPickup(alliance), Units.feetToMeters(12.0)),
-            followThenScore(
-                ReefConstants.ReefFaces.KL,
-                Superstructure.WantedSuperState.SCORE_RIGHT_L4,
-                Units.inchesToMeters(72.0),
-                Units.feetToMeters(10.0)),
+            new InstantCommand(
+                    () ->
+                        robotContainer
+                            .getSuperstructure()
+                            .setScoringSide(SuperstructureConstants.ScoringSide.RIGHT))
+                .andThen(
+                    followThenScore(
+                        ReefConstants.ReefFaces.KL,
+                        Choreographer.WantedChoreography.SCORE_L4,
+                        Units.inchesToMeters(72.0),
+                        Units.feetToMeters(10.0))),
             followThenIntakeFromStation(
                 FieldConstants.getLeftStationPickup(alliance), Units.feetToMeters(12.0)),
             driveToPoint(
@@ -133,12 +169,18 @@ public class AutoFactory {
                     () ->
                         robotContainer.getDrive().getDistanceFromDriveToPointSetpoint()
                             < Units.inchesToMeters(80.0)),
-            followThenScore(
-                ReefConstants.ReefFaces.IJ,
-                Superstructure.WantedSuperState.SCORE_RIGHT_L4,
-                Units.inchesToMeters(60.0),
-                Units.feetToMeters(10.0)),
-            setState(Superstructure.WantedSuperState.DEFAULT_STATE)));
+            new InstantCommand(
+                    () ->
+                        robotContainer
+                            .getSuperstructure()
+                            .setScoringSide(SuperstructureConstants.ScoringSide.RIGHT))
+                .andThen(
+                    followThenScore(
+                        ReefConstants.ReefFaces.IJ,
+                        Choreographer.WantedChoreography.SCORE_L4,
+                        Units.inchesToMeters(60.0),
+                        Units.feetToMeters(10.0))),
+            setState(Choreographer.WantedChoreography.DEFAULT_STATE)));
   }
 
   public Pair<Pose2d, Command> createFDCEAuto() {
@@ -150,25 +192,43 @@ public class AutoFactory {
     return Pair.of(
         initialPose,
         Commands.sequence(
-            followThenScore(
-                ReefConstants.ReefFaces.EF,
-                Superstructure.WantedSuperState.SCORE_RIGHT_L4,
-                Units.inchesToMeters(72.0),
-                Units.feetToMeters(8.0)),
+            new InstantCommand(
+                    () ->
+                        robotContainer
+                            .getSuperstructure()
+                            .setScoringSide(SuperstructureConstants.ScoringSide.RIGHT))
+                .andThen(
+                    followThenScore(
+                        ReefConstants.ReefFaces.EF,
+                        Choreographer.WantedChoreography.SCORE_L4,
+                        Units.inchesToMeters(72.0),
+                        Units.feetToMeters(8.0))),
             followThenIntakeFromStation(
                 FieldConstants.getRightStationPickup(alliance), Units.feetToMeters(10.0)),
-            followThenScore(
-                ReefConstants.ReefFaces.CD,
-                Superstructure.WantedSuperState.SCORE_RIGHT_L4,
-                Units.inchesToMeters(72.0),
-                Units.feetToMeters(10.0)),
+            new InstantCommand(
+                    () ->
+                        robotContainer
+                            .getSuperstructure()
+                            .setScoringSide(SuperstructureConstants.ScoringSide.RIGHT))
+                .andThen(
+                    followThenScore(
+                        ReefConstants.ReefFaces.CD,
+                        Choreographer.WantedChoreography.SCORE_L4,
+                        Units.inchesToMeters(72.0),
+                        Units.feetToMeters(10.0))),
             followThenIntakeFromStation(
                 FieldConstants.getRightStationPickup(alliance), Units.feetToMeters(12.0)),
-            followThenScore(
-                ReefConstants.ReefFaces.CD,
-                Superstructure.WantedSuperState.SCORE_LEFT_L4,
-                Units.inchesToMeters(72.0),
-                Units.feetToMeters(10.0)),
+            new InstantCommand(
+                    () ->
+                        robotContainer
+                            .getSuperstructure()
+                            .setScoringSide(SuperstructureConstants.ScoringSide.LEFT))
+                .andThen(
+                    followThenScore(
+                        ReefConstants.ReefFaces.CD,
+                        Choreographer.WantedChoreography.SCORE_L4,
+                        Units.inchesToMeters(72.0),
+                        Units.feetToMeters(10.0))),
             followThenIntakeFromStation(
                 FieldConstants.getRightStationPickup(alliance), Units.feetToMeters(12.0)),
             driveToPoint(
@@ -182,16 +242,22 @@ public class AutoFactory {
                     () ->
                         robotContainer.getDrive().getDistanceFromDriveToPointSetpoint()
                             < Units.inchesToMeters(80.0)),
-            followThenScore(
-                ReefConstants.ReefFaces.EF,
-                Superstructure.WantedSuperState.SCORE_LEFT_L4,
-                Units.inchesToMeters(60.0),
-                Units.feetToMeters(10.0)),
-            setState(Superstructure.WantedSuperState.DEFAULT_STATE)));
+            new InstantCommand(
+                    () ->
+                        robotContainer
+                            .getSuperstructure()
+                            .setScoringSide(SuperstructureConstants.ScoringSide.LEFT))
+                .andThen(
+                    followThenScore(
+                        ReefConstants.ReefFaces.EF,
+                        Choreographer.WantedChoreography.SCORE_L4,
+                        Units.inchesToMeters(60.0),
+                        Units.feetToMeters(10.0))),
+            setState(Choreographer.WantedChoreography.DEFAULT_STATE)));
   }
 
-  Command setState(Superstructure.WantedSuperState state) {
-    return robotContainer.getSuperstructure().setStateCommand(state);
+  Command setState(Choreographer.WantedChoreography state) {
+    return robotContainer.getSuperstructure().setChoreographyCommand(state);
   }
 
   Command followTrajectory(Trajectory<SwerveSample> trajectory) {
@@ -222,7 +288,7 @@ public class AutoFactory {
 
   private Command followThenScore(
       ReefConstants.ReefFaces reefFaces,
-      Superstructure.WantedSuperState scoreState,
+      Choreographer.WantedChoreography scoreState,
       double distanceFromEndOfPathtoMoveArmUp,
       double maxVelocity) {
     var desiredPose = getAutoScoringPose(reefFaces, scoreState);
@@ -238,7 +304,7 @@ public class AutoFactory {
 
   private Command followThenScore(
       ReefConstants.ReefFaces reefFaces,
-      Superstructure.WantedSuperState scoreState,
+      Choreographer.WantedChoreography scoreState,
       double distanceFromEndOfPathtoMoveArmUp) {
     var desiredPose = getAutoScoringPose(reefFaces, scoreState);
     return ((driveToPoint(desiredPose, Units.feetToMeters(8.0))
@@ -253,7 +319,7 @@ public class AutoFactory {
 
   private Command followThenScoreWithNonDefaultMaxVelocity(
       ReefConstants.ReefFaces reefFaces,
-      Superstructure.WantedSuperState scoreState,
+      Choreographer.WantedChoreography scoreState,
       double maxVelocity) {
     var desiredPose = getAutoScoringPose(reefFaces, scoreState);
     return ((driveToPoint(desiredPose, maxVelocity).alongWith(setState(scoreState))))
@@ -261,7 +327,7 @@ public class AutoFactory {
   }
 
   private Command followThenScoreWithMinimumReleaseTime(
-      ReefConstants.ReefFaces reefFaces, Superstructure.WantedSuperState scoreState) {
+      ReefConstants.ReefFaces reefFaces, Choreographer.WantedChoreography scoreState) {
     var desiredPose = getAutoScoringPose(reefFaces, scoreState);
     return ((driveToPoint(desiredPose, Units.feetToMeters(12.0)).alongWith(setState(scoreState))))
         .andThen(
@@ -269,14 +335,14 @@ public class AutoFactory {
   }
 
   private Command followThenScore(
-      ReefConstants.ReefFaces reefFaces, Superstructure.WantedSuperState scoreState) {
+      ReefConstants.ReefFaces reefFaces, Choreographer.WantedChoreography scoreState) {
     var desiredPose = getAutoScoringPose(reefFaces, scoreState);
     return ((driveToPoint(desiredPose, Units.feetToMeters(12.0)).alongWith(setState(scoreState))))
         .andThen(waitForCoralRelease().raceWith(new WaitCommand(1.0)));
   }
 
   private Command superFollowThenScore(
-      ReefConstants.ReefFaces reefFaces, Superstructure.WantedSuperState scoreState) {
+      ReefConstants.ReefFaces reefFaces, Choreographer.WantedChoreography scoreState) {
     return Commands.sequence(
         (driveToAutoScoringPose(reefFaces, scoreState)
                 .until(() -> robotContainer.getSuperstructure().isReadyToEjectInAutoPeriod())
@@ -287,7 +353,7 @@ public class AutoFactory {
   private Command followThenScore(
       ReefConstants.ReefFaces reefFaces,
       Trajectory<SwerveSample> path,
-      Superstructure.WantedSuperState scoreState) {
+      Choreographer.WantedChoreography scoreState) {
     return (followTrajectory(path)
             .andThen(
                 new WaitUntilCommand(
@@ -311,7 +377,7 @@ public class AutoFactory {
 
   private Command followThenIntakeFromStation(Pose2d intakePose, double intakeVelocity) {
     return driveToPoint(intakePose, intakeVelocity)
-        .alongWith(setState(Superstructure.WantedSuperState.INTAKE_CORAL_FROM_STATION))
+        .alongWith(setState(Choreographer.WantedChoreography.INTAKE_CORAL_FROM_GROUND))
         .andThen(
             Commands.waitUntil(() -> robotContainer.getSuperstructure().isReadyToIntakeCountdown()))
         .andThen(waitForCoralPickup().raceWith(Commands.waitSeconds(2.0)));
@@ -326,30 +392,20 @@ public class AutoFactory {
   }
 
   public Pose2d getAutoScoringPose(
-      ReefConstants.ReefFaces reefFaces, Superstructure.WantedSuperState superState) {
+      ReefConstants.ReefFaces reefFaces, Choreographer.WantedChoreography superState) {
     var map =
         alliance == DriverStation.Alliance.Blue
             ? ReefConstants.blueAllianceReefFacesToIds
             : ReefConstants.redAllianceReefFacesToIds;
     var id = map.get(reefFaces);
-    var scoringSide =
-        (superState == Superstructure.WantedSuperState.SCORE_LEFT_L2
-                || superState == Superstructure.WantedSuperState.SCORE_LEFT_L3
-                || superState == Superstructure.WantedSuperState.SCORE_LEFT_L4)
-            ? SuperstructureConstants.ScoringSide.LEFT
-            : SuperstructureConstants.ScoringSide.RIGHT;
+    var scoringSide = robotContainer.getSuperstructure().getScoringSide(); // use current side
     return FieldConstants.getDesiredFinalScoringPoseForCoral(
         id, scoringSide, ScoringDirection.LEFT);
   }
 
   public Command driveToAutoScoringPose(
-      ReefConstants.ReefFaces reefFaces, Superstructure.WantedSuperState superState) {
-    var scoringSide =
-        (superState == Superstructure.WantedSuperState.SCORE_LEFT_L2
-                || superState == Superstructure.WantedSuperState.SCORE_LEFT_L3
-                || superState == Superstructure.WantedSuperState.SCORE_LEFT_L4)
-            ? SuperstructureConstants.ScoringSide.LEFT
-            : SuperstructureConstants.ScoringSide.RIGHT;
+      ReefConstants.ReefFaces reefFaces, Choreographer.WantedChoreography superState) {
+    var scoringSide = robotContainer.getSuperstructure().getScoringSide();
     return Commands.run(
         () -> robotContainer.getSuperstructure().driveToScoringPose(reefFaces, scoringSide, false));
   }

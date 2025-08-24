@@ -26,7 +26,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.constants.Constants;
 import frc.robot.constants.Constants.RobotType;
-import frc.robot.subsystems.Superstructure;
+import frc.robot.subsystems.Choreographer;
 import frc.robot.util.DummyLogReceiver;
 import frc.robot.util.LoggedTracer;
 import frc.robot.util.NTClientLogger;
@@ -324,7 +324,7 @@ public class Robot extends LoggedRobot {
   public void disabledInit() {
     robotContainer
         .getSuperstructure()
-        .setWantedSuperState(Superstructure.WantedSuperState.DEFAULT_STATE);
+        .setWantedChoreography(Choreographer.WantedChoreography.DEFAULT_STATE);
   }
 
   /** This function is called periodically when disabled. */
