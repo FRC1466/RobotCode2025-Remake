@@ -7,8 +7,8 @@
 
 package frc.robot.subsystems;
 
-import static frc.robot.constants.SuperstructureConstants.*;
-import static frc.robot.constants.SuperstructurePositions.*;
+import static frc.robot.constants.ChoreographerConstants.*;
+import static frc.robot.constants.ChoreographerPositions.*;
 
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -25,9 +25,9 @@ import frc.robot.Robot;
 import frc.robot.RobotState;
 import frc.robot.constants.FieldConstants;
 import frc.robot.constants.ReefConstants;
-import frc.robot.constants.SuperstructureConstants;
-import frc.robot.constants.SuperstructureConstants.ScoringDirection;
-import frc.robot.constants.SuperstructureConstants.ScoringSide;
+import frc.robot.constants.ChoreographerConstants;
+import frc.robot.constants.ChoreographerConstants.ScoringDirection;
+import frc.robot.constants.ChoreographerConstants.ScoringSide;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.elevator.Elevator;
 import frc.robot.subsystems.intake.Intake;
@@ -80,7 +80,6 @@ public class Choreographer extends SubsystemBase {
     HOME,
     STOPPED,
     DEFAULT_STATE,
-    INTAKE_CORAL_FROM_STATION,
     INTAKE_CORAL_FROM_GROUND,
     SCORE_L1,
     SCORE_L2,
@@ -111,7 +110,6 @@ public class Choreographer extends SubsystemBase {
     NO_PIECE,
     HOLDING_CORAL,
     HOLDING_ALGAE,
-    INTAKE_CORAL_FROM_STATION,
     INTAKE_CORAL_FROM_GROUND,
     SCORE_L1,
     SCORE_L2,
@@ -179,9 +177,6 @@ public class Choreographer extends SubsystemBase {
         break;
       case HOME:
         currentChoreography = CurrentChoreography.HOME;
-        break;
-      case INTAKE_CORAL_FROM_STATION:
-        currentChoreography = CurrentChoreography.INTAKE_CORAL_FROM_STATION;
         break;
       case INTAKE_CORAL_FROM_GROUND:
         currentChoreography = CurrentChoreography.INTAKE_CORAL_FROM_GROUND;
@@ -885,10 +880,10 @@ public class Choreographer extends SubsystemBase {
       double xOffset = Units.inchesToMeters(xOffsetFromTagForBackoutIntakingAlgaeInches);
       double yOffset = 0.0;
 
-      if (scoringDirection == SuperstructureConstants.ScoringDirection.LEFT) {
-        yOffset += Units.inchesToMeters(SuperstructureConstants.yOffsetFromPoleForLeft);
+      if (scoringDirection == ChoreographerConstants.ScoringDirection.LEFT) {
+        yOffset += Units.inchesToMeters(ChoreographerConstants.yOffsetFromPoleForLeft);
       } else {
-        yOffset -= Units.inchesToMeters(SuperstructureConstants.yOffsetFromPoleForLeft);
+        yOffset -= Units.inchesToMeters(ChoreographerConstants.yOffsetFromPoleForLeft);
       }
 
       Translation2d offsetFromTag = new Translation2d(xOffset, yOffset);
@@ -917,10 +912,10 @@ public class Choreographer extends SubsystemBase {
 
       double yOffset = 0.0;
 
-      if (scoringDirection == SuperstructureConstants.ScoringDirection.LEFT) {
-        yOffset += Units.inchesToMeters(SuperstructureConstants.yOffsetFromPoleForLeft);
+      if (scoringDirection == ChoreographerConstants.ScoringDirection.LEFT) {
+        yOffset += Units.inchesToMeters(ChoreographerConstants.yOffsetFromPoleForLeft);
       } else {
-        yOffset -= Units.inchesToMeters(SuperstructureConstants.yOffsetFromPoleForLeft);
+        yOffset -= Units.inchesToMeters(ChoreographerConstants.yOffsetFromPoleForLeft);
       }
 
       Translation2d offsetFromTag = new Translation2d(xOffset, yOffset);
@@ -949,10 +944,10 @@ public class Choreographer extends SubsystemBase {
 
       double yOffset = 0.0;
 
-      if (scoringDirection == SuperstructureConstants.ScoringDirection.LEFT) {
-        yOffset += Units.inchesToMeters(SuperstructureConstants.yOffsetFromPoleForLeft);
+      if (scoringDirection == ChoreographerConstants.ScoringDirection.LEFT) {
+        yOffset += Units.inchesToMeters(ChoreographerConstants.yOffsetFromPoleForLeft);
       } else {
-        yOffset -= Units.inchesToMeters(SuperstructureConstants.yOffsetFromPoleForLeft);
+        yOffset -= Units.inchesToMeters(ChoreographerConstants.yOffsetFromPoleForLeft);
       }
 
       Translation2d offsetFromTag = new Translation2d(xOffset, yOffset);

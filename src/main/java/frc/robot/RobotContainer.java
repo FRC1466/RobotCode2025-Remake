@@ -87,7 +87,7 @@ public class RobotContainer {
   @Getter private OverridePublisher overridePublisher;
   @Getter private MechanismVisualizer mechanismVisualizer;
 
-  @Getter private Choreographer superstructure;
+  @Getter private Choreographer choreographer;
 
   @Getter
   private AutoFactory autoFactory =
@@ -179,7 +179,7 @@ public class RobotContainer {
     final var table = NetworkTableInstance.getDefault().getTable("AdvantageScope");
     mechanismVisualizer = new MechanismVisualizer(table);
 
-    superstructure =
+    choreographer =
         new Choreographer(drive, intake, elevator, wrist, slapdown, overridePublisher, vision);
 
     mechanismVisualizer.setStageTravel(new double[] {0.3, 0.297078, 0.297078, 0.296373});
@@ -210,7 +210,7 @@ public class RobotContainer {
     controller.povDown().onTrue(Commands.runOnce(() -> selectedCoralScoreLevel.value = 1));
 
     // Scoring side selection
-    controller.x().onTrue(superstructure.flipScoringSideCommand());
+    controller.x().onTrue(choreographer.flipScoringSideCommand());
 
     // Auto score
     controller
@@ -220,18 +220,18 @@ public class RobotContainer {
                     () -> {
                       return switch (selectedCoralScoreLevel.value) {
                         case 1 ->
-                            superstructure.setChoreographyCommand(WantedChoreography.SCORE_L1);
+                            choreographer.setChoreographyCommand(WantedChoreography.SCORE_L1);
                         case 2 ->
-                            superstructure.setChoreographyCommand(WantedChoreography.SCORE_L2);
+                            choreographer.setChoreographyCommand(WantedChoreography.SCORE_L2);
                         case 3 ->
-                            superstructure.setChoreographyCommand(WantedChoreography.SCORE_L3);
+                            choreographer.setChoreographyCommand(WantedChoreography.SCORE_L3);
                         default ->
-                            superstructure.setChoreographyCommand(WantedChoreography.SCORE_L4);
+                            choreographer.setChoreographyCommand(WantedChoreography.SCORE_L4);
                       };
                     },
-                    Set.of(superstructure))
+                    Set.of(choreographer))
                 .withName("Auto Score Selected Level"))
-        .onFalse(superstructure.setChoreographyCommand(WantedChoreography.DEFAULT_STATE));
+        .onFalse(choreographer.setChoreographyCommand(WantedChoreography.DEFAULT_STATE));
 
     // Manual coral eject
     controller
@@ -246,10 +246,10 @@ public class RobotContainer {
     controller
         .leftTrigger()
         .whileTrue(
-            superstructure
+            choreographer
                 .setChoreographyCommand(WantedChoreography.INTAKE_CORAL_FROM_GROUND)
                 .withName("Coral Ground Intake"))
-        .onFalse(superstructure.setChoreographyCommand(WantedChoreography.DEFAULT_STATE));
+        .onFalse(choreographer.setChoreographyCommand(WantedChoreography.DEFAULT_STATE));
 
     // Algae triggers
     Trigger onOpposingSide =
@@ -281,10 +281,10 @@ public class RobotContainer {
         .leftBumper()
         .and(() -> !hasAlgae.value)
         .whileTrue(
-            superstructure
+            choreographer
                 .setChoreographyCommand(WantedChoreography.INTAKE_ALGAE_REEF)
                 .withName("Algae Reef Intake"))
-        .onFalse(superstructure.setChoreographyCommand(WantedChoreography.DEFAULT_STATE));
+        .onFalse(choreographer.setChoreographyCommand(WantedChoreography.DEFAULT_STATE));
 
     // Algae pre-processor
     controller
@@ -293,10 +293,10 @@ public class RobotContainer {
         .and(() -> hasAlgae.value)
         .and(controller.a().negate())
         .whileTrue(
-            superstructure
+            choreographer
                 .setChoreographyCommand(WantedChoreography.MOVE_ALGAE_TO_PROCESSOR_POSITION)
                 .withName("Algae Pre-Processor"))
-        .onFalse(superstructure.setChoreographyCommand(WantedChoreography.DEFAULT_STATE));
+        .onFalse(choreographer.setChoreographyCommand(WantedChoreography.DEFAULT_STATE));
 
     // Algae processor
     controller
@@ -305,10 +305,10 @@ public class RobotContainer {
         .and(() -> hasAlgae.value)
         .and(controller.a())
         .whileTrue(
-            superstructure
+            choreographer
                 .setChoreographyCommand(WantedChoreography.SCORE_ALGAE_IN_PROCESSOR)
                 .withName("Algae Processing"))
-        .onFalse(superstructure.setChoreographyCommand(WantedChoreography.DEFAULT_STATE));
+        .onFalse(choreographer.setChoreographyCommand(WantedChoreography.DEFAULT_STATE));
 
     // Algae pre-net
     controller
@@ -317,10 +317,10 @@ public class RobotContainer {
         .and(() -> hasAlgae.value)
         .and(controller.a().negate())
         .whileTrue(
-            superstructure
+            choreographer
                 .setChoreographyCommand(WantedChoreography.MOVE_ALGAE_TO_NET_POSITION)
                 .withName("Algae Pre-Net"))
-        .onFalse(superstructure.setChoreographyCommand(WantedChoreography.DEFAULT_STATE));
+        .onFalse(choreographer.setChoreographyCommand(WantedChoreography.DEFAULT_STATE));
 
     // Algae net score
     controller
@@ -329,20 +329,20 @@ public class RobotContainer {
         .and(() -> hasAlgae.value)
         .and(controller.a())
         .whileTrue(
-            superstructure
+            choreographer
                 .setChoreographyCommand(WantedChoreography.SCORE_ALGAE_IN_NET)
                 .withName("Algae Net Score"))
-        .onFalse(superstructure.setChoreographyCommand(WantedChoreography.DEFAULT_STATE));
+        .onFalse(choreographer.setChoreographyCommand(WantedChoreography.DEFAULT_STATE));
 
     // Algae toss
     controller
         .a()
         .and(controller.leftBumper().negate())
         .whileTrue(
-            superstructure
+            choreographer
                 .setChoreographyCommand(WantedChoreography.EJECT_ALGAE)
                 .withName("Algae Toss"))
-        .onFalse(superstructure.setChoreographyCommand(WantedChoreography.DEFAULT_STATE));
+        .onFalse(choreographer.setChoreographyCommand(WantedChoreography.DEFAULT_STATE));
 
     // Reset gyro
     var driverStartAndBack = controller.start().and(controller.back());

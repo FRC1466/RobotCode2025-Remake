@@ -323,7 +323,7 @@ public class Robot extends LoggedRobot {
   @Override
   public void disabledInit() {
     robotContainer
-        .getSuperstructure()
+        .getChoreographer()
         .setWantedChoreography(Choreographer.WantedChoreography.DEFAULT_STATE);
   }
 
