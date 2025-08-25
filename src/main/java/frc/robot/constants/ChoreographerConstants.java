@@ -7,7 +7,7 @@
 
 package frc.robot.constants;
 
-public class SuperstructureConstants {
+public class ChoreographerConstants {
   // public static final double xOffsetFromTagForL1BaseScoringInches = 22.0;
   public static final double xOffsetFromTagForL1TopScoringInches = 25;
 

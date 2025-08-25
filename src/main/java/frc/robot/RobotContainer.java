@@ -35,6 +35,15 @@ import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.Choreographer;
 import frc.robot.subsystems.Choreographer.WantedChoreography;
 import frc.robot.subsystems.MechanismVisualizer;
+import frc.robot.subsystems.algaeSlapdown.AlgaeSlapdown;
+import frc.robot.subsystems.algaeSlapdown.AlgaeSlapdownIO;
+import frc.robot.subsystems.algaeSlapdown.AlgaeSlapdownIOSim;
+import frc.robot.subsystems.coralSlapdown.CoralSlapdown;
+import frc.robot.subsystems.coralSlapdown.CoralSlapdownIO;
+import frc.robot.subsystems.coralSlapdown.CoralSlapdownIOSim;
+import frc.robot.subsystems.diffwrist.DifferentialWristPivot;
+import frc.robot.subsystems.diffwrist.DifferentialWristPivotIO;
+import frc.robot.subsystems.diffwrist.DifferentialWristPivotIOSim;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.DriveIO;
 import frc.robot.subsystems.drive.DriveIOCTRE;
@@ -46,18 +55,15 @@ import frc.robot.subsystems.intake.Intake.WantedState;
 import frc.robot.subsystems.overridePublisher.OverridePublisher;
 import frc.robot.subsystems.overridePublisher.OverridePublisherIO;
 import frc.robot.subsystems.overridePublisher.OverridePublisherIOReal;
+import frc.robot.subsystems.pivot.Pivot;
+import frc.robot.subsystems.pivot.PivotIO;
+import frc.robot.subsystems.pivot.PivotIOSim;
 import frc.robot.subsystems.rollers.RollerSystemIO;
 import frc.robot.subsystems.rollers.RollerSystemIOSim;
 import frc.robot.subsystems.sensors.CoralSensorIO;
 import frc.robot.subsystems.sensors.HomeSensorIO;
-import frc.robot.subsystems.slapdown.Slapdown;
-import frc.robot.subsystems.slapdown.SlapdownIO;
-import frc.robot.subsystems.slapdown.SlapdownIOSim;
 import frc.robot.subsystems.vision.Vision;
 import frc.robot.subsystems.vision.VisionIO;
-import frc.robot.subsystems.wrist.Wrist;
-import frc.robot.subsystems.wrist.WristIO;
-import frc.robot.subsystems.wrist.WristIOSim;
 import frc.robot.util.AllianceFlipUtil;
 import frc.robot.util.Container;
 import frc.robot.util.DoublePressTracker;
@@ -80,9 +86,11 @@ public class RobotContainer {
   // Subsystems
   @Getter private Drive drive;
   @Getter private Elevator elevator;
-  @Getter private Wrist wrist;
-  @Getter private Slapdown slapdown;
+  @Getter private Pivot pivot;
+  @Getter private CoralSlapdown coralSlapdown;
+  @Getter private AlgaeSlapdown algaeSlapdown;
   @Getter private Intake intake;
+  @Getter private DifferentialWristPivot differential;
   @Getter private Vision vision;
   @Getter private OverridePublisher overridePublisher;
   @Getter private MechanismVisualizer mechanismVisualizer;
@@ -133,8 +141,10 @@ public class RobotContainer {
         }
         case SIMBOT -> {
           elevator = new Elevator(new ElevatorIOSim(), new HomeSensorIO() {});
-          wrist = new Wrist(new WristIOSim(), elevator::getPosition);
-          slapdown = new Slapdown(new SlapdownIOSim());
+          pivot = new Pivot(new PivotIOSim());
+          differential = new DifferentialWristPivot(new DifferentialWristPivotIOSim());
+          coralSlapdown = new CoralSlapdown(new CoralSlapdownIOSim());
+          algaeSlapdown = new AlgaeSlapdown(new AlgaeSlapdownIOSim());
           intake =
               new Intake(
                   new RollerSystemIOSim(DCMotor.getKrakenX60(1), 1, 1),
@@ -158,11 +168,17 @@ public class RobotContainer {
     if (elevator == null) {
       elevator = new Elevator(new ElevatorIO() {}, new HomeSensorIO() {});
     }
-    if (wrist == null) {
-      wrist = new Wrist(new WristIO() {}, elevator::getPosition);
+    if (pivot == null) {
+      pivot = new Pivot(new PivotIO() {});
     }
-    if (slapdown == null) {
-      slapdown = new Slapdown(new SlapdownIO() {});
+    if (differential == null) {
+      differential = new DifferentialWristPivot(new DifferentialWristPivotIO() {});
+    }
+    if (coralSlapdown == null) {
+      coralSlapdown = new CoralSlapdown(new CoralSlapdownIO() {});
+    }
+    if (algaeSlapdown == null) {
+      algaeSlapdown = new AlgaeSlapdown(new AlgaeSlapdownIO() {});
     }
     if (intake == null) {
       intake = new Intake(new RollerSystemIO() {}, new RollerSystemIO() {}, new CoralSensorIO() {});
@@ -180,7 +196,16 @@ public class RobotContainer {
     mechanismVisualizer = new MechanismVisualizer(table);
 
     choreographer =
-        new Choreographer(drive, intake, elevator, wrist, slapdown, overridePublisher, vision);
+        new Choreographer(
+            drive,
+            intake,
+            elevator,
+            pivot,
+            coralSlapdown,
+            algaeSlapdown,
+            differential,
+            overridePublisher,
+            vision);
 
     mechanismVisualizer.setStageTravel(new double[] {0.3, 0.297078, 0.297078, 0.296373});
     mechanismVisualizer.setStageZeroOffsets(new double[] {0.0, 0.0, 0.0, 0.0});
@@ -219,12 +244,9 @@ public class RobotContainer {
             Commands.defer(
                     () -> {
                       return switch (selectedCoralScoreLevel.value) {
-                        case 1 ->
-                            choreographer.setChoreographyCommand(WantedChoreography.SCORE_L1);
-                        case 2 ->
-                            choreographer.setChoreographyCommand(WantedChoreography.SCORE_L2);
-                        case 3 ->
-                            choreographer.setChoreographyCommand(WantedChoreography.SCORE_L3);
+                        case 1 -> choreographer.setChoreographyCommand(WantedChoreography.SCORE_L1);
+                        case 2 -> choreographer.setChoreographyCommand(WantedChoreography.SCORE_L2);
+                        case 3 -> choreographer.setChoreographyCommand(WantedChoreography.SCORE_L3);
                         default ->
                             choreographer.setChoreographyCommand(WantedChoreography.SCORE_L4);
                       };

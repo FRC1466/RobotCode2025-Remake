@@ -5,22 +5,22 @@
 // license that can be found in the LICENSE file at
 // the root directory of this project.
 
-package frc.robot.subsystems.slapdown;
+package frc.robot.subsystems.pivot;
 
-import static frc.robot.constants.SlapdownConstants.*;
+import static frc.robot.constants.AlgaeSlapdownConstants.*;
 
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.constants.SlapdownConstants;
+import frc.robot.constants.AlgaeSlapdownConstants;
 import frc.robot.util.LoggedTracer;
 import lombok.Getter;
 import org.littletonrobotics.junction.Logger;
 
-/** The Slapdown subsystem controls the slapdown arm rotation using a simple state machine. */
-public class Slapdown extends SubsystemBase {
+/** The Pivot subsystem controls the slapdown arm rotation using a simple state machine. */
+public class Pivot extends SubsystemBase {
   public enum WantedState {
     IDLE,
     MOVE_TO_POSITION
@@ -31,8 +31,8 @@ public class Slapdown extends SubsystemBase {
     MOVING_TO_POSITION
   }
 
-  private final SlapdownIO io;
-  private final SlapdownIOInputsAutoLogged inputs = new SlapdownIOInputsAutoLogged();
+  private final PivotIO io;
+  private final PivotIOInputsAutoLogged inputs = new PivotIOInputsAutoLogged();
 
   private WantedState wantedState = WantedState.IDLE;
   private SystemState systemState = SystemState.IDLING;
@@ -41,7 +41,7 @@ public class Slapdown extends SubsystemBase {
 
   private static final double kAngleToleranceRad = Units.degreesToRadians(2.0);
 
-  public Slapdown(SlapdownIO io) {
+  public Pivot(PivotIO io) {
     this.io = io;
     this.goalAngle = Rotation2d.fromRadians(stowedPosition.get());
   }
@@ -83,18 +83,18 @@ public class Slapdown extends SubsystemBase {
   @Override
   public void periodic() {
     io.updateInputs(inputs);
-    Logger.processInputs("Subsystems/Slapdown", inputs);
+    Logger.processInputs("Subsystems/Pivot", inputs);
 
-    if (SlapdownConstants.kP.hasChanged(hashCode())
-        || SlapdownConstants.kI.hasChanged(hashCode())
-        || SlapdownConstants.kD.hasChanged(hashCode())) {
+    if (AlgaeSlapdownConstants.kP.hasChanged(hashCode())
+        || AlgaeSlapdownConstants.kI.hasChanged(hashCode())
+        || AlgaeSlapdownConstants.kD.hasChanged(hashCode())) {
       io.setPID(kP.get(), kI.get(), kD.get());
     }
 
     systemState = handleStateTransitions();
     applyStates();
     logState();
-    LoggedTracer.record("Slapdown");
+    LoggedTracer.record("Pivot");
   }
 
   private SystemState handleStateTransitions() {
@@ -120,11 +120,11 @@ public class Slapdown extends SubsystemBase {
   }
 
   private void logState() {
-    Logger.recordOutput("Subsystems/Slapdown/SystemState", systemState.name());
-    Logger.recordOutput("Subsystems/Slapdown/WantedState", wantedState.name());
-    Logger.recordOutput("Subsystems/Slapdown/GoalAngle", goalAngle);
-    Logger.recordOutput("Subsystems/Slapdown/AtGoal", atGoal());
-    Logger.recordOutput("Subsystems/Slapdown/Angle", getAngle());
-    Logger.recordOutput("Subsystems/Slapdown/VelocityRadPerSec", getVelocity());
+    Logger.recordOutput("Subsystems/Pivot/SystemState", systemState.name());
+    Logger.recordOutput("Subsystems/Pivot/WantedState", wantedState.name());
+    Logger.recordOutput("Subsystems/Pivot/GoalAngle", goalAngle);
+    Logger.recordOutput("Subsystems/Pivot/AtGoal", atGoal());
+    Logger.recordOutput("Subsystems/Pivot/Angle", getAngle());
+    Logger.recordOutput("Subsystems/Pivot/VelocityRadPerSec", getVelocity());
   }
 }

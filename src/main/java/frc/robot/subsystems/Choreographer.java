@@ -23,19 +23,20 @@ import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Robot;
 import frc.robot.RobotState;
-import frc.robot.constants.FieldConstants;
-import frc.robot.constants.ReefConstants;
 import frc.robot.constants.ChoreographerConstants;
 import frc.robot.constants.ChoreographerConstants.ScoringDirection;
 import frc.robot.constants.ChoreographerConstants.ScoringSide;
+import frc.robot.constants.FieldConstants;
+import frc.robot.constants.ReefConstants;
+import frc.robot.subsystems.algaeSlapdown.AlgaeSlapdown;
+import frc.robot.subsystems.coralSlapdown.CoralSlapdown;
+import frc.robot.subsystems.diffwrist.DifferentialWristPivot;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.elevator.Elevator;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.overridePublisher.OverridePublisher;
-import frc.robot.subsystems.slapdown.Slapdown;
+import frc.robot.subsystems.pivot.Pivot;
 import frc.robot.subsystems.vision.Vision;
-import frc.robot.subsystems.wrist.Wrist;
-import frc.robot.subsystems.wrist.Wrist.ForceDirection;
 import frc.robot.util.Position;
 import lombok.Setter;
 import org.littletonrobotics.junction.Logger;
@@ -43,9 +44,11 @@ import org.littletonrobotics.junction.Logger;
 public class Choreographer extends SubsystemBase {
   private final Drive drive;
   private final Intake intake;
-  private final Wrist wrist;
   private final Elevator elevator;
-  private final Slapdown slapdown;
+  private final CoralSlapdown coralSlapdown;
+  private final AlgaeSlapdown algaeSlapdown;
+  private final Pivot pivot;
+  private final DifferentialWristPivot differential;
   private final OverridePublisher overrides;
   private final Vision vision;
 
@@ -143,15 +146,19 @@ public class Choreographer extends SubsystemBase {
       Drive drive,
       Intake intake,
       Elevator elevator,
-      Wrist wrist,
-      Slapdown slapdown,
+      Pivot pivot,
+      CoralSlapdown coralSlapdown,
+      AlgaeSlapdown algaeSlapdown,
+      DifferentialWristPivot differentialWristPivot,
       OverridePublisher overrides,
       Vision vision) {
     this.drive = drive;
     this.intake = intake;
-    this.wrist = wrist;
     this.elevator = elevator;
-    this.slapdown = slapdown;
+    this.pivot = pivot;
+    this.coralSlapdown = coralSlapdown;
+    this.algaeSlapdown = algaeSlapdown;
+    this.differential = differentialWristPivot;
     this.overrides = overrides;
     this.vision = vision;
   }
@@ -263,7 +270,6 @@ public class Choreographer extends SubsystemBase {
     scoringDirection = RobotState.getInstance().getFacingSideRelativeToClosestTag();
     Logger.recordOutput("Choreographer/ScoringDirection", scoringDirection);
     if (previousChoreography != currentChoreography) {
-      wrist.clearForceDirection();
       resetDebouncers();
       hasDriveReachedIntermediatePoseForReefAlgaePickup = false;
     }
@@ -364,8 +370,11 @@ public class Choreographer extends SubsystemBase {
   private void home() {}
 
   private void stopped() {
-    wrist.setWantedState(Wrist.WantedState.IDLE);
+    pivot.setWantedState(Pivot.WantedState.IDLE);
     elevator.setWantedState(Elevator.WantedState.IDLE);
+    coralSlapdown.setWantedState(CoralSlapdown.WantedState.IDLE);
+    algaeSlapdown.setWantedState(AlgaeSlapdown.WantedState.IDLE);
+    differential.setWantedState(DifferentialWristPivot.WantedState.IDLE);
     intake.setWantedState(Intake.WantedState.OFF);
   }
 
@@ -376,17 +385,13 @@ public class Choreographer extends SubsystemBase {
     drive.setTeleopVelocityCoefficient(defaultTeleopTranslationCoefficient);
     drive.setRotationVelocityCoefficient(1.0);
 
-    intake.setWantedState(
-        wrist.atGoal() && elevator.atGoal()
-            ? Intake.WantedState.HOLD_ALGAE
-            : Intake.WantedState.HOLD_ALGAE_HARDER);
+    intake.setWantedState(Intake.WantedState.HOLD_ALGAE);
   }
 
   private void holdingCoral() {
     coralL1TopTimer.stop();
     coralEject = false;
     subsystemsRun(CORAL_STOW);
-    wristRunExact(CORAL_STOW);
     intake.setWantedState(Intake.WantedState.HOLD_CORAL);
     drive.setWantedState(Drive.WantedState.TELEOP_DRIVE);
     drive.setTeleopVelocityCoefficient(defaultTeleopTranslationCoefficient);
@@ -397,16 +402,13 @@ public class Choreographer extends SubsystemBase {
   private void holdingCoralAuto() {
     coralEject = false;
     subsystemsRun(CORAL_STOW);
-    wristRunExact(CORAL_STOW);
     intake.setWantedState(Intake.WantedState.HOLD_CORAL);
     handleCoralLocationChoreography();
   }
 
   private void noPiece() {
-    wrist.clearForceDirection();
     coralL1TopTimer.stop();
     subsystemsRun(CORAL_STOW);
-    wristRunExact(CORAL_STOW);
     intake.setWantedState(Intake.WantedState.OFF);
     drive.setWantedState(Drive.WantedState.TELEOP_DRIVE);
     drive.setTeleopVelocityCoefficient(defaultTeleopTranslationCoefficient);
@@ -414,14 +416,12 @@ public class Choreographer extends SubsystemBase {
   }
 
   private void noPieceAuto() {
-    wrist.clearForceDirection();
     subsystemsRun(CORAL_STOW);
     intake.setWantedState(Intake.WantedState.OFF);
   }
 
   private void intakeCoralFromGround() {
     subsystemsRun(CORAL_INTAKE);
-    wristRunExact(CORAL_INTAKE);
     intake.setWantedState(Intake.WantedState.INTAKE_CORAL);
     if (simCoralDebouncer.calculate(mechanismsAtGoals())) {
       intake.setHasCoralSlapdown(true);
@@ -466,7 +466,7 @@ public class Choreographer extends SubsystemBase {
         subsystemsRun(ALGAE_STOW);
       }
     } else {
-      if (!wrist.atGoal() && !elevator.atGoal(Units.inchesToMeters(1.0))) {
+      if (!elevator.atGoal(Units.inchesToMeters(1.0))) {
         drive.setDesiredPoseForDriveToPoint(getIntermediatePointToDriveToForAlgaeIntaking(id));
       } else {
         drive.setDesiredPoseForDriveToPoint(getDesiredPointToDriveToForAlgaeIntaking(id));
@@ -520,10 +520,8 @@ public class Choreographer extends SubsystemBase {
         driveToScoringPose(scoringSide, scoringDirection, false);
       }
       if (scoringDirection == ScoringDirection.RIGHT) {
-        wrist.setForceDirection(ForceDirection.COUNTERCLOCKWISE);
         subsystemsRun(L2_LEFT_HOLD);
       } else {
-        wrist.setForceDirection(ForceDirection.CLOCKWISE);
         subsystemsRun(L2_RIGHT_HOLD);
       }
 
@@ -573,10 +571,8 @@ public class Choreographer extends SubsystemBase {
         driveToScoringPose(scoringSide, scoringDirection, false);
       }
       if (scoringDirection == ScoringDirection.RIGHT) {
-        wrist.setForceDirection(ForceDirection.COUNTERCLOCKWISE);
         subsystemsRun(L3_LEFT_HOLD);
       } else {
-        wrist.setForceDirection(ForceDirection.CLOCKWISE);
         subsystemsRun(L3_RIGHT_HOLD);
       }
       if (isReadyToEject()) {
@@ -625,10 +621,8 @@ public class Choreographer extends SubsystemBase {
         driveToScoringPose(scoringSide, scoringDirection, false);
       }
       if (scoringDirection == ScoringDirection.RIGHT) {
-        wrist.setForceDirection(ForceDirection.COUNTERCLOCKWISE);
         subsystemsRun(L4_LEFT_HOLD);
       } else {
-        wrist.setForceDirection(ForceDirection.CLOCKWISE);
         subsystemsRun(L4_RIGHT_HOLD);
       }
       if (isReadyToEject()) {
@@ -781,24 +775,17 @@ public class Choreographer extends SubsystemBase {
         drive.isAtDriveToPointSetpoint()
             && drive.isAtDesiredRotation(Units.degreesToRadians(2.0))
             && drive.isStopped()
-            && wrist.atGoal()
             && elevator.atGoal());
   }
 
   public boolean isReadyToEjectInAutoPeriod() {
     return readyToScoreDebouncerAuto.calculate(
-        elevator.atGoal()
-            && wrist.atGoal()
-            && drive.isAtEndOfChoreoTrajectoryOrDriveToPoint()
-            && drive.isStopped());
+        elevator.atGoal() && drive.isAtEndOfChoreoTrajectoryOrDriveToPoint() && drive.isStopped());
   }
 
   public boolean isReadyToIntakeCountdown() {
     return intakeDebouncerAuto.calculate(
-        elevator.atGoal()
-            && wrist.atGoal()
-            && drive.isAtEndOfChoreoTrajectoryOrDriveToPoint()
-            && drive.isStopped());
+        elevator.atGoal() && drive.isAtEndOfChoreoTrajectoryOrDriveToPoint() && drive.isStopped());
   }
 
   public boolean driveToScoringPose(
@@ -1001,39 +988,58 @@ public class Choreographer extends SubsystemBase {
   }
 
   public void subsystemsRun(Position position) {
-    wrist.setExactAngle(false);
-    wrist.setWantedState(Wrist.WantedState.MOVE_TO_POSITION, position.wristAngle());
+    pivot.setWantedState(Pivot.WantedState.MOVE_TO_POSITION, position.pivotAngle());
     elevator.setWantedState(Elevator.WantedState.MOVE_TO_POSITION, position.elevatorHeightMeters());
-    slapdown.setWantedState(Slapdown.WantedState.MOVE_TO_POSITION, position.slapdownAngle());
+    coralSlapdown.setWantedState(
+        CoralSlapdown.WantedState.MOVE_TO_POSITION, position.coralSlapdownAngle());
+    algaeSlapdown.setWantedState(
+        AlgaeSlapdown.WantedState.MOVE_TO_POSITION, position.algaeSlapdownAngle());
+    differential.setWantedState(
+        DifferentialWristPivot.WantedState.MOVE_TO_POSITIONS,
+        position.differentialPivotAngle(),
+        position.differentialWristAngle());
   }
 
-  public void slapdownRun(Position position) {
-    slapdown.setWantedState(Slapdown.WantedState.MOVE_TO_POSITION, position.slapdownAngle());
+  public void differentialRun(Position position) {
+    differential.setWantedState(
+        DifferentialWristPivot.WantedState.MOVE_TO_POSITIONS,
+        position.differentialPivotAngle(),
+        position.differentialWristAngle());
+  }
+
+  public void coralSlapdownRun(Position position) {
+    coralSlapdown.setWantedState(
+        CoralSlapdown.WantedState.MOVE_TO_POSITION, position.coralSlapdownAngle());
+  }
+
+  public void algaeSlapdownRun(Position position) {
+    algaeSlapdown.setWantedState(
+        AlgaeSlapdown.WantedState.MOVE_TO_POSITION, position.algaeSlapdownAngle());
   }
 
   public void elevatorRun(Position position) {
     elevator.setWantedState(Elevator.WantedState.MOVE_TO_POSITION, position.elevatorHeightMeters());
   }
 
-  public void wristRun(Position position) {
-    wrist.setExactAngle(false);
-    wrist.setWantedState(Wrist.WantedState.MOVE_TO_POSITION, position.wristAngle());
-  }
-
-  public void wristRunExact(Position position) {
-    wrist.setExactAngle(true);
-    wrist.setWantedState(Wrist.WantedState.MOVE_TO_POSITION, position.wristAngle());
+  public void pivotRun(Position position) {
+    pivot.setWantedState(Pivot.WantedState.MOVE_TO_POSITION, position.pivotAngle());
   }
 
   public boolean allAtGoals() {
-    return wrist.atGoal()
+    return differential.atGoal()
         && elevator.atGoal()
-        && slapdown.atGoal()
+        && pivot.atGoal()
+        && coralSlapdown.atGoal()
+        && algaeSlapdown.atGoal()
         && drive.isAtDriveToPointSetpoint();
   }
 
   public boolean mechanismsAtGoals() {
-    return wrist.atGoal() && elevator.atGoal() && slapdown.atGoal();
+    return differential.atGoal()
+        && elevator.atGoal()
+        && pivot.atGoal()
+        && coralSlapdown.atGoal()
+        && algaeSlapdown.atGoal();
   }
 
   private void handleCoralLocationChoreography() {
@@ -1041,7 +1047,6 @@ public class Choreographer extends SubsystemBase {
       case SLAPDOWN:
         if (!intake.hasCoralSlapdown() && intake.hasCoralClaw()) {
           subsystemsRun(CORAL_HANDOFF);
-          wristRunExact(CORAL_HANDOFF);
           if (mechanismsAtGoals()) {
             intake.setWantedState(Intake.WantedState.RETURN_CORAL);
             if (Robot.isSimulation()) {
@@ -1053,7 +1058,6 @@ public class Choreographer extends SubsystemBase {
         break;
       case CLAW:
         if (!intake.hasCoralClaw() && intake.hasCoralSlapdown()) {
-          wristRunExact(CORAL_HANDOFF);
           if (mechanismsAtGoals()) {
             intake.setWantedState(Intake.WantedState.HANDOFF_CORAL);
             if (Robot.isSimulation()) {

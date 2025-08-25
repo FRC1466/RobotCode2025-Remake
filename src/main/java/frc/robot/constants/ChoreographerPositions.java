@@ -9,13 +9,12 @@ package frc.robot.constants;
 
 import frc.robot.util.Position;
 
-public class SuperstructurePositions {
+public class ChoreographerPositions {
   public static final Position STOW = Position.fromDegrees(0, 0, 0);
-  public static final Position CORAL_STOW =
-      Position.fromDegrees(0, 180, 0.82); // TODO: update values
+  public static final Position CORAL_STOW = Position.fromDegrees(75, 0, 0, 15, 0, 0);
   public static final Position ALGAE_STOW = Position.fromDegrees(0, 0, 0); // TODO: set values
-  public static final Position CORAL_INTAKE = Position.fromDegrees(130, 180, 0.82);
-  public static final Position CORAL_HANDOFF = Position.fromDegrees(0, 180, 0.82);
+  public static final Position CORAL_INTAKE = Position.fromDegrees(225, 0, 0, 35, 120, 90);
+  public static final Position CORAL_HANDOFF = Position.fromDegrees(75, 0, 0, 35, 120, 90);
 
   // Because L1 is one side I put it here
   public static final Position L1 = Position.fromDegrees(60, 180, 0.82);

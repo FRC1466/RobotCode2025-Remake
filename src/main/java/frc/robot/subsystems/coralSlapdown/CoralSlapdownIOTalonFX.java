@@ -5,9 +5,9 @@
 // license that can be found in the LICENSE file at
 // the root directory of this project.
 
-package frc.robot.subsystems.slapdown;
+package frc.robot.subsystems.coralSlapdown;
 
-import static frc.robot.constants.SlapdownConstants.*;
+import static frc.robot.constants.CoralSlapdownConstants.*;
 
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.Slot0Configs;
@@ -19,10 +19,10 @@ import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.units.measure.*;
-import frc.robot.constants.SlapdownConstants;
+import frc.robot.constants.CoralSlapdownConstants;
 import frc.robot.util.TalonFXFactory;
 
-public class SlapdownIOTalonFX implements SlapdownIO {
+public class CoralSlapdownIOTalonFX implements CoralSlapdownIO {
   private final TalonFX slapdown;
 
   private final DutyCycleOut dutyCycleOut = new DutyCycleOut(0.0);
@@ -36,7 +36,7 @@ public class SlapdownIOTalonFX implements SlapdownIO {
   private final StatusSignal<AngularVelocity> rotorVelocity;
   private final StatusSignal<AngularAcceleration> rotorAcceleration;
 
-  public SlapdownIOTalonFX() {
+  public CoralSlapdownIOTalonFX() {
     slapdown = TalonFXFactory.createDefaultTalon(motorId);
 
     TalonFXConfiguration cfg = new TalonFXConfiguration();
@@ -52,9 +52,9 @@ public class SlapdownIOTalonFX implements SlapdownIO {
 
     cfg.MotorOutput.NeutralMode = NeutralModeValue.Brake;
     cfg.MotionMagic.MotionMagicAcceleration =
-        SlapdownConstants.wristRadiansToRotations(accelerationConstraint);
+        CoralSlapdownConstants.wristRadiansToRotations(accelerationConstraint);
     cfg.MotionMagic.MotionMagicCruiseVelocity =
-        SlapdownConstants.wristRadiansToRotations(velocityConstraint);
+        CoralSlapdownConstants.wristRadiansToRotations(velocityConstraint);
     cfg.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
 
     slapdown.getConfigurator().apply(cfg);
@@ -69,30 +69,30 @@ public class SlapdownIOTalonFX implements SlapdownIO {
   }
 
   @Override
-  public void updateInputs(SlapdownIOInputs inputs) {
+  public void updateInputs(CoralSlapdownIOInputs inputs) {
     inputs.slapdownAngle =
         Rotation2d.fromRadians(
-            SlapdownConstants.wristRotationsToRadians(rotorPosition.getValueAsDouble()));
+            CoralSlapdownConstants.wristRotationsToRadians(rotorPosition.getValueAsDouble()));
     inputs.slapdownAppliedVolts = motorVoltage.getValueAsDouble();
     inputs.slapdownSupplyCurrentAmps = supplyCurrent.getValueAsDouble();
     inputs.slapdownStatorCurrentAmps = statorCurrent.getValueAsDouble();
     inputs.slapdownMotorTemp = deviceTemp.getValueAsDouble();
     inputs.slapdownAngularVelocityRadPerSec =
-        SlapdownConstants.wristRotationsToRadians(rotorVelocity.getValueAsDouble());
+        CoralSlapdownConstants.wristRotationsToRadians(rotorVelocity.getValueAsDouble());
     inputs.slapdownAngularAccelerationRadPerSecSquared =
-        SlapdownConstants.wristRotationsToRadians(rotorAcceleration.getValueAsDouble());
+        CoralSlapdownConstants.wristRotationsToRadians(rotorAcceleration.getValueAsDouble());
   }
 
   @Override
   public void setTargetAngle(Rotation2d target) {
     slapdown.setControl(
         positionVoltage.withPosition(
-            SlapdownConstants.wristRadiansToRotations(target.getRadians())));
+            CoralSlapdownConstants.wristRadiansToRotations(target.getRadians())));
   }
 
   @Override
   public void resetSlapdownAngle(Rotation2d angle) {
-    slapdown.setPosition(SlapdownConstants.wristRadiansToRotations(angle.getRadians()));
+    slapdown.setPosition(CoralSlapdownConstants.wristRadiansToRotations(angle.getRadians()));
   }
 
   @Override

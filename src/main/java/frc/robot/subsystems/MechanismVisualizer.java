@@ -12,6 +12,7 @@ import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation3d;
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.StructArrayPublisher;
 
@@ -75,7 +76,8 @@ public class MechanismVisualizer implements AutoCloseable {
 
     // Differential rotations: elevator tilt -> pivot -> wrist spin
     Rotation3d diffBaseRot = new Rotation3d(0, diffPivot, 0).rotateBy(rotElev);
-    Rotation3d wristRot = new Rotation3d(0, 0, diffRotation).rotateBy(diffBaseRot);
+    Rotation3d wristRot =
+        new Rotation3d(0, 0, diffRotation + Units.degreesToRadians(2.5)).rotateBy(diffBaseRot);
 
     poses[2] = new Pose3d(diffBasePose.getTranslation(), diffBaseRot);
     poses[3] = new Pose3d(diffBasePose.getTranslation(), wristRot);
@@ -113,20 +115,6 @@ public class MechanismVisualizer implements AutoCloseable {
 
     // Force base-most to anchor (no translation drift)
     poses[4 + elevatorStageCount - 1] = new Pose3d(elevatorBaseAnchor, rotElev);
-
-    // Convert robot-local to field
-    Pose3d robotPose3d =
-        new Pose3d(
-            robotPose.getX(),
-            robotPose.getY(),
-            0.0,
-            new Rotation3d(0, 0, robotPose.getRotation().getRadians()));
-
-    for (int i = 0; i < poses.length; i++) {
-      poses[i] =
-          robotPose3d.transformBy(
-              new Transform3d(poses[i].getTranslation(), poses[i].getRotation()));
-    }
 
     mechanismPosesPublisher.set(poses);
   }

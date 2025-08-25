@@ -12,7 +12,7 @@ import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
-import frc.robot.constants.SuperstructureConstants.ScoringDirection;
+import frc.robot.constants.ChoreographerConstants.ScoringDirection;
 
 @SuppressWarnings("UnusedVariable")
 public class FieldConstants {
@@ -206,32 +206,32 @@ public class FieldConstants {
   }
 
   public static Pose2d getBackoutPointToForL1Scoring(
-      int tagID, SuperstructureConstants.ScoringSide scoringSide) {
+      int tagID, ChoreographerConstants.ScoringSide scoringSide) {
     return getDesiredPointToDriveToForL1Scoring(
         tagID,
         scoringSide,
-        Units.inchesToMeters(SuperstructureConstants.xOffsetFromTagForL1BackoutInches));
+        Units.inchesToMeters(ChoreographerConstants.xOffsetFromTagForL1BackoutInches));
   }
 
   public static Pose2d getDesiredPointToDriveToForL1Scoring(
-      int tagID, SuperstructureConstants.ScoringSide scoringSide) {
+      int tagID, ChoreographerConstants.ScoringSide scoringSide) {
     return getDesiredPointToDriveToForL1Scoring(tagID, scoringSide, 0.0);
   }
 
   public static Pose2d getDesiredPointToDriveToForL1Scoring(
       int tagID,
-      SuperstructureConstants.ScoringSide scoringSide,
+      ChoreographerConstants.ScoringSide scoringSide,
       double distanceFromFinalScoringPose) {
 
     if (tagID >= 1 && tagID <= 22) {
       Pose2d tagPose = FieldConstants.FIELD_LAYOUT.getTagPose(tagID).get().toPose2d();
       double xOffset =
           Units.inchesToMeters(
-              SuperstructureConstants.xOffsetFromTagForL1TopScoringInches
+              ChoreographerConstants.xOffsetFromTagForL1TopScoringInches
                   + Units.metersToInches(distanceFromFinalScoringPose));
 
       double yOffset =
-          -Units.inchesToMeters(SuperstructureConstants.yOffsetFromTagForScoringL1Inches);
+          -Units.inchesToMeters(ChoreographerConstants.yOffsetFromTagForScoringL1Inches);
 
       Transform2d offsetFromTag = new Transform2d(xOffset, yOffset, Rotation2d.k180deg);
 
@@ -245,40 +245,40 @@ public class FieldConstants {
 
   public static Pose2d getDesiredFinalScoringPoseForCoral(
       int tagID,
-      SuperstructureConstants.ScoringSide scoringSide,
-      SuperstructureConstants.ScoringDirection scoringDirection) {
+      ChoreographerConstants.ScoringSide scoringSide,
+      ChoreographerConstants.ScoringDirection scoringDirection) {
     return getDesiredPointToDriveToForCoralScoring(tagID, scoringSide, scoringDirection, 0.0);
   }
 
   public static Pose2d getDesiredIntermediateScoringPoseForCoral(
       int tagID,
-      SuperstructureConstants.ScoringSide scoringSide,
-      SuperstructureConstants.ScoringDirection scoringDirection) {
+      ChoreographerConstants.ScoringSide scoringSide,
+      ChoreographerConstants.ScoringDirection scoringDirection) {
     return getDesiredPointToDriveToForCoralScoring(tagID, scoringSide, scoringDirection, 1);
   }
 
   public static Pose2d getDesiredPointToDriveToForCoralScoring(
       int tagID,
-      SuperstructureConstants.ScoringSide scoringSide,
-      SuperstructureConstants.ScoringDirection scoringDirection,
+      ChoreographerConstants.ScoringSide scoringSide,
+      ChoreographerConstants.ScoringDirection scoringDirection,
       double distanceFromFinalScoringPoseMeters) {
 
     if (tagID >= 1 && tagID <= 22) {
       Pose2d tagPose = FieldConstants.FIELD_LAYOUT.getTagPose(tagID).get().toPose2d();
       double xOffset =
           Units.inchesToMeters(
-              SuperstructureConstants.xOffsetFromTagForScoringInches
+              ChoreographerConstants.xOffsetFromTagForScoringInches
                   + Units.metersToInches(distanceFromFinalScoringPoseMeters));
 
       double yOffset =
-          -Units.inchesToMeters(SuperstructureConstants.yOffsetFromTagForScoringOnReefInchesBase);
-      if (scoringSide == SuperstructureConstants.ScoringSide.RIGHT) {
+          -Units.inchesToMeters(ChoreographerConstants.yOffsetFromTagForScoringOnReefInchesBase);
+      if (scoringSide == ChoreographerConstants.ScoringSide.RIGHT) {
         yOffset *= -1;
       }
-      if (scoringDirection == SuperstructureConstants.ScoringDirection.LEFT) {
-        yOffset += Units.inchesToMeters(SuperstructureConstants.yOffsetFromPoleForLeft);
+      if (scoringDirection == ChoreographerConstants.ScoringDirection.LEFT) {
+        yOffset += Units.inchesToMeters(ChoreographerConstants.yOffsetFromPoleForLeft);
       } else {
-        yOffset -= Units.inchesToMeters(SuperstructureConstants.yOffsetFromPoleForLeft);
+        yOffset -= Units.inchesToMeters(ChoreographerConstants.yOffsetFromPoleForLeft);
       }
 
       Translation2d offsetFromTag = new Translation2d(xOffset, yOffset);

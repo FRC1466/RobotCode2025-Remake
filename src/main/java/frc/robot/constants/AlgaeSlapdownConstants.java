@@ -10,7 +10,7 @@ package frc.robot.constants;
 import edu.wpi.first.math.util.Units;
 import frc.robot.util.LoggedTunableNumber;
 
-public class SlapdownConstants {
+public class AlgaeSlapdownConstants {
   // Motor IDs
   public static final int motorId = 14;
 
@@ -19,11 +19,11 @@ public class SlapdownConstants {
   public static final double statorCurrentLimit = 80.0;
 
   // PID Constants
-  public static final LoggedTunableNumber kP = new LoggedTunableNumber("Slapdown/kP", 8);
-  public static final LoggedTunableNumber kI = new LoggedTunableNumber("Slapdown/kI", 0.0);
-  public static final LoggedTunableNumber kD = new LoggedTunableNumber("Slapdown/kD", 0.0);
-  public static final LoggedTunableNumber kG = new LoggedTunableNumber("Slapdown/kG", 0.0);
-  public static final LoggedTunableNumber kS = new LoggedTunableNumber("Slapdown/kS", 0.0);
+  public static final LoggedTunableNumber kP = new LoggedTunableNumber("AlgaeSlapdown/kP", 8);
+  public static final LoggedTunableNumber kI = new LoggedTunableNumber("AlgaeSlapdown/kI", 0.0);
+  public static final LoggedTunableNumber kD = new LoggedTunableNumber("AlgaeSlapdown/kD", 0.0);
+  public static final LoggedTunableNumber kG = new LoggedTunableNumber("AlgaeSlapdown/kG", 0.0);
+  public static final LoggedTunableNumber kS = new LoggedTunableNumber("AlgaeSlapdown/kS", 0.0);
 
   // Motion Magic Constants, in rotations
   public static final double accelerationConstraint = Units.rotationsToRadians(10);
@@ -43,8 +43,8 @@ public class SlapdownConstants {
 
   // Setpoints (in Radians)
   public static final LoggedTunableNumber stowedPosition =
-      new LoggedTunableNumber("Slapdown/StowedPosition", 0.0);
+      new LoggedTunableNumber("AlgaeSlapdown/StowedPosition", 0.0);
 
   public static final LoggedTunableNumber intakePosition =
-      new LoggedTunableNumber("Slapdown/IntakePosition", 2.269);
+      new LoggedTunableNumber("AlgaeSlapdown/IntakePosition", 2.269);
 }

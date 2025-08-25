@@ -10,9 +10,9 @@ package frc.robot;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import frc.robot.constants.ChoreographerConstants;
 import frc.robot.constants.FieldConstants;
 import frc.robot.constants.ReefConstants;
-import frc.robot.constants.SuperstructureConstants;
 import java.util.List;
 import java.util.Map;
 import org.littletonrobotics.junction.Logger;
@@ -110,7 +110,7 @@ public class RobotState {
     return correctTagID;
   }
 
-  public SuperstructureConstants.ScoringDirection getFacingSideRelativeToClosestTag() {
+  public ChoreographerConstants.ScoringDirection getFacingSideRelativeToClosestTag() {
     int tagId = getClosestTagId();
     Pose2d tagPose = FieldConstants.getTagPose(tagId).toPose2d();
     Pose2d robotPose = getRobotPoseFromSwerveDriveOdometry();
@@ -125,10 +125,10 @@ public class RobotState {
     if (Math.abs(difference) < 1.0) {
       // Already effectively aligned; pick an arbitrary stable direction (adjust if you add an
       // ALIGNED state)
-      return SuperstructureConstants.ScoringDirection.LEFT;
+      return ChoreographerConstants.ScoringDirection.LEFT;
     }
     return difference > 0
-        ? SuperstructureConstants.ScoringDirection.LEFT
-        : SuperstructureConstants.ScoringDirection.RIGHT;
+        ? ChoreographerConstants.ScoringDirection.LEFT
+        : ChoreographerConstants.ScoringDirection.RIGHT;
   }
 }

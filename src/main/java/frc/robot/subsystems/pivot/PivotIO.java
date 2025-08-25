@@ -5,31 +5,31 @@
 // license that can be found in the LICENSE file at
 // the root directory of this project.
 
-package frc.robot.subsystems.wrist;
+package frc.robot.subsystems.pivot;
 
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.geometry.Rotation2d;
 import org.littletonrobotics.junction.AutoLog;
 
-public interface WristIO {
-  default void updateInputs(WristIOInputs inputs) {}
+public interface PivotIO {
+  default void updateInputs(PivotIOInputs inputs) {}
 
   @AutoLog
-  class WristIOInputs {
+  class PivotIOInputs {
     // Angle is relative to starting position
-    public Rotation2d wristAngle = Rotation2d.kZero;
+    public Rotation2d slapdownAngle = Rotation2d.kZero;
 
-    public double wristAppliedVolts;
-    public double wristSupplyCurrentAmps;
-    public double wristStatorCurrentAmps;
-    public double wristAngularVelocityRadPerSec;
-    public double wristAngularAccelerationRadPerSecSquared;
-    public double wristMotorTemp;
+    public double slapdownAppliedVolts;
+    public double slapdownSupplyCurrentAmps;
+    public double slapdownStatorCurrentAmps;
+    public double slapdownAngularVelocityRadPerSec;
+    public double slapdownAngularAccelerationRadPerSecSquared;
+    public double slapdownMotorTemp;
   }
 
   default void setTargetAngle(Rotation2d target) {}
 
-  default void resetWristAngle(Rotation2d angle) {}
+  default void resetSlapdownAngle(Rotation2d angle) {}
 
   default void setDutyCycle(double dutyCycle) {}
 

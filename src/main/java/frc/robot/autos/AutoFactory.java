@@ -19,11 +19,11 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.*;
 import frc.robot.RobotContainer;
 import frc.robot.RobotState;
+import frc.robot.constants.ChoreographerConstants;
+import frc.robot.constants.ChoreographerConstants.ScoringDirection;
 import frc.robot.constants.FieldConstants;
 import frc.robot.constants.ReefConstants;
 import frc.robot.constants.ReefConstants.ReefFaces;
-import frc.robot.constants.ChoreographerConstants;
-import frc.robot.constants.ChoreographerConstants.ScoringDirection;
 import frc.robot.subsystems.Choreographer;
 
 /** A factory for creating autonomous programs for a given {@link Auto} */

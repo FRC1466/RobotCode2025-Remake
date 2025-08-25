@@ -13,6 +13,7 @@ import edu.wpi.first.math.MathShared;
 import edu.wpi.first.math.MathSharedStore;
 import edu.wpi.first.math.MathUsageId;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -27,6 +28,10 @@ import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.constants.Constants;
 import frc.robot.constants.Constants.RobotType;
 import frc.robot.subsystems.Choreographer;
+import frc.robot.subsystems.algaeSlapdown.AlgaeSlapdown;
+import frc.robot.subsystems.coralSlapdown.CoralSlapdown;
+import frc.robot.subsystems.diffwrist.DifferentialWristPivot;
+import frc.robot.subsystems.elevator.Elevator;
 import frc.robot.util.DummyLogReceiver;
 import frc.robot.util.LoggedTracer;
 import frc.robot.util.NTClientLogger;
@@ -256,14 +261,32 @@ public class Robot extends LoggedRobot {
         "MechanismViz/ElevatorRotation", ntElevatorRotation);
 
     robotContainer
+        .getAlgaeSlapdown()
+        .setWantedState(
+            AlgaeSlapdown.WantedState.MOVE_TO_POSITION, Rotation2d.fromDegrees(ntSlapdownAlgae));
+    robotContainer
+        .getCoralSlapdown()
+        .setWantedState(
+            CoralSlapdown.WantedState.MOVE_TO_POSITION, Rotation2d.fromDegrees(ntSlapdownCoral));
+    robotContainer
+        .getElevator()
+        .setWantedState(Elevator.WantedState.MOVE_TO_POSITION, ntElevatorHeight);
+    robotContainer
+        .getDifferential()
+        .setWantedState(
+            DifferentialWristPivot.WantedState.MOVE_TO_POSITIONS,
+            Rotation2d.fromDegrees(ntDiffPivot),
+            Rotation2d.fromDegrees(ntDiffRotation));
+
+    robotContainer
         .getMechanismVisualizer()
         .update(
             RobotState.getInstance().getRobotPoseFromSwerveDriveOdometry(),
-            ntSlapdownCoral,
-            ntSlapdownAlgae,
-            ntDiffRotation,
-            ntDiffPivot,
-            ntElevatorHeight,
+            robotContainer.getCoralSlapdown().getAngle().getRadians(),
+            robotContainer.getAlgaeSlapdown().getAngle().getRadians(),
+            robotContainer.getDifferential().getWristAngle().getRadians(),
+            robotContainer.getDifferential().getPivotAngle().getRadians(),
+            robotContainer.getElevator().getPosition(),
             ntElevatorRotation);
 
     // Print auto duration

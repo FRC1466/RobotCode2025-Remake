@@ -5,9 +5,9 @@
 // license that can be found in the LICENSE file at
 // the root directory of this project.
 
-package frc.robot.subsystems.slapdown;
+package frc.robot.subsystems.pivot;
 
-import static frc.robot.constants.SlapdownConstants.*;
+import static frc.robot.constants.AlgaeSlapdownConstants.*;
 
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -21,7 +21,7 @@ import edu.wpi.first.wpilibj.simulation.SingleJointedArmSim;
  * Simulated implementation of the SlapdownIO interface for development and testing when not at the
  * lab. This class simulates the slapdown mechanism's behavior using the WPILib physics sim tools.
  */
-public class SlapdownIOSim implements SlapdownIO {
+public class PivotIOSim implements PivotIO {
   private static final double minAngleRads = 0.0;
   private static final double maxAngleRads = Math.PI * 2;
   private static final double armLength = 0.4;
@@ -48,7 +48,7 @@ public class SlapdownIOSim implements SlapdownIO {
   private boolean closedLoop = false;
 
   @Override
-  public void updateInputs(SlapdownIOInputs inputs) {
+  public void updateInputs(PivotIOInputs inputs) {
     sim.setInputVoltage(appliedVoltage);
     sim.update(0.02);
 

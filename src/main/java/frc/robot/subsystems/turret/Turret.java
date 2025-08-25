@@ -5,16 +5,16 @@
 // license that can be found in the LICENSE file at
 // the root directory of this project.
 
-package frc.robot.subsystems.wrist;
+package frc.robot.subsystems.turret;
 
-import static frc.robot.constants.WristConstants.*;
+import static frc.robot.constants.TurretConstants.*;
 
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.constants.WristConstants;
+import frc.robot.constants.TurretConstants;
 import frc.robot.util.LoggedTracer;
 import java.util.function.DoubleSupplier;
 import lombok.Getter;
@@ -22,10 +22,10 @@ import lombok.Setter;
 import org.littletonrobotics.junction.Logger;
 
 /**
- * Controls the rotational movement of the robot's wrist with continuous angle tracking, smart
+ * Controls the rotational movement of the robot's turret with continuous angle tracking, smart
  * setpoint selection, and directional movement forcing.
  */
-public class Wrist extends SubsystemBase {
+public class Turret extends SubsystemBase {
 
   public enum WantedState {
     IDLE,
@@ -54,8 +54,8 @@ public class Wrist extends SubsystemBase {
 
   private double maxForcedTravelRadians = motorMaxRadians - motorMinRadians;
 
-  private final WristIO io;
-  private final WristIOInputsAutoLogged inputs = new WristIOInputsAutoLogged();
+  private final TurretIO io;
+  private final TurretIOInputsAutoLogged inputs = new TurretIOInputsAutoLogged();
 
   private WantedState wantedState = WantedState.IDLE;
   private SystemState systemState = SystemState.IDLING;
@@ -64,7 +64,7 @@ public class Wrist extends SubsystemBase {
   @Setter @Getter private ForceDirection forceDirection = ForceDirection.SHORTEST;
   @Setter private boolean exactAngle = false;
 
-  public Wrist(WristIO io, DoubleSupplier elevatorHeightMeters) {
+  public Turret(TurretIO io, DoubleSupplier elevatorHeightMeters) {
     this.io = io;
     this.goalAngle = Rotation2d.fromRadians(stowedPosition.get());
     this.elevatorHeightMeters = elevatorHeightMeters;
@@ -79,7 +79,7 @@ public class Wrist extends SubsystemBase {
     setGoalPosition(goalAngle);
   }
 
-  /** Set the target wrist angle without changing wanted state. */
+  /** Set the target turret angle without changing wanted state. */
   private void setGoalPosition(Rotation2d goal) {
     this.goalAngle = goal;
   }
@@ -148,15 +148,15 @@ public class Wrist extends SubsystemBase {
   }
 
   public Rotation2d getAngle() {
-    return inputs.wristAngle;
+    return inputs.turretAngle;
   }
 
   public double getVelocity() {
-    return inputs.wristAngularVelocityRadPerSec;
+    return inputs.turretAngularVelocityRadPerSec;
   }
 
   public double getAcceleration() {
-    return inputs.wristAngularAccelerationRadPerSecSquared;
+    return inputs.turretAngularAccelerationRadPerSecSquared;
   }
 
   /** Return to normal shortest-path behavior. */
@@ -180,18 +180,18 @@ public class Wrist extends SubsystemBase {
   @Override
   public void periodic() {
     io.updateInputs(inputs);
-    Logger.processInputs("Subsystems/Wrist", inputs);
+    Logger.processInputs("Subsystems/Turret", inputs);
 
-    if (WristConstants.kP.hasChanged(hashCode())
-        || WristConstants.kI.hasChanged(hashCode())
-        || WristConstants.kD.hasChanged(hashCode())) {
+    if (TurretConstants.kP.hasChanged(hashCode())
+        || TurretConstants.kI.hasChanged(hashCode())
+        || TurretConstants.kD.hasChanged(hashCode())) {
       io.setPID(kP.get(), kI.get(), kD.get());
     }
 
     this.systemState = handleStateTransitions();
     applyStates();
     logState();
-    LoggedTracer.record("Wrist");
+    LoggedTracer.record("Turret");
   }
 
   private SystemState handleStateTransitions() {
@@ -221,18 +221,18 @@ public class Wrist extends SubsystemBase {
   }
 
   private void logState() {
-    Logger.recordOutput("Subsystems/Wrist/SystemState", systemState.name());
-    Logger.recordOutput("Subsystems/Wrist/WantedState", wantedState.name());
-    Logger.recordOutput("Subsystems/Wrist/GoalAngle", goalAngle);
-    Logger.recordOutput("Subsystems/Wrist/AtGoal", atGoal());
-    Logger.recordOutput("Subsystems/Wrist/Angle", getAngle());
-    Logger.recordOutput("Subsystems/Wrist/VelocityRadPerSec", getVelocity());
+    Logger.recordOutput("Subsystems/Turret/SystemState", systemState.name());
+    Logger.recordOutput("Subsystems/Turret/WantedState", wantedState.name());
+    Logger.recordOutput("Subsystems/Turret/GoalAngle", goalAngle);
+    Logger.recordOutput("Subsystems/Turret/AtGoal", atGoal());
+    Logger.recordOutput("Subsystems/Turret/Angle", getAngle());
+    Logger.recordOutput("Subsystems/Turret/VelocityRadPerSec", getVelocity());
     Logger.recordOutput(
-        "Subsystems/Wrist/OptimizedGoalAngle",
+        "Subsystems/Turret/OptimizedGoalAngle",
         Rotation2d.fromRadians(
             computeSmartSetpoint(
                 getAngle().getRadians(), goalAngle.getRadians(), forceDirection, exactAngle)));
-    Logger.recordOutput("Subsystems/Wrist/Direction", forceDirection);
+    Logger.recordOutput("Subsystems/Turret/Direction", forceDirection);
   }
 
   /**

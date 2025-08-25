@@ -5,9 +5,9 @@
 // license that can be found in the LICENSE file at
 // the root directory of this project.
 
-package frc.robot.subsystems.wrist;
+package frc.robot.subsystems.algaeSlapdown;
 
-import static frc.robot.constants.WristConstants.*;
+import static frc.robot.constants.AlgaeSlapdownConstants.*;
 
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -18,25 +18,23 @@ import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.simulation.SingleJointedArmSim;
 
 /**
- * Simulated implementation of the WristIO interface for development and testing when not at the
- * lab. This class simulates the wrist's behavior using the WristSim class from WPILib. To learn
- * more on implementing WPILib simulations, view their documentation here:
- * https://docs.wpilib.org/en/stable/docs/software/wpilib-tools/robot-simulation/physics-sim.html
+ * Simulated implementation of the SlapdownIO interface for development and testing when not at the
+ * lab. This class simulates the slapdown mechanism's behavior using the WPILib physics sim tools.
  */
-public class WristIOSim implements WristIO {
-  private static final double minAngleDegrees = -540;
-  private static final double maxAngleDegrees = 540;
+public class AlgaeSlapdownIOSim implements AlgaeSlapdownIO {
+  private static final double minAngleRads = 0.0;
+  private static final double maxAngleRads = Math.PI * 2;
   private static final double armLength = 0.4;
   private static final double massKg = 4;
 
   private final SingleJointedArmSim sim =
       new SingleJointedArmSim(
           DCMotor.getKrakenX60Foc(1),
-          wristReduction,
+          slapdownReduction,
           SingleJointedArmSim.estimateMOI(armLength, massKg),
           armLength,
-          Math.toRadians(minAngleDegrees),
-          Math.toRadians(maxAngleDegrees),
+          minAngleRads,
+          maxAngleRads,
           false,
           0);
 
@@ -45,29 +43,26 @@ public class WristIOSim implements WristIO {
           kP.get(),
           kI.get(),
           kD.get(),
-          new TrapezoidProfile.Constraints(
-              velocityConstraint, // Max velocity (rad/s)
-              accelerationConstraint // Max acceleration (rad/s^2)
-              ));
+          new TrapezoidProfile.Constraints(velocityConstraint, accelerationConstraint));
   private double appliedVoltage = 0.0;
   private boolean closedLoop = false;
 
   @Override
-  public void updateInputs(WristIOInputs inputs) {
+  public void updateInputs(AlgaeSlapdownIOInputs inputs) {
     sim.setInputVoltage(appliedVoltage);
     sim.update(0.02);
 
-    double prevVelocity = inputs.wristAngularVelocityRadPerSec;
+    double prevVelocity = inputs.slapdownAngularVelocityRadPerSec;
 
-    inputs.wristAngle = Rotation2d.fromRadians(sim.getAngleRads());
-    inputs.wristAngularVelocityRadPerSec = sim.getVelocityRadPerSec();
-    inputs.wristAngularAccelerationRadPerSecSquared =
-        (inputs.wristAngularVelocityRadPerSec - prevVelocity) / 0.02;
+    inputs.slapdownAngle = Rotation2d.fromRadians(sim.getAngleRads());
+    inputs.slapdownAngularVelocityRadPerSec = sim.getVelocityRadPerSec();
+    inputs.slapdownAngularAccelerationRadPerSecSquared =
+        (inputs.slapdownAngularVelocityRadPerSec - prevVelocity) / 0.02;
 
-    inputs.wristAppliedVolts = appliedVoltage;
-    inputs.wristSupplyCurrentAmps = Math.abs(appliedVoltage) * 10.0;
-    inputs.wristStatorCurrentAmps = inputs.wristSupplyCurrentAmps;
-    inputs.wristMotorTemp = 40.0;
+    inputs.slapdownAppliedVolts = appliedVoltage;
+    inputs.slapdownSupplyCurrentAmps = Math.abs(appliedVoltage) * 10.0;
+    inputs.slapdownStatorCurrentAmps = inputs.slapdownSupplyCurrentAmps;
+    inputs.slapdownMotorTemp = 40.0;
 
     if (!DriverStation.isEnabled()) {
       appliedVoltage = 0.0;
@@ -80,10 +75,7 @@ public class WristIOSim implements WristIO {
   @Override
   public void setTargetAngle(Rotation2d target) {
     closedLoop = true;
-    pid.setGoal(
-        Math.max(
-            Math.toRadians(minAngleDegrees),
-            Math.min(Math.toRadians(maxAngleDegrees), target.getRadians())));
+    pid.setGoal(Math.max(minAngleRads, Math.min(maxAngleRads, target.getRadians())));
   }
 
   @Override
@@ -93,7 +85,7 @@ public class WristIOSim implements WristIO {
   }
 
   @Override
-  public void resetWristAngle(Rotation2d angle) {
+  public void resetSlapdownAngle(Rotation2d angle) {
     sim.setState(angle.getRadians(), 0.0);
     pid.reset(angle.getRadians());
   }
