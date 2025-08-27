@@ -32,6 +32,7 @@ import frc.robot.subsystems.algaeSlapdown.AlgaeSlapdown;
 import frc.robot.subsystems.coralSlapdown.CoralSlapdown;
 import frc.robot.subsystems.diffwrist.DifferentialWristPivot;
 import frc.robot.subsystems.elevator.Elevator;
+import frc.robot.subsystems.pivot.Pivot;
 import frc.robot.util.DummyLogReceiver;
 import frc.robot.util.LoggedTracer;
 import frc.robot.util.NTClientLogger;
@@ -277,6 +278,10 @@ public class Robot extends LoggedRobot {
             DifferentialWristPivot.WantedState.MOVE_TO_POSITIONS,
             Rotation2d.fromDegrees(ntDiffPivot),
             Rotation2d.fromDegrees(ntDiffRotation));
+    robotContainer
+        .getPivot()
+        .setWantedState(
+            Pivot.WantedState.MOVE_TO_POSITION, Rotation2d.fromDegrees(ntElevatorRotation));
 
     robotContainer
         .getMechanismVisualizer()
@@ -287,7 +292,7 @@ public class Robot extends LoggedRobot {
             robotContainer.getDifferential().getWristAngle().getRadians(),
             robotContainer.getDifferential().getPivotAngle().getRadians(),
             robotContainer.getElevator().getPosition(),
-            ntElevatorRotation);
+            robotContainer.getPivot().getAngle().getRadians());
 
     // Print auto duration
     if (autoCommand != null) {
