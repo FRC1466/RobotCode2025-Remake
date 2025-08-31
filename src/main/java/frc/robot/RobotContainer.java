@@ -15,11 +15,9 @@ import com.ctre.phoenix6.swerve.SwerveModuleConstants;
 import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.system.plant.DCMotor;
-import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.GenericHID.RumbleType;
 import edu.wpi.first.wpilibj.XboxController;
@@ -28,7 +26,6 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
-import frc.robot.autos.AutoFactory;
 import frc.robot.constants.Constants;
 import frc.robot.constants.FieldConstants;
 import frc.robot.generated.TunerConstants;
@@ -96,10 +93,6 @@ public class RobotContainer {
   @Getter private MechanismVisualizer mechanismVisualizer;
 
   @Getter private Choreographer choreographer;
-
-  @Getter
-  private AutoFactory autoFactory =
-      new AutoFactory(DriverStation.getAlliance().orElse(Alliance.Blue), this);
 
   private final LoggedDashboardChooser<Pair<Pose2d, Command>> autoChooser =
       new LoggedDashboardChooser<>("Auto");
@@ -192,8 +185,10 @@ public class RobotContainer {
     if (overridePublisher == null) {
       overridePublisher = new OverridePublisher(new OverridePublisherIO() {});
     }
-    final var table = NetworkTableInstance.getDefault().getTable("AdvantageScope");
-    mechanismVisualizer = new MechanismVisualizer(table);
+    mechanismVisualizer = new MechanismVisualizer();
+
+    mechanismVisualizer.setStageTravel(new double[] {0.3, 0.297078, 0.297078, 0.296373});
+    mechanismVisualizer.setStageZeroOffsets(new double[] {0.0, 0.0, 0.0, 0.0});
 
     choreographer =
         new Choreographer(
@@ -207,16 +202,8 @@ public class RobotContainer {
             overridePublisher,
             vision);
 
-    mechanismVisualizer.setStageTravel(new double[] {0.3, 0.297078, 0.297078, 0.296373});
-    mechanismVisualizer.setStageZeroOffsets(new double[] {0.0, 0.0, 0.0, 0.0});
-
     // Configure the button bindings
     configureButtonBindings();
-
-    autoChooser.addDefaultOption("Idle", autoFactory.createIdleCommand());
-    autoChooser.addOption("Taxi", autoFactory.createTaxiCommand());
-    autoChooser.addOption("3x Processor Side", autoFactory.createEDCAuto());
-    autoChooser.addOption("4x Processor Side", autoFactory.createFDCEAuto());
   }
 
   /**
@@ -229,10 +216,38 @@ public class RobotContainer {
     // Coral score level selection
     final Container<Integer> selectedCoralScoreLevel = new Container<>(4);
 
-    controller.povUp().onTrue(Commands.runOnce(() -> selectedCoralScoreLevel.value = 4));
-    controller.povLeft().onTrue(Commands.runOnce(() -> selectedCoralScoreLevel.value = 3));
-    controller.povRight().onTrue(Commands.runOnce(() -> selectedCoralScoreLevel.value = 2));
-    controller.povDown().onTrue(Commands.runOnce(() -> selectedCoralScoreLevel.value = 1));
+    controller
+        .povUp()
+        .onTrue(
+            Commands.runOnce(
+                () -> {
+                  selectedCoralScoreLevel.value = 4;
+                  choreographer.setWantedCoralLocation(Choreographer.WantedCoralLocation.CLAW);
+                }));
+    controller
+        .povLeft()
+        .onTrue(
+            Commands.runOnce(
+                () -> {
+                  selectedCoralScoreLevel.value = 3;
+                  choreographer.setWantedCoralLocation(Choreographer.WantedCoralLocation.CLAW);
+                }));
+    controller
+        .povRight()
+        .onTrue(
+            Commands.runOnce(
+                () -> {
+                  selectedCoralScoreLevel.value = 2;
+                  choreographer.setWantedCoralLocation(Choreographer.WantedCoralLocation.CLAW);
+                }));
+    controller
+        .povDown()
+        .onTrue(
+            Commands.runOnce(
+                () -> {
+                  selectedCoralScoreLevel.value = 1;
+                  choreographer.setWantedCoralLocation(Choreographer.WantedCoralLocation.SLAPDOWN);
+                }));
 
     // Scoring side selection
     controller.x().onTrue(choreographer.flipScoringSideCommand());
@@ -297,6 +312,12 @@ public class RobotContainer {
 
     Container<Boolean> hasAlgae = new Container<>(false);
     controller.leftBumper().onTrue(Commands.runOnce(() -> hasAlgae.value = intake.hasAlgae()));
+
+    // Algae ground intake
+    controller
+        .y()
+        .whileTrue(choreographer.setChoreographyCommand(WantedChoreography.INTAKE_ALGAE_GROUND))
+        .onFalse(choreographer.setChoreographyCommand(WantedChoreography.DEFAULT_STATE));
 
     // Algae reef intake
     controller

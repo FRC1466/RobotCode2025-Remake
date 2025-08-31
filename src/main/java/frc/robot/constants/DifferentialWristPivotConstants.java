@@ -14,7 +14,7 @@ import frc.robot.util.LoggedTunableNumber;
 public class DifferentialWristPivotConstants {
   // Tunable PID for pivot and wrist
   public static final LoggedTunableNumber kP_Pivot =
-      new LoggedTunableNumber("DiffWristPivot/kP_Pivot", 8.0);
+      new LoggedTunableNumber("DiffWristPivot/kP_Pivot", 12);
   public static final LoggedTunableNumber kI_Pivot =
       new LoggedTunableNumber("DiffWristPivot/kI_Pivot", 0.0);
   public static final LoggedTunableNumber kD_Pivot =
@@ -29,10 +29,10 @@ public class DifferentialWristPivotConstants {
 
   // Motion constraints (rad/s, rad/s^2) – if needed by IOs later
   public static final double velocityConstraintRadPerSec = Units.degreesToRadians(180);
-  public static final double accelerationConstraintRadPerSec2 = Units.degreesToRadians(720);
+  public static final double accelerationConstraintRadPerSec2 = Units.degreesToRadians(1800);
 
   // Safe limits
-  public static final double pivotMinRadians = Units.degreesToRadians(-60);
+  public static final double pivotMinRadians = Units.degreesToRadians(-90);
   public static final double pivotMaxRadians = Units.degreesToRadians(120);
   public static final double wristMinRadians = Units.degreesToRadians(-540);
   public static final double wristMaxRadians = Units.degreesToRadians(540);

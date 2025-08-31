@@ -7,6 +7,13 @@
 
 package frc.robot.constants;
 
+import static frc.robot.constants.ChoreographerConstants.xOffsetFromPoseBackL2Inches;
+import static frc.robot.constants.ChoreographerConstants.xOffsetFromPoseBackL3Inches;
+import static frc.robot.constants.ChoreographerConstants.xOffsetFromPoseBackL4Inches;
+import static frc.robot.constants.ChoreographerConstants.xOffsetFromPoseFrontL2Inches;
+import static frc.robot.constants.ChoreographerConstants.xOffsetFromPoseFrontL3Inches;
+import static frc.robot.constants.ChoreographerConstants.xOffsetFromPoseFrontL4Inches;
+
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.geometry.*;
@@ -246,8 +253,45 @@ public class FieldConstants {
   public static Pose2d getDesiredFinalScoringPoseForCoral(
       int tagID,
       ChoreographerConstants.ScoringSide scoringSide,
-      ChoreographerConstants.ScoringDirection scoringDirection) {
-    return getDesiredPointToDriveToForCoralScoring(tagID, scoringSide, scoringDirection, 0.0);
+      ChoreographerConstants.ScoringDirection scoringDirection,
+      int scoringLevel) {
+    Pose2d finalPose =
+        getDesiredPointToDriveToForCoralScoring(tagID, scoringSide, scoringDirection, 0.0);
+    if (scoringDirection == ScoringDirection.FRONT) {
+      switch (scoringLevel) {
+        case 2:
+          return finalPose.plus(
+              new Transform2d(
+                  Units.inchesToMeters(xOffsetFromPoseFrontL2Inches), 0, new Rotation2d()));
+        case 3:
+          return finalPose.plus(
+              new Transform2d(
+                  Units.inchesToMeters(xOffsetFromPoseFrontL3Inches), 0, new Rotation2d()));
+        case 4:
+          return finalPose.plus(
+              new Transform2d(
+                  Units.inchesToMeters(xOffsetFromPoseFrontL4Inches), 0, new Rotation2d()));
+        default:
+          return finalPose;
+      }
+    } else {
+      switch (scoringLevel) {
+        case 2:
+          return finalPose.plus(
+              new Transform2d(
+                  Units.inchesToMeters(xOffsetFromPoseBackL2Inches), 0, new Rotation2d()));
+        case 3:
+          return finalPose.plus(
+              new Transform2d(
+                  Units.inchesToMeters(xOffsetFromPoseBackL3Inches), 0, new Rotation2d()));
+        case 4:
+          return finalPose.plus(
+              new Transform2d(
+                  Units.inchesToMeters(xOffsetFromPoseBackL4Inches), 0, new Rotation2d()));
+        default:
+          return finalPose;
+      }
+    }
   }
 
   public static Pose2d getDesiredIntermediateScoringPoseForCoral(
@@ -275,20 +319,15 @@ public class FieldConstants {
       if (scoringSide == ChoreographerConstants.ScoringSide.RIGHT) {
         yOffset *= -1;
       }
-      if (scoringDirection == ChoreographerConstants.ScoringDirection.LEFT) {
-        yOffset += Units.inchesToMeters(ChoreographerConstants.yOffsetFromPoleForLeft);
-      } else {
-        yOffset -= Units.inchesToMeters(ChoreographerConstants.yOffsetFromPoleForLeft);
-      }
 
       Translation2d offsetFromTag = new Translation2d(xOffset, yOffset);
 
       Rotation2d rotation = new Rotation2d();
 
-      if (scoringDirection == ScoringDirection.LEFT) {
-        rotation = Rotation2d.kCW_90deg;
+      if (scoringDirection == ScoringDirection.FRONT) {
+        rotation = Rotation2d.k180deg;
       } else {
-        rotation = Rotation2d.kCCW_90deg;
+        rotation = Rotation2d.kZero;
       }
 
       var transformedPose =

@@ -57,7 +57,7 @@ public class Intake extends SubsystemBase {
    * Represents the actual, internal state of the Intake subsystem. This state is determined by the
    * subsystem's logic in the periodic loop, based on the wantedState and sensor feedback.
    */
-  public enum SystemState {
+  private enum SystemState {
     INTAKING_CORAL,
     HOLDING_CORAL,
     HANDING_OFF_CORAL,
@@ -217,6 +217,10 @@ public class Intake extends SubsystemBase {
 
   public boolean hasCoralSlapdown() {
     return hasCoralSlapdown;
+  }
+
+  public boolean hasCoralEither() {
+    return hasCoralClaw || hasCoralSlapdown;
   }
 
   /**

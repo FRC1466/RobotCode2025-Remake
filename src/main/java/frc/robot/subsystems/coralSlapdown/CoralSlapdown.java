@@ -127,4 +127,8 @@ public class CoralSlapdown extends SubsystemBase {
     Logger.recordOutput("Subsystems/CoralSlapdown/Angle", getAngle());
     Logger.recordOutput("Subsystems/CoralSlapdown/VelocityRadPerSec", getVelocity());
   }
+
+  public void resetAngle(Rotation2d angle) {
+    io.resetSlapdownAngle(angle);
+  }
 }

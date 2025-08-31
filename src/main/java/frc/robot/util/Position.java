@@ -82,26 +82,6 @@ public record Position(
         new Rotation2d(differentialWristRad));
   }
 
-  // Convenience/compat builders (legacy API) — maps old fields to reasonable defaults
-  public static Position of(Rotation2d slapdown, Rotation2d wrist, double elevatorMeters) {
-    return of(
-        slapdown, // coralSlapdown
-        slapdown, // algaeSlapdown (default to same as coral for legacy)
-        elevatorMeters,
-        new Rotation2d(), // pivotAngle = 0 deg
-        new Rotation2d(), // differentialPivotAngle = 0 deg
-        wrist); // differentialWristAngle
-  }
-
-  public static Position fromDegrees(double slapdownDeg, double wristDeg, double elevatorMeters) {
-    return of(
-        Rotation2d.fromDegrees(slapdownDeg), Rotation2d.fromDegrees(wristDeg), elevatorMeters);
-  }
-
-  public static Position fromRadians(double slapdownRad, double wristRad, double elevatorMeters) {
-    return of(new Rotation2d(slapdownRad), new Rotation2d(wristRad), elevatorMeters);
-  }
-
   // Withers
   public Position withCoralSlapdown(Rotation2d newCoralSlapdown) {
     return new Position(

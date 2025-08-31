@@ -121,14 +121,11 @@ public class RobotState {
     difference = ((difference + 180) % 360 + 360) % 360 - 180;
     Logger.recordOutput("RobotState/TagRotationDelta", difference);
 
-    // Decide shortest turn direction (LEFT = counter-clockwise, RIGHT = clockwise)
-    if (Math.abs(difference) < 1.0) {
-      // Already effectively aligned; pick an arbitrary stable direction (adjust if you add an
-      // ALIGNED state)
-      return ChoreographerConstants.ScoringDirection.LEFT;
+    // Determine whether the tag is on the front side (within +/-90 degrees) or the back side.
+    if (Math.abs(difference) <= 90.0) {
+      return ChoreographerConstants.ScoringDirection.BACK;
+    } else {
+      return ChoreographerConstants.ScoringDirection.FRONT;
     }
-    return difference > 0
-        ? ChoreographerConstants.ScoringDirection.LEFT
-        : ChoreographerConstants.ScoringDirection.RIGHT;
   }
 }

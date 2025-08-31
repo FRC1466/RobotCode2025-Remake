@@ -121,4 +121,8 @@ public class DifferentialWristPivot extends SubsystemBase {
     Logger.recordOutput("Subsystems/DiffWristPivot/GoalWrist", goalWrist);
     Logger.recordOutput("Subsystems/DiffWristPivot/AtGoal", atGoal());
   }
+
+  public void resetAngles(Rotation2d anglePivot, Rotation2d angleRotation) {
+    io.resetAngles(anglePivot, angleRotation);
+  }
 }

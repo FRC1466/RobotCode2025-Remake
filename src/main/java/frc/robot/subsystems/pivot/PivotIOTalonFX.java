@@ -70,17 +70,16 @@ public class PivotIOTalonFX implements PivotIO {
 
   @Override
   public void updateInputs(PivotIOInputs inputs) {
-    inputs.slapdownAngle =
-        Rotation2d.fromRadians(
-            AlgaeSlapdownConstants.wristRotationsToRadians(rotorPosition.getValueAsDouble()));
-    inputs.slapdownAppliedVolts = motorVoltage.getValueAsDouble();
-    inputs.slapdownSupplyCurrentAmps = supplyCurrent.getValueAsDouble();
-    inputs.slapdownStatorCurrentAmps = statorCurrent.getValueAsDouble();
-    inputs.slapdownMotorTemp = deviceTemp.getValueAsDouble();
-    inputs.slapdownAngularVelocityRadPerSec =
-        AlgaeSlapdownConstants.wristRotationsToRadians(rotorVelocity.getValueAsDouble());
-    inputs.slapdownAngularAccelerationRadPerSecSquared =
-        AlgaeSlapdownConstants.wristRotationsToRadians(rotorAcceleration.getValueAsDouble());
+        inputs.data =
+            new PivotIOData(
+                Rotation2d.fromRadians(
+                    AlgaeSlapdownConstants.wristRotationsToRadians(rotorPosition.getValueAsDouble())),
+                motorVoltage.getValueAsDouble(),
+                supplyCurrent.getValueAsDouble(),
+                statorCurrent.getValueAsDouble(),
+                AlgaeSlapdownConstants.wristRotationsToRadians(rotorVelocity.getValueAsDouble()),
+                AlgaeSlapdownConstants.wristRotationsToRadians(rotorAcceleration.getValueAsDouble()),
+                deviceTemp.getValueAsDouble());
   }
 
   @Override
@@ -91,7 +90,7 @@ public class PivotIOTalonFX implements PivotIO {
   }
 
   @Override
-  public void resetSlapdownAngle(Rotation2d angle) {
+  public void resetAngle(Rotation2d angle) {
     slapdown.setPosition(AlgaeSlapdownConstants.wristRadiansToRotations(angle.getRadians()));
   }
 

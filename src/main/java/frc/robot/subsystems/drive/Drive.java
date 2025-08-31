@@ -65,7 +65,7 @@ public class Drive extends SubsystemBase {
   private final PIDController choreoThetaController = new PIDController(7, 0, 0);
 
   private final PIDController autoDriveToPointController = new PIDController(3.0, 0, 0.1);
-  private final PIDController teleopDriveToPointController = new PIDController(3.6, 0, 0.1);
+  private final PIDController teleopDriveToPointController = new PIDController(3, 0, 0.1);
 
   private final SwerveRequest.SysIdSwerveTranslation translationCharacterization =
       new SwerveRequest.SysIdSwerveTranslation();

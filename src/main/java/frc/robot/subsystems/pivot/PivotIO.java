@@ -16,20 +16,29 @@ public interface PivotIO {
 
   @AutoLog
   class PivotIOInputs {
-    // Angle is relative to starting position
-    public Rotation2d slapdownAngle = Rotation2d.kZero;
-
-    public double slapdownAppliedVolts;
-    public double slapdownSupplyCurrentAmps;
-    public double slapdownStatorCurrentAmps;
-    public double slapdownAngularVelocityRadPerSec;
-    public double slapdownAngularAccelerationRadPerSecSquared;
-    public double slapdownMotorTemp;
+    public PivotIOData data =
+        new PivotIOData(
+            new Rotation2d(0),
+            0,
+            0,
+            0,
+            0,
+            0,
+            0);
   }
+
+  record PivotIOData(
+    Rotation2d angle,
+    double appliedVolts,
+    double supplyCurrentAmps,
+    double statorCurrentAmps,
+    double angularVelocityRotPerSec,
+    double angularAccelerationRadPerSecSquared,
+    double motorTemp) {}
 
   default void setTargetAngle(Rotation2d target) {}
 
-  default void resetSlapdownAngle(Rotation2d angle) {}
+  default void resetAngle(Rotation2d angle) {}
 
   default void setDutyCycle(double dutyCycle) {}
 

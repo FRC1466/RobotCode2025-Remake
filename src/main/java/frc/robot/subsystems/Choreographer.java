@@ -23,7 +23,6 @@ import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Robot;
 import frc.robot.RobotState;
-import frc.robot.constants.ChoreographerConstants;
 import frc.robot.constants.ChoreographerConstants.ScoringDirection;
 import frc.robot.constants.ChoreographerConstants.ScoringSide;
 import frc.robot.constants.FieldConstants;
@@ -135,7 +134,7 @@ public class Choreographer extends SubsystemBase {
 
   @Setter private WantedCoralLocation wantedCoralLocation = WantedCoralLocation.CLAW;
 
-  private ScoringDirection scoringDirection = ScoringDirection.LEFT;
+  private ScoringDirection scoringDirection = ScoringDirection.BACK;
   private ScoringSide targetScoringSide = ScoringSide.LEFT;
 
   private boolean hasDriveReachedIntermediatePoseForReefAlgaePickup = false;
@@ -379,7 +378,7 @@ public class Choreographer extends SubsystemBase {
   }
 
   private void holdingAlgae() {
-    subsystemsRun(ALGAE_STOW);
+    subsystemsRunNoAlgaeSlapdown(ALGAE_STOW);
 
     drive.setWantedState(Drive.WantedState.TELEOP_DRIVE);
     drive.setTeleopVelocityCoefficient(defaultTeleopTranslationCoefficient);
@@ -391,7 +390,11 @@ public class Choreographer extends SubsystemBase {
   private void holdingCoral() {
     coralL1TopTimer.stop();
     coralEject = false;
-    subsystemsRun(CORAL_STOW);
+    if (wantedCoralLocation == WantedCoralLocation.SLAPDOWN) {
+      subsystemsRun(CORAL_STOW_L1);
+    } else {
+      subsystemsRun(CORAL_STOW);
+    }
     intake.setWantedState(Intake.WantedState.HOLD_CORAL);
     drive.setWantedState(Drive.WantedState.TELEOP_DRIVE);
     drive.setTeleopVelocityCoefficient(defaultTeleopTranslationCoefficient);
@@ -408,7 +411,7 @@ public class Choreographer extends SubsystemBase {
 
   private void noPiece() {
     coralL1TopTimer.stop();
-    subsystemsRun(CORAL_STOW);
+    subsystemsRun(STOW);
     intake.setWantedState(Intake.WantedState.OFF);
     drive.setWantedState(Drive.WantedState.TELEOP_DRIVE);
     drive.setTeleopVelocityCoefficient(defaultTeleopTranslationCoefficient);
@@ -416,7 +419,7 @@ public class Choreographer extends SubsystemBase {
   }
 
   private void noPieceAuto() {
-    subsystemsRun(CORAL_STOW);
+    subsystemsRun(STOW);
     intake.setWantedState(Intake.WantedState.OFF);
   }
 
@@ -439,12 +442,12 @@ public class Choreographer extends SubsystemBase {
 
     subsystemsRun(
         level == ReefConstants.AlgaeIntakeLocation.L2
-            ? scoringDirection == ScoringDirection.LEFT
-                ? ALGAE_LEFT_INTAKE_L2
-                : ALGAE_RIGHT_INTAKE_L2
-            : scoringDirection == ScoringDirection.LEFT
-                ? ALGAE_LEFT_INTAKE_L3
-                : ALGAE_RIGHT_INTAKE_L3);
+            ? scoringDirection == ScoringDirection.FRONT
+                ? ALGAE_FRONT_INTAKE_L2
+                : ALGAE_BACK_INTAKE_L2
+            : scoringDirection == ScoringDirection.FRONT
+                ? ALGAE_FRONT_INTAKE_L3
+                : ALGAE_BACK_INTAKE_L3);
 
     intake.setWantedState(Intake.WantedState.INTAKE_ALGAE);
 
@@ -479,7 +482,15 @@ public class Choreographer extends SubsystemBase {
     }
   }
 
-  private void intakeAlgaeFromGround() {}
+  private void intakeAlgaeFromGround() {
+    subsystemsRun(ALGAE_GROUND_INTAKE);
+    if (Robot.isSimulation()) {
+      if (simAlgaeDebouncer.calculate(mechanismsAtGoals())) {
+        intake.setWantedState(Intake.WantedState.INTAKE_ALGAE);
+        intake.setHasAlgae(true);
+      }
+    }
+  }
 
   private void intakeAlgaeIceCream() {}
 
@@ -487,7 +498,7 @@ public class Choreographer extends SubsystemBase {
     setWantedCoralLocation(WantedCoralLocation.SLAPDOWN);
     if (intake.hasCoralSlapdown()) {
       if (!overrides.isReefOverride()) {
-        driveToScoringPose(scoringSide, scoringDirection, true);
+        driveToScoringPose(scoringSide, scoringDirection, 1);
       }
       subsystemsRun(L1);
       if (isReadyToEject()) {
@@ -495,6 +506,7 @@ public class Choreographer extends SubsystemBase {
       }
       if (coralEject) {
         intake.setWantedState(Intake.WantedState.OUTTAKE_CORAL);
+        subsystemsRun(L1_FINAL);
       }
     } else {
       handleCoralLocationChoreography();
@@ -517,12 +529,12 @@ public class Choreographer extends SubsystemBase {
     setWantedCoralLocation(WantedCoralLocation.CLAW);
     if (intake.hasCoralClaw()) {
       if (!overrides.isReefOverride()) {
-        driveToScoringPose(scoringSide, scoringDirection, false);
+        driveToScoringPose(scoringSide, scoringDirection, 2);
       }
-      if (scoringDirection == ScoringDirection.RIGHT) {
-        subsystemsRun(L2_LEFT_HOLD);
+      if (scoringDirection == ScoringDirection.FRONT) {
+        subsystemsRun(L2_FRONT_SCORE);
       } else {
-        subsystemsRun(L2_RIGHT_HOLD);
+        subsystemsRun(L2_BACK_SCORE);
       }
 
       if (isReadyToEject()) {
@@ -530,11 +542,6 @@ public class Choreographer extends SubsystemBase {
       }
       if (coralEject) {
         if (overrides.isReefOverride() == false) {
-          if (scoringDirection == ScoringDirection.RIGHT) {
-            subsystemsRun(L2_LEFT_SCORE);
-          } else {
-            subsystemsRun(L2_RIGHT_SCORE);
-          }
           intake.setWantedState(Intake.WantedState.OUTTAKE_CORAL);
         }
       }
@@ -544,10 +551,10 @@ public class Choreographer extends SubsystemBase {
   }
 
   private void scoreL2Auto(ScoringSide scoringSide) {
-    if (scoringDirection == ScoringDirection.LEFT) {
-      subsystemsRun(L2_LEFT_HOLD);
+    if (scoringDirection == ScoringDirection.FRONT) {
+      subsystemsRun(L2_FRONT_SCORE);
     } else {
-      subsystemsRun(L2_RIGHT_HOLD);
+      subsystemsRun(L2_BACK_SCORE);
     }
 
     if (isReadyToEjectInAutoPeriod()) {
@@ -555,11 +562,6 @@ public class Choreographer extends SubsystemBase {
     }
 
     if (coralEject) {
-      if (scoringDirection == ScoringDirection.LEFT) {
-        subsystemsRun(L2_LEFT_SCORE);
-      } else {
-        subsystemsRun(L2_RIGHT_SCORE);
-      }
       intake.setWantedState(Intake.WantedState.OUTTAKE_CORAL);
     }
   }
@@ -568,23 +570,18 @@ public class Choreographer extends SubsystemBase {
     setWantedCoralLocation(WantedCoralLocation.CLAW);
     if (intake.hasCoralClaw()) {
       if (!overrides.isReefOverride()) {
-        driveToScoringPose(scoringSide, scoringDirection, false);
+        driveToScoringPose(scoringSide, scoringDirection, 3);
       }
-      if (scoringDirection == ScoringDirection.RIGHT) {
-        subsystemsRun(L3_LEFT_HOLD);
+      if (scoringDirection == ScoringDirection.FRONT) {
+        subsystemsRun(L3_FRONT_SCORE);
       } else {
-        subsystemsRun(L3_RIGHT_HOLD);
+        subsystemsRun(L3_BACK_SCORE);
       }
       if (isReadyToEject()) {
         coralEject = true;
       }
       if (coralEject) {
         if (overrides.isReefOverride() == false) {
-          if (scoringDirection == ScoringDirection.RIGHT) {
-            subsystemsRun(L3_LEFT_SCORE);
-          } else {
-            subsystemsRun(L3_RIGHT_SCORE);
-          }
           intake.setWantedState(Intake.WantedState.OUTTAKE_CORAL);
         }
       }
@@ -594,10 +591,10 @@ public class Choreographer extends SubsystemBase {
   }
 
   private void scoreL3Auto(ScoringSide scoringSide) {
-    if (scoringDirection == ScoringDirection.LEFT) {
-      subsystemsRun(L3_LEFT_HOLD);
+    if (scoringDirection == ScoringDirection.FRONT) {
+      subsystemsRun(L3_FRONT_SCORE);
     } else {
-      subsystemsRun(L3_RIGHT_HOLD);
+      subsystemsRun(L3_BACK_SCORE);
     }
 
     if (isReadyToEjectInAutoPeriod()) {
@@ -605,11 +602,6 @@ public class Choreographer extends SubsystemBase {
     }
 
     if (coralEject) {
-      if (scoringDirection == ScoringDirection.LEFT) {
-        subsystemsRun(L3_LEFT_SCORE);
-      } else {
-        subsystemsRun(L3_RIGHT_SCORE);
-      }
       intake.setWantedState(Intake.WantedState.OUTTAKE_CORAL);
     }
   }
@@ -618,23 +610,18 @@ public class Choreographer extends SubsystemBase {
     setWantedCoralLocation(WantedCoralLocation.CLAW);
     if (intake.hasCoralClaw()) {
       if (!overrides.isReefOverride()) {
-        driveToScoringPose(scoringSide, scoringDirection, false);
+        driveToScoringPose(scoringSide, scoringDirection, 4);
       }
-      if (scoringDirection == ScoringDirection.RIGHT) {
-        subsystemsRun(L4_LEFT_HOLD);
+      if (scoringDirection == ScoringDirection.FRONT) {
+        subsystemsRun(L4_FRONT_SCORE);
       } else {
-        subsystemsRun(L4_RIGHT_HOLD);
+        subsystemsRun(L4_BACK_SCORE);
       }
       if (isReadyToEject()) {
         coralEject = true;
       }
       if (coralEject) {
         if (overrides.isReefOverride() == false) {
-          if (scoringDirection == ScoringDirection.RIGHT) {
-            subsystemsRun(L4_LEFT_SCORE);
-          } else {
-            subsystemsRun(L4_RIGHT_SCORE);
-          }
           intake.setWantedState(Intake.WantedState.OUTTAKE_CORAL);
         }
       }
@@ -644,10 +631,10 @@ public class Choreographer extends SubsystemBase {
   }
 
   private void scoreL4Auto(ScoringSide scoringSide) {
-    if (scoringDirection == ScoringDirection.LEFT) {
-      subsystemsRun(L3_LEFT_HOLD);
+    if (scoringDirection == ScoringDirection.FRONT) {
+      subsystemsRun(L4_FRONT_SCORE);
     } else {
-      subsystemsRun(L3_RIGHT_HOLD);
+      subsystemsRun(L4_BACK_SCORE);
     }
 
     if (isReadyToEjectInAutoPeriod()) {
@@ -655,41 +642,13 @@ public class Choreographer extends SubsystemBase {
     }
 
     if (coralEject) {
-      if (scoringDirection == ScoringDirection.LEFT) {
-        subsystemsRun(L3_LEFT_SCORE);
-      } else {
-        subsystemsRun(L3_RIGHT_SCORE);
-      }
       intake.setWantedState(Intake.WantedState.OUTTAKE_CORAL);
     }
   }
 
   private void moveAlgaeToNetPosition() {
-    Rotation2d rotation =
-        FieldConstants.isBlueAlliance() ? Rotation2d.kCW_90deg : Rotation2d.kCCW_90deg;
-    if (RobotState.getInstance().getRobotPoseFromSwerveDriveOdometry().getRotation().getDegrees()
-        > 0) {
-      rotation = Rotation2d.kCCW_90deg;
-    } else {
-      rotation = Rotation2d.kCW_90deg;
-    }
-    drive.setTargetRotation(rotation);
-
-    intake.setWantedState(Intake.WantedState.HOLD_ALGAE);
-    drive.setTeleopVelocityCoefficient(0.4);
-
-    if (drive.isAtDesiredRotation()) {
-      if (rotation == Rotation2d.kCW_90deg) {
-        subsystemsRun(ALGAE_LEFT_BARGE);
-      } else {
-        subsystemsRun(ALGAE_RIGHT_BARGE);
-      }
-    }
-  }
-
-  private void moveAlgaeToProcessorPosition() {
-    Rotation2d rotation = FieldConstants.isBlueAlliance() ? Rotation2d.k180deg : Rotation2d.kZero;
-    if (Math.abs(
+    Rotation2d rotation = FieldConstants.isBlueAlliance() ? Rotation2d.kZero : Rotation2d.k180deg;
+    /*if (Math.abs(
             RobotState.getInstance()
                 .getRobotPoseFromSwerveDriveOdometry()
                 .getRotation()
@@ -698,41 +657,54 @@ public class Choreographer extends SubsystemBase {
       rotation = Rotation2d.k180deg;
     } else {
       rotation = Rotation2d.kZero;
+    }*/
+    drive.setTargetRotation(rotation);
+
+    intake.setWantedState(Intake.WantedState.HOLD_ALGAE);
+    drive.setTeleopVelocityCoefficient(0.4);
+
+    if (drive.isAtDesiredRotation()) {
+      if (rotation == Rotation2d.kZero) {
+        subsystemsRun(ALGAE_FRONT_BARGE);
+      } else {
+        subsystemsRun(ALGAE_BACK_BARGE);
+      }
+    }
+  }
+
+  private void moveAlgaeToProcessorPosition() {
+    Rotation2d rotation =
+        FieldConstants.isBlueAlliance() ? Rotation2d.kCW_90deg : Rotation2d.kCCW_90deg;
+    if (RobotState.getInstance().getRobotPoseFromSwerveDriveOdometry().getRotation().getDegrees()
+        < 0) {
+      rotation = Rotation2d.kCW_90deg;
+    } else {
+      rotation = Rotation2d.kCCW_90deg;
     }
     drive.setTargetRotation(rotation);
     if (drive.isAtDesiredRotation()) {
-      if (FieldConstants.isOnBlueAlliance(
-          RobotState.getInstance().getRobotPoseFromSwerveDriveOdometry())) {
-        if (rotation == Rotation2d.kZero) {
-          subsystemsRun(ALGAE_LEFT_PROCESSOR);
-        } else {
-          subsystemsRun(ALGAE_RIGHT_PROCESSOR);
-        }
-      } else {
-        if (rotation == Rotation2d.k180deg) {
-          subsystemsRun(ALGAE_LEFT_PROCESSOR);
-        } else {
-          subsystemsRun(ALGAE_RIGHT_PROCESSOR);
-        }
-      }
+      subsystemsRun(ALGAE_FRONT_PROCESSOR);
     }
   }
 
   private void scoreAlgaeNet() {
     drive.setTeleopVelocityCoefficient(0.0);
-    Rotation2d rotation =
-        FieldConstants.isBlueAlliance() ? Rotation2d.kCW_90deg : Rotation2d.kCCW_90deg;
-    if (RobotState.getInstance().getRobotPoseFromSwerveDriveOdometry().getRotation().getDegrees()
-        > 0) {
-      rotation = Rotation2d.kCCW_90deg;
+    Rotation2d rotation = FieldConstants.isBlueAlliance() ? Rotation2d.kZero : Rotation2d.k180deg;
+    /*if (Math.abs(
+            RobotState.getInstance()
+                .getRobotPoseFromSwerveDriveOdometry()
+                .getRotation()
+                .getDegrees())
+        > 90) {
+      rotation = Rotation2d.k180deg;
     } else {
-      rotation = Rotation2d.kCW_90deg;
-    }
+      rotation = Rotation2d.kZero;
+    }*/
     if (drive.isAtDesiredRotation()) {
-      if (rotation == Rotation2d.kCW_90deg) {
-        subsystemsRun(ALGAE_LEFT_BARGE);
+      if (rotation == Rotation2d.kZero) {
+        subsystemsRun(ALGAE_FRONT_BARGE);
       } else {
-        subsystemsRun(ALGAE_RIGHT_BARGE);
+        subsystemsRun(ALGAE_BACK_BARGE);
       }
       intake.setWantedState(Intake.WantedState.EJECT_ALGAE);
     }
@@ -740,32 +712,15 @@ public class Choreographer extends SubsystemBase {
 
   private void scoreAlgaeProcessor() {
     Rotation2d rotation = FieldConstants.isBlueAlliance() ? Rotation2d.k180deg : Rotation2d.kZero;
-    if (Math.abs(
-            RobotState.getInstance()
-                .getRobotPoseFromSwerveDriveOdometry()
-                .getRotation()
-                .getDegrees())
-        > 90) {
-      rotation = Rotation2d.k180deg;
+    if (RobotState.getInstance().getRobotPoseFromSwerveDriveOdometry().getRotation().getDegrees()
+        < 0) {
+      rotation = Rotation2d.kCW_90deg;
     } else {
-      rotation = Rotation2d.kZero;
+      rotation = Rotation2d.kCCW_90deg;
     }
     drive.setTargetRotation(rotation);
     if (drive.isAtDesiredRotation()) {
-      if (FieldConstants.isOnBlueAlliance(
-          RobotState.getInstance().getRobotPoseFromSwerveDriveOdometry())) {
-        if (rotation == Rotation2d.kZero) {
-          subsystemsRun(ALGAE_LEFT_PROCESSOR);
-        } else {
-          subsystemsRun(ALGAE_RIGHT_PROCESSOR);
-        }
-      } else {
-        if (rotation == Rotation2d.k180deg) {
-          subsystemsRun(ALGAE_LEFT_PROCESSOR);
-        } else {
-          subsystemsRun(ALGAE_RIGHT_PROCESSOR);
-        }
-      }
+      subsystemsRun(ALGAE_FRONT_PROCESSOR);
     }
     intake.setWantedState(Intake.WantedState.EJECT_ALGAE);
   }
@@ -789,11 +744,14 @@ public class Choreographer extends SubsystemBase {
   }
 
   public boolean driveToScoringPose(
-      ScoringSide scoringSide, ScoringDirection scoringDirection, boolean isL1) {
+      ScoringSide scoringSide, ScoringDirection scoringDirection, int scoringLevel) {
     Pose2d desiredPoseToDriveTo =
-        !isL1
+        !(scoringLevel == 1)
             ? FieldConstants.getDesiredFinalScoringPoseForCoral(
-                RobotState.getInstance().getClosestTagId(), scoringSide, scoringDirection)
+                RobotState.getInstance().getClosestTagId(),
+                scoringSide,
+                scoringDirection,
+                scoringLevel)
             : FieldConstants.getDesiredPointToDriveToForL1Scoring(
                 RobotState.getInstance().getClosestTagId(), scoringSide);
 
@@ -805,7 +763,7 @@ public class Choreographer extends SubsystemBase {
   public boolean driveToScoringPoseL4(ScoringSide scoringSide, ScoringDirection scoringDirection) {
     Pose2d desiredPoseToDriveTo =
         FieldConstants.getDesiredFinalScoringPoseForCoral(
-            RobotState.getInstance().getClosestTagId(), scoringSide, scoringDirection);
+            RobotState.getInstance().getClosestTagId(), scoringSide, scoringDirection, 4);
 
     drive.setDesiredPoseForDriveToPointWithConstraints(desiredPoseToDriveTo, 0.5, 3.0);
     Logger.recordOutput("Choreographer/DesiredPointToDriveTo", desiredPoseToDriveTo);
@@ -813,15 +771,16 @@ public class Choreographer extends SubsystemBase {
   }
 
   public boolean driveToScoringPose(
-      ReefConstants.ReefFaces face, ScoringSide scoringSide, boolean isL1) {
+      ReefConstants.ReefFaces face, ScoringSide scoringSide, int scoringLevel) {
     var map =
         FieldConstants.isBlueAlliance()
             ? ReefConstants.blueAllianceReefFacesToIds
             : ReefConstants.redAllianceReefFacesToIds;
     var id = map.get(face);
     Pose2d desiredPoseToDriveTo =
-        !isL1
-            ? FieldConstants.getDesiredFinalScoringPoseForCoral(id, scoringSide, scoringDirection)
+        !(scoringLevel == 1)
+            ? FieldConstants.getDesiredFinalScoringPoseForCoral(
+                id, scoringSide, scoringDirection, scoringLevel)
             : FieldConstants.getDesiredPointToDriveToForL1Scoring(id, scoringSide);
 
     drive.setDesiredPoseForDriveToPointWithMaximumAngularVelocity(desiredPoseToDriveTo, 3.0);
@@ -833,15 +792,16 @@ public class Choreographer extends SubsystemBase {
       ReefConstants.ReefFaces face,
       ScoringSide scoringSide,
       ScoringDirection scoringDirection,
-      boolean isL1) {
+      int scoringLevel) {
     var map =
         FieldConstants.isBlueAlliance()
             ? ReefConstants.blueAllianceReefFacesToIds
             : ReefConstants.redAllianceReefFacesToIds;
     var id = map.get(face);
     Pose2d desiredPoseToDriveTo =
-        !isL1
-            ? FieldConstants.getDesiredFinalScoringPoseForCoral(id, scoringSide, scoringDirection)
+        !(scoringLevel == 1)
+            ? FieldConstants.getDesiredFinalScoringPoseForCoral(
+                id, scoringSide, scoringDirection, scoringLevel)
             : FieldConstants.getDesiredPointToDriveToForL1Scoring(id, scoringSide);
 
     drive.setDesiredPoseForDriveToPointWithMaximumAngularVelocity(desiredPoseToDriveTo, 3.0);
@@ -865,22 +825,15 @@ public class Choreographer extends SubsystemBase {
     if (tagID >= 1 && tagID <= 22) {
       Pose2d tagPose = FieldConstants.getTagPose(tagID).toPose2d();
       double xOffset = Units.inchesToMeters(xOffsetFromTagForBackoutIntakingAlgaeInches);
-      double yOffset = 0.0;
 
-      if (scoringDirection == ChoreographerConstants.ScoringDirection.LEFT) {
-        yOffset += Units.inchesToMeters(ChoreographerConstants.yOffsetFromPoleForLeft);
-      } else {
-        yOffset -= Units.inchesToMeters(ChoreographerConstants.yOffsetFromPoleForLeft);
-      }
-
-      Translation2d offsetFromTag = new Translation2d(xOffset, yOffset);
+      Translation2d offsetFromTag = new Translation2d(xOffset, 0);
 
       Rotation2d rotation = new Rotation2d();
 
-      if (scoringDirection == ScoringDirection.LEFT) {
-        rotation = Rotation2d.kCW_90deg;
+      if (scoringDirection == ScoringDirection.FRONT) {
+        rotation = Rotation2d.k180deg;
       } else {
-        rotation = Rotation2d.kCCW_90deg;
+        rotation = Rotation2d.kZero;
       }
 
       Pose2d transformedPose =
@@ -897,22 +850,14 @@ public class Choreographer extends SubsystemBase {
       Pose2d tagPose = FieldConstants.getTagPose(tagID).toPose2d();
       double xOffset = Units.inchesToMeters(xOffsetFromTagForIntermediateIntakingAlgaeInches);
 
-      double yOffset = 0.0;
-
-      if (scoringDirection == ChoreographerConstants.ScoringDirection.LEFT) {
-        yOffset += Units.inchesToMeters(ChoreographerConstants.yOffsetFromPoleForLeft);
-      } else {
-        yOffset -= Units.inchesToMeters(ChoreographerConstants.yOffsetFromPoleForLeft);
-      }
-
-      Translation2d offsetFromTag = new Translation2d(xOffset, yOffset);
+      Translation2d offsetFromTag = new Translation2d(xOffset, 0);
 
       Rotation2d rotation = new Rotation2d();
 
-      if (scoringDirection == ScoringDirection.LEFT) {
-        rotation = Rotation2d.kCW_90deg;
+      if (scoringDirection == ScoringDirection.FRONT) {
+        rotation = Rotation2d.k180deg;
       } else {
-        rotation = Rotation2d.kCCW_90deg;
+        rotation = Rotation2d.kZero;
       }
 
       Pose2d transformedPose =
@@ -929,22 +874,14 @@ public class Choreographer extends SubsystemBase {
       Pose2d tagPose = FieldConstants.getTagPose(tagID).toPose2d();
       double xOffset = Units.inchesToMeters(xOffsetFromTagForIntakingAlgaeInches);
 
-      double yOffset = 0.0;
-
-      if (scoringDirection == ChoreographerConstants.ScoringDirection.LEFT) {
-        yOffset += Units.inchesToMeters(ChoreographerConstants.yOffsetFromPoleForLeft);
-      } else {
-        yOffset -= Units.inchesToMeters(ChoreographerConstants.yOffsetFromPoleForLeft);
-      }
-
-      Translation2d offsetFromTag = new Translation2d(xOffset, yOffset);
+      Translation2d offsetFromTag = new Translation2d(xOffset, 0);
 
       Rotation2d rotation = new Rotation2d();
 
-      if (scoringDirection == ScoringDirection.LEFT) {
-        rotation = Rotation2d.kCW_90deg;
+      if (scoringDirection == ScoringDirection.FRONT) {
+        rotation = Rotation2d.k180deg;
       } else {
-        rotation = Rotation2d.kCCW_90deg;
+        rotation = Rotation2d.kZero;
       }
 
       Pose2d transformedPose =
@@ -988,6 +925,122 @@ public class Choreographer extends SubsystemBase {
   }
 
   public void subsystemsRun(Position position) {
+    double currentElevator = elevator.getPosition();
+    double targetElevator = position.elevatorHeightMeters();
+    Rotation2d targetPivot = position.pivotAngle();
+    Rotation2d targetWrist = position.differentialWristAngle();
+    Rotation2d targetDiffPivot = position.differentialPivotAngle();
+
+    boolean goingUp = currentElevator < targetElevator - 0.01;
+    boolean goingDown = currentElevator > targetElevator + 0.01;
+
+    // Always update slapdowns
+    coralSlapdown.setWantedState(
+        CoralSlapdown.WantedState.MOVE_TO_POSITION, position.coralSlapdownAngle());
+    algaeSlapdown.setWantedState(
+        AlgaeSlapdown.WantedState.MOVE_TO_POSITION, position.algaeSlapdownAngle());
+
+    if (goingUp) {
+      // 1. Move pivot first
+      pivot.setWantedState(Pivot.WantedState.MOVE_TO_POSITION, targetPivot);
+
+      // 2. Once pivot is at goal, move elevator
+      if (pivot.atGoal()) {
+        elevator.setWantedState(Elevator.WantedState.MOVE_TO_POSITION, targetElevator);
+
+        Rotation2d clampedDiffPivot = targetDiffPivot;
+        if (!elevator.atGoal()) {
+          clampedDiffPivot =
+              Rotation2d.fromDegrees(Math.max(-15, Math.min(15, targetDiffPivot.getDegrees())));
+        }
+        differential.setWantedState(
+            DifferentialWristPivot.WantedState.MOVE_TO_POSITIONS,
+            clampedDiffPivot,
+            new Rotation2d());
+
+        // 3. Once elevator is at goal, move wrist
+        if (elevator.atGoal()) {
+          differential.setWantedState(
+              DifferentialWristPivot.WantedState.MOVE_TO_POSITIONS, targetDiffPivot, targetWrist);
+        }
+      }
+    } else if (goingDown) {
+      // 1. Move wrist and elevator together
+      elevator.setWantedState(Elevator.WantedState.MOVE_TO_POSITION, targetElevator);
+      differential.setWantedState(
+          DifferentialWristPivot.WantedState.MOVE_TO_POSITIONS, targetDiffPivot, targetWrist);
+
+      if (elevator.atGoal()) {
+        pivot.setWantedState(Pivot.WantedState.MOVE_TO_POSITION, targetPivot);
+      }
+    } else {
+      // Already at target elevator height, just make sure everything else is at goal
+      pivot.setWantedState(Pivot.WantedState.MOVE_TO_POSITION, targetPivot);
+      differential.setWantedState(
+          DifferentialWristPivot.WantedState.MOVE_TO_POSITIONS, targetDiffPivot, targetWrist);
+    }
+  }
+
+  public void subsystemsRunNoAlgaeSlapdown(Position position) {
+    double currentElevator = elevator.getPosition();
+    double targetElevator = position.elevatorHeightMeters();
+    Rotation2d targetPivot = position.pivotAngle();
+    Rotation2d targetWrist = position.differentialWristAngle();
+    Rotation2d targetDiffPivot = position.differentialPivotAngle();
+
+    boolean goingUp = currentElevator < targetElevator - 0.01;
+    boolean goingDown = currentElevator > targetElevator + 0.01;
+
+    // Always update slapdowns
+    coralSlapdown.setWantedState(
+        CoralSlapdown.WantedState.MOVE_TO_POSITION, position.coralSlapdownAngle());
+
+    if (goingUp) {
+      // 1. Move pivot first
+      pivot.setWantedState(Pivot.WantedState.MOVE_TO_POSITION, targetPivot);
+
+      // 2. Once pivot is at goal, move elevator
+      if (pivot.atGoal()) {
+        elevator.setWantedState(Elevator.WantedState.MOVE_TO_POSITION, targetElevator);
+
+        Rotation2d clampedDiffPivot = targetDiffPivot;
+        if (!elevator.atGoal()) {
+          clampedDiffPivot =
+              Rotation2d.fromDegrees(Math.max(-15, Math.min(15, targetDiffPivot.getDegrees())));
+        }
+        differential.setWantedState(
+            DifferentialWristPivot.WantedState.MOVE_TO_POSITIONS,
+            clampedDiffPivot,
+            new Rotation2d());
+
+        // 3. Once elevator is at goal, move wrist
+        if (elevator.atGoal()) {
+          differential.setWantedState(
+              DifferentialWristPivot.WantedState.MOVE_TO_POSITIONS, targetDiffPivot, targetWrist);
+        }
+      }
+    } else if (goingDown) {
+      // 1. Move wrist and elevator together
+      elevator.setWantedState(Elevator.WantedState.MOVE_TO_POSITION, targetElevator);
+      differential.setWantedState(
+          DifferentialWristPivot.WantedState.MOVE_TO_POSITIONS, targetDiffPivot, targetWrist);
+
+      if (elevator.atGoal()) {
+        pivot.setWantedState(Pivot.WantedState.MOVE_TO_POSITION, targetPivot);
+      }
+    } else {
+      // Already at target elevator height, just make sure everything else is at goal
+      pivot.setWantedState(Pivot.WantedState.MOVE_TO_POSITION, targetPivot);
+      differential.setWantedState(
+          DifferentialWristPivot.WantedState.MOVE_TO_POSITIONS, targetDiffPivot, targetWrist);
+    }
+
+    if (pivot.atGoal(Rotation2d.fromDegrees(1))) {
+      algaeSlapdownRun(position);
+    }
+  }
+
+  public void subsystemsRunDirect(Position position) {
     pivot.setWantedState(Pivot.WantedState.MOVE_TO_POSITION, position.pivotAngle());
     elevator.setWantedState(Elevator.WantedState.MOVE_TO_POSITION, position.elevatorHeightMeters());
     coralSlapdown.setWantedState(
@@ -1058,6 +1111,7 @@ public class Choreographer extends SubsystemBase {
         break;
       case CLAW:
         if (!intake.hasCoralClaw() && intake.hasCoralSlapdown()) {
+          subsystemsRun(CORAL_HANDOFF);
           if (mechanismsAtGoals()) {
             intake.setWantedState(Intake.WantedState.HANDOFF_CORAL);
             if (Robot.isSimulation()) {

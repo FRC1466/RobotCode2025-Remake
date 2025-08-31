@@ -127,4 +127,8 @@ public class AlgaeSlapdown extends SubsystemBase {
     Logger.recordOutput("Subsystems/AlgaeSlapdown/Angle", getAngle());
     Logger.recordOutput("Subsystems/AlgaeSlapdown/VelocityRadPerSec", getVelocity());
   }
+
+  public void resetAngle(Rotation2d angle) {
+    io.resetSlapdownAngle(angle);
+  }
 }

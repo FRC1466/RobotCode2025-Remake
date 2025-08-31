@@ -7,14 +7,14 @@
 
 package frc.robot.subsystems.pivot;
 
-import static frc.robot.constants.AlgaeSlapdownConstants.*;
+import static frc.robot.constants.PivotConstants.*;
 
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.constants.AlgaeSlapdownConstants;
+import frc.robot.constants.PivotConstants;
 import frc.robot.util.LoggedTracer;
 import lombok.Getter;
 import org.littletonrobotics.junction.Logger;
@@ -64,20 +64,25 @@ public class Pivot extends SubsystemBase {
         getAngle().getRadians(), getGoalAngle().getRadians(), kAngleToleranceRad);
   }
 
+  public boolean atGoal(Rotation2d tolerance) {
+    return MathUtil.isNear(
+        getAngle().getRadians(), getGoalAngle().getRadians(), tolerance.getRadians());
+  }
+
   public void setNeutralMode(NeutralModeValue neutralModeValue) {
     io.setNeutralMode(neutralModeValue);
   }
 
   public Rotation2d getAngle() {
-    return inputs.slapdownAngle;
+    return inputs.data.angle();
   }
 
   public double getVelocity() {
-    return inputs.slapdownAngularVelocityRadPerSec;
+    return inputs.data.angularVelocityRotPerSec();
   }
 
   public double getAcceleration() {
-    return inputs.slapdownAngularAccelerationRadPerSecSquared;
+    return inputs.data.angularAccelerationRadPerSecSquared();
   }
 
   @Override
@@ -85,9 +90,9 @@ public class Pivot extends SubsystemBase {
     io.updateInputs(inputs);
     Logger.processInputs("Subsystems/Pivot", inputs);
 
-    if (AlgaeSlapdownConstants.kP.hasChanged(hashCode())
-        || AlgaeSlapdownConstants.kI.hasChanged(hashCode())
-        || AlgaeSlapdownConstants.kD.hasChanged(hashCode())) {
+    if (PivotConstants.kP.hasChanged(hashCode())
+        || PivotConstants.kI.hasChanged(hashCode())
+        || PivotConstants.kD.hasChanged(hashCode())) {
       io.setPID(kP.get(), kI.get(), kD.get());
     }
 
@@ -117,6 +122,10 @@ public class Pivot extends SubsystemBase {
         io.setTargetAngle(goalAngle);
         break;
     }
+  }
+
+  public void resetAngle(Rotation2d angle) {
+    io.resetAngle(angle);
   }
 
   private void logState() {

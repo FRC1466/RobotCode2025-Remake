@@ -7,43 +7,43 @@
 
 package frc.robot.constants;
 
+import static edu.wpi.first.math.geometry.Rotation2d.fromDegrees;
+
 import frc.robot.util.Position;
 
 public class ChoreographerPositions {
-  public static final Position STOW = Position.fromDegrees(0, 0, 0);
-  public static final Position CORAL_STOW = Position.fromDegrees(75, 0, 0, 15, 0, 0);
-  public static final Position ALGAE_STOW = Position.fromDegrees(0, 0, 0); // TODO: set values
-  public static final Position CORAL_INTAKE = Position.fromDegrees(225, 0, 0, 35, 120, 90);
+  public static final Position STOW = Position.fromDegrees(0, 0, 0, 10, 0, 0);
+  public static final Position PRE_MATCH = Position.fromDegrees(0, 27.5, 0, 57.5, 55, 0);
+  public static final Position CORAL_STOW = Position.fromDegrees(0, 0, 0, 30, 30, 0);
+  public static final Position CORAL_STOW_L1 = Position.fromDegrees(75, 0, 0, 30, 120, 90);
+  public static final Position ALGAE_STOW = Position.fromDegrees(0, 0, 0, 20, 20, 0);
   public static final Position CORAL_HANDOFF = Position.fromDegrees(75, 0, 0, 35, 120, 90);
+  public static final Position CORAL_INTAKE = CORAL_HANDOFF.withCoralSlapdown(fromDegrees(225));
 
-  // Because L1 is one side I put it here
-  public static final Position L1 = Position.fromDegrees(60, 180, 0.82);
+  // General scoring position(s)
+  public static final Position L1 = Position.fromDegrees(120, 0, 0, 30, 30, 0);
+  public static final Position L1_FINAL = Position.fromDegrees(120, 110, 0, 30, 30, 0);
 
-  // Reef levels (LEFT side) - HOLD and SCORE positions
-  public static final Position L2_LEFT_HOLD = Position.fromDegrees(0, 320, 0.3);
-  public static final Position L2_LEFT_SCORE = Position.fromDegrees(0, 300, 0.3);
-  public static final Position L3_LEFT_HOLD = Position.fromDegrees(0, 320, 0.7);
-  public static final Position L3_LEFT_SCORE = Position.fromDegrees(0, 300, 0.7);
-  public static final Position L4_LEFT_HOLD = Position.fromDegrees(0, 310, 1.45);
-  public static final Position L4_LEFT_SCORE = Position.fromDegrees(0, 270, 1.45);
+  // Reef levels (FRONT side) - SCORE positions
+  public static final Position L2_FRONT_SCORE = Position.fromDegrees(0, 0, 0, 37.5, -20, 0);
+  public static final Position L3_FRONT_SCORE = Position.fromDegrees(0, 0, 0.35, 37.5, -20, 0);
+  public static final Position L4_FRONT_SCORE = Position.fromDegrees(0, 0, 1.2, 17.5, 65, 0);
 
-  // Reef levels (RIGHT side) - HOLD and SCORE positions
-  public static final Position L2_RIGHT_HOLD = Position.fromDegrees(0, 40, 0.3);
-  public static final Position L2_RIGHT_SCORE = Position.fromDegrees(0, 60, 0.3);
-  public static final Position L3_RIGHT_HOLD = Position.fromDegrees(0, 40, 0.7);
-  public static final Position L3_RIGHT_SCORE = Position.fromDegrees(0, 60, 0.7);
-  public static final Position L4_RIGHT_HOLD = Position.fromDegrees(0, 50, 1.45);
-  public static final Position L4_RIGHT_SCORE = Position.fromDegrees(0, 90, 1.45);
+  // Reef levels (BACK side) - SCORE positions
+  public static final Position L2_BACK_SCORE = Position.fromDegrees(0, 0, 0, -10, -40, 0);
+  public static final Position L3_BACK_SCORE = Position.fromDegrees(0, 0, 0.3, -10, -20, 0);
+  public static final Position L4_BACK_SCORE = Position.fromDegrees(0, 0, 1.2, -2.5, -88, 0);
 
-  // Algae specific (LEFT side)
-  public static final Position ALGAE_LEFT_INTAKE_L2 = Position.fromDegrees(0, 90, 0.7);
-  public static final Position ALGAE_LEFT_INTAKE_L3 = Position.fromDegrees(0, 90, 1.1);
-  public static final Position ALGAE_LEFT_PROCESSOR = Position.fromDegrees(0, 115, 0.5);
-  public static final Position ALGAE_LEFT_BARGE = Position.fromDegrees(0, 330, 1.5);
+  // Algae specific (FRONT side)
+  public static final Position ALGAE_GROUND_INTAKE = Position.fromDegrees(0, 140, 0, 60, 80, 0);
+  public static final Position ALGAE_FRONT_INTAKE_L2 = Position.fromDegrees(0, 0, .35, 40, 50, 0);
+  public static final Position ALGAE_FRONT_INTAKE_L3 = Position.fromDegrees(0, 0, 0.6, 30, 60, 0);
+  public static final Position ALGAE_FRONT_PROCESSOR = Position.fromDegrees(0, 0, 0, 90, 10, 0);
+  public static final Position ALGAE_FRONT_BARGE = Position.fromDegrees(0, 0, 1.2, 20, -10, 0);
 
-  // Algae specific (RIGHT side)
-  public static final Position ALGAE_RIGHT_INTAKE_L2 = Position.fromDegrees(0, 270, 0.7);
-  public static final Position ALGAE_RIGHT_INTAKE_L3 = Position.fromDegrees(0, 270, 1.1);
-  public static final Position ALGAE_RIGHT_PROCESSOR = Position.fromDegrees(0, 245, 0.5);
-  public static final Position ALGAE_RIGHT_BARGE = Position.fromDegrees(0, 30, 1.5);
+  // Algae specific (BACK side)
+  public static final Position ALGAE_BACK_INTAKE_L2 =
+      Position.fromDegrees(0, 0, 0.1, -10, -77.5, 0);
+  public static final Position ALGAE_BACK_INTAKE_L3 = Position.fromDegrees(0, 0, .475, -5, -80, 0);
+  public static final Position ALGAE_BACK_BARGE = Position.fromDegrees(0, 0, 0, 0, 0, 0);
 }

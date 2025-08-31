@@ -7,7 +7,7 @@
 
 package frc.robot.subsystems.pivot;
 
-import static frc.robot.constants.AlgaeSlapdownConstants.*;
+import static frc.robot.constants.PivotConstants.*;
 
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -22,8 +22,8 @@ import edu.wpi.first.wpilibj.simulation.SingleJointedArmSim;
  * lab. This class simulates the slapdown mechanism's behavior using the WPILib physics sim tools.
  */
 public class PivotIOSim implements PivotIO {
-  private static final double minAngleRads = 0.0;
-  private static final double maxAngleRads = Math.PI * 2;
+  private static final double minAngleRads = -Math.PI;
+  private static final double maxAngleRads = Math.PI;
   private static final double armLength = 0.4;
   private static final double massKg = 4;
 
@@ -52,17 +52,17 @@ public class PivotIOSim implements PivotIO {
     sim.setInputVoltage(appliedVoltage);
     sim.update(0.02);
 
-    double prevVelocity = inputs.slapdownAngularVelocityRadPerSec;
+    double prevVelocity = inputs.data.angularVelocityRotPerSec();
 
-    inputs.slapdownAngle = Rotation2d.fromRadians(sim.getAngleRads());
-    inputs.slapdownAngularVelocityRadPerSec = sim.getVelocityRadPerSec();
-    inputs.slapdownAngularAccelerationRadPerSecSquared =
-        (inputs.slapdownAngularVelocityRadPerSec - prevVelocity) / 0.02;
-
-    inputs.slapdownAppliedVolts = appliedVoltage;
-    inputs.slapdownSupplyCurrentAmps = Math.abs(appliedVoltage) * 10.0;
-    inputs.slapdownStatorCurrentAmps = inputs.slapdownSupplyCurrentAmps;
-    inputs.slapdownMotorTemp = 40.0;
+    inputs.data =
+        new PivotIOData(
+          Rotation2d.fromRadians(sim.getAngleRads()),
+          sim.getVelocityRadPerSec(),
+          (sim.getVelocityRadPerSec() - prevVelocity) / 0.02,
+            appliedVoltage,
+            Math.abs(appliedVoltage) * 10.0,
+            Math.abs(appliedVoltage) * 10.0,
+            40.0);
 
     if (!DriverStation.isEnabled()) {
       appliedVoltage = 0.0;
@@ -85,7 +85,7 @@ public class PivotIOSim implements PivotIO {
   }
 
   @Override
-  public void resetSlapdownAngle(Rotation2d angle) {
+  public void resetAngle(Rotation2d angle) {
     sim.setState(angle.getRadians(), 0.0);
     pid.reset(angle.getRadians());
   }

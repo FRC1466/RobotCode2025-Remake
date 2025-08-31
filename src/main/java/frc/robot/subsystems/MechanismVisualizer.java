@@ -13,12 +13,11 @@ import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.networktables.NetworkTable;
-import edu.wpi.first.networktables.StructArrayPublisher;
+import frc.robot.util.LoggedTunableNumber;
+import org.littletonrobotics.junction.Logger;
 
-public class MechanismVisualizer implements AutoCloseable {
+public class MechanismVisualizer {
   // Poses: 0 coral, 1 algae, 2 diff base, 3 wrist, 4..N elevator stages (top to base)
-  private final StructArrayPublisher<Pose3d> mechanismPosesPublisher;
   private final Pose3d[] poses;
 
   // Geometry (robot frame)
@@ -41,18 +40,49 @@ public class MechanismVisualizer implements AutoCloseable {
   private final double[] perStageTravel = new double[movingStages]; // top-most first
   private final double[] stageZeroOffsets = new double[elevatorStageCount]; // top-most first
 
-  public MechanismVisualizer(NetworkTable table) {
+  // Tunable offsets for hasCoral and hasAlgae
+  private final LoggedTunableNumber hasCoralOffsetX =
+      new LoggedTunableNumber("Mechanism/HasCoralOffsetX", 0.0);
+  private final LoggedTunableNumber hasCoralOffsetY =
+      new LoggedTunableNumber("Mechanism/HasCoralOffsetY", 0.0);
+  private final LoggedTunableNumber hasCoralOffsetZ =
+      new LoggedTunableNumber("Mechanism/HasCoralOffsetZ", 0.25);
+  private final LoggedTunableNumber hasCoralRotX =
+      new LoggedTunableNumber("Mechanism/HasCoralRotX", 0.0);
+  private final LoggedTunableNumber hasCoralRotY =
+      new LoggedTunableNumber("Mechanism/HasCoralRotY", 0.0);
+  private final LoggedTunableNumber hasCoralRotZ =
+      new LoggedTunableNumber("Mechanism/HasCoralRotZ", 0.0);
+
+  private final LoggedTunableNumber hasCoralSlapdownOffsetX =
+      new LoggedTunableNumber("Mechanism/HasCoralSlapdownOffsetX", -.275);
+  private final LoggedTunableNumber hasCoralSlapdownOffsetY =
+      new LoggedTunableNumber("Mechanism/HasCoralSlapdownOffsetY", 0.0);
+  private final LoggedTunableNumber hasCoralSlapdownOffsetZ =
+      new LoggedTunableNumber("Mechanism/HasCoralSlapdownOffsetZ", -.05);
+  private final LoggedTunableNumber hasCoralSlapdownRotX =
+      new LoggedTunableNumber("Mechanism/HasCoralSlapdownRotX", 0.0);
+  private final LoggedTunableNumber hasCoralSlapdownRotY =
+      new LoggedTunableNumber("Mechanism/HasCoralSlapdownRotY", 0.0);
+  private final LoggedTunableNumber hasCoralSlapdownRotZ =
+      new LoggedTunableNumber("Mechanism/HasCoralSlapdownRotZ", 1.57);
+
+  private final LoggedTunableNumber hasAlgaeOffsetX =
+      new LoggedTunableNumber("Mechanism/HasAlgaeOffsetX", -0.005);
+  private final LoggedTunableNumber hasAlgaeOffsetY =
+      new LoggedTunableNumber("Mechanism/HasAlgaeOffsetY", 0.0);
+  private final LoggedTunableNumber hasAlgaeOffsetZ =
+      new LoggedTunableNumber("Mechanism/HasAlgaeOffsetZ", 0.4);
+
+  public MechanismVisualizer() {
     poses = new Pose3d[2 + 2 + elevatorStageCount];
     for (int i = 0; i < poses.length; i++) poses[i] = new Pose3d();
 
     for (int i = 0; i < movingStages; i++) perStageTravel[i] = defaultPerStageTravel;
     // stageZeroOffsets default to 0
-
-    mechanismPosesPublisher = table.getStructArrayTopic("MechanismPoses", Pose3d.struct).publish();
-    mechanismPosesPublisher.set(poses);
   }
 
-  // Update all mechanism poses and publish
+  // Update all mechanism poses and log
   public void update(
       Pose2d robotPose,
       double slapdownCoral,
@@ -60,9 +90,12 @@ public class MechanismVisualizer implements AutoCloseable {
       double diffRotation,
       double diffPivot,
       double elevatorHeight,
-      double elevatorRotation) {
+      double elevatorRotation,
+      boolean hasCoral,
+      boolean coralInSlapdown,
+      boolean hasAlgae) {
 
-    // Slapdowns (about local Y)
+    // Slapdowns (initial local pose around anchor; rotation applied later for visualization)
     poses[0] = new Pose3d(coralPivotAnchor, new Rotation3d(0, slapdownCoral, 0));
     poses[1] = new Pose3d(algaePivotAnchor, new Rotation3d(0, slapdownAlgae, 0));
 
@@ -89,7 +122,7 @@ public class MechanismVisualizer implements AutoCloseable {
 
     double[] slotStart = new double[movingStages];
     double acc = 0.0;
-    for (int j = 0; j < movingStages; j++) {
+    for (int j = movingStages - 1; j >= 0; j--) {
       slotStart[j] = acc;
       acc += Math.max(0.0, perStageTravel[j]);
     }
@@ -107,16 +140,90 @@ public class MechanismVisualizer implements AutoCloseable {
         }
         stageZ = stageZeroOffsets[i] + sum;
       }
-      Pose3d stagePose =
+
+      poses[4 + i] =
           elevBasePose.transformBy(
               new Transform3d(new Translation3d(0, 0, stageZ), new Rotation3d()));
-      poses[4 + i] = stagePose;
     }
 
     // Force base-most to anchor (no translation drift)
     poses[4 + elevatorStageCount - 1] = new Pose3d(elevatorBaseAnchor, rotElev);
 
-    mechanismPosesPublisher.set(poses);
+    // ---- Logging (replacement block) ----
+    Logger.recordOutput("MechanismVisualization/MechanismPoses", poses);
+
+    // Convert robot 2D pose -> 3D world pose once
+    Pose3d robot3d = new Pose3d(robotPose);
+
+    // wrist pose is computed in robot frame as poses[3].
+    Pose3d wristRobotFrame = poses[3]; // pivot point & wrist rotation in robot frame
+
+    // Convert wrist into world coordinates (robot -> world)
+    Pose3d wristWorld =
+        robot3d.transformBy(
+            new Transform3d(wristRobotFrame.getTranslation(), wristRobotFrame.getRotation()));
+
+    // ---------- CORAL ----------
+    if (hasCoral) {
+      if (coralInSlapdown) {
+        Pose3d anchorRobotPose = poses[0];
+
+        Pose3d anchorWorld =
+            robot3d.transformBy(
+                new Transform3d(anchorRobotPose.getTranslation(), anchorRobotPose.getRotation()));
+
+        Translation3d slapLocalOffset =
+            new Translation3d(
+                hasCoralSlapdownOffsetX.get(),
+                hasCoralSlapdownOffsetY.get(),
+                hasCoralSlapdownOffsetZ.get());
+
+        Pose3d placed = anchorWorld.transformBy(new Transform3d(slapLocalOffset, new Rotation3d()));
+
+        // Coral’s own tunable rotation
+        Rotation3d coralRot =
+            new Rotation3d(
+                hasCoralSlapdownRotX.get(), hasCoralSlapdownRotY.get(), hasCoralSlapdownRotZ.get());
+
+        // Add the robot’s yaw to coral yaw
+        double robotYaw = robot3d.getRotation().getZ(); // robot heading
+        Rotation3d finalRot =
+            new Rotation3d(coralRot.getX(), coralRot.getY(), coralRot.getZ() + robotYaw);
+
+        Pose3d slapWorld = new Pose3d(placed.getTranslation(), finalRot);
+
+        Logger.recordOutput("MechanismVisualization/HasCoralPose", new Pose3d[] {slapWorld});
+      } else {
+        // CORAL IN CLAW (attach to wrist world pose; translation/rotation are local to wrist)
+        Translation3d coralLocal =
+            new Translation3d(hasCoralOffsetX.get(), hasCoralOffsetY.get(), hasCoralOffsetZ.get());
+
+        Rotation3d coralLocalRot =
+            new Rotation3d(hasCoralRotX.get(), hasCoralRotY.get(), hasCoralRotZ.get());
+
+        Pose3d coralClawWorld = wristWorld.transformBy(new Transform3d(coralLocal, coralLocalRot));
+
+        Logger.recordOutput("MechanismVisualization/HasCoralPose", new Pose3d[] {coralClawWorld});
+      }
+    } else {
+      Logger.recordOutput("MechanismVisualization/HasCoralPose", new Pose3d[] {});
+    }
+
+    // ---------- ALGAE ----------
+    if (hasAlgae) {
+      Translation3d algaeLocal =
+          new Translation3d(hasAlgaeOffsetX.get(), hasAlgaeOffsetY.get(), hasAlgaeOffsetZ.get());
+
+      Rotation3d algaeLocalRot = new Rotation3d(0.0, 0.0, 0.0); // add tunables if desired
+
+      Pose3d algaeClawWorld = wristWorld.transformBy(new Transform3d(algaeLocal, algaeLocalRot));
+
+      Logger.recordOutput(
+          "MechanismVisualization/HasAlgaePose",
+          new Translation3d[] {algaeClawWorld.getTranslation()});
+    } else {
+      Logger.recordOutput("MechanismVisualization/HasAlgaePose", new Translation3d[] {});
+    }
   }
 
   public void setStageTravel(double[] perStageTravelMeters) {
@@ -133,13 +240,5 @@ public class MechanismVisualizer implements AutoCloseable {
 
   private static double clamp(double v, double min, double max) {
     return Math.max(min, Math.min(v, max));
-  }
-
-  @Override
-  public void close() {
-    try {
-      mechanismPosesPublisher.close();
-    } catch (Exception ignored) {
-    }
   }
 }

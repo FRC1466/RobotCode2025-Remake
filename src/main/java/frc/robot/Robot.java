@@ -13,7 +13,6 @@ import edu.wpi.first.math.MathShared;
 import edu.wpi.first.math.MathSharedStore;
 import edu.wpi.first.math.MathUsageId;
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -25,14 +24,9 @@ import edu.wpi.first.wpilibj.Watchdog;
 import edu.wpi.first.wpilibj.simulation.DriverStationSim;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import frc.robot.constants.ChoreographerPositions;
 import frc.robot.constants.Constants;
 import frc.robot.constants.Constants.RobotType;
-import frc.robot.subsystems.Choreographer;
-import frc.robot.subsystems.algaeSlapdown.AlgaeSlapdown;
-import frc.robot.subsystems.coralSlapdown.CoralSlapdown;
-import frc.robot.subsystems.diffwrist.DifferentialWristPivot;
-import frc.robot.subsystems.elevator.Elevator;
-import frc.robot.subsystems.pivot.Pivot;
 import frc.robot.util.DummyLogReceiver;
 import frc.robot.util.LoggedTracer;
 import frc.robot.util.NTClientLogger;
@@ -224,65 +218,6 @@ public class Robot extends LoggedRobot {
     CommandScheduler.getInstance().run();
     LoggedTracer.record("Commands");
 
-    // Publish and read values from SmartDashboard (NetworkTables)
-    double ntSlapdownCoral =
-        edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.getNumber(
-            "MechanismViz/SlapdownCoral", 0.0);
-    edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.putNumber(
-        "MechanismViz/SlapdownCoral", ntSlapdownCoral);
-
-    double ntSlapdownAlgae =
-        edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.getNumber(
-            "MechanismViz/SlapdownAlgae", 0.0);
-    edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.putNumber(
-        "MechanismViz/SlapdownAlgae", ntSlapdownAlgae);
-
-    double ntDiffPivot =
-        edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.getNumber(
-            "MechanismViz/DiffPivot", 0.0);
-    edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.putNumber(
-        "MechanismViz/DiffPivot", ntDiffPivot);
-
-    double ntDiffRotation =
-        edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.getNumber(
-            "MechanismViz/DiffRotation", 0.0);
-    edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.putNumber(
-        "MechanismViz/DiffRotation", ntDiffRotation);
-
-    double ntElevatorHeight =
-        edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.getNumber(
-            "MechanismViz/ElevatorHeight", 0.0);
-    edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.putNumber(
-        "MechanismViz/ElevatorHeight", ntElevatorHeight);
-
-    double ntElevatorRotation =
-        edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.getNumber(
-            "MechanismViz/ElevatorRotation", 0.0);
-    edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.putNumber(
-        "MechanismViz/ElevatorRotation", ntElevatorRotation);
-
-    robotContainer
-        .getAlgaeSlapdown()
-        .setWantedState(
-            AlgaeSlapdown.WantedState.MOVE_TO_POSITION, Rotation2d.fromDegrees(ntSlapdownAlgae));
-    robotContainer
-        .getCoralSlapdown()
-        .setWantedState(
-            CoralSlapdown.WantedState.MOVE_TO_POSITION, Rotation2d.fromDegrees(ntSlapdownCoral));
-    robotContainer
-        .getElevator()
-        .setWantedState(Elevator.WantedState.MOVE_TO_POSITION, ntElevatorHeight);
-    robotContainer
-        .getDifferential()
-        .setWantedState(
-            DifferentialWristPivot.WantedState.MOVE_TO_POSITIONS,
-            Rotation2d.fromDegrees(ntDiffPivot),
-            Rotation2d.fromDegrees(ntDiffRotation));
-    robotContainer
-        .getPivot()
-        .setWantedState(
-            Pivot.WantedState.MOVE_TO_POSITION, Rotation2d.fromDegrees(ntElevatorRotation));
-
     robotContainer
         .getMechanismVisualizer()
         .update(
@@ -292,7 +227,10 @@ public class Robot extends LoggedRobot {
             robotContainer.getDifferential().getWristAngle().getRadians(),
             robotContainer.getDifferential().getPivotAngle().getRadians(),
             robotContainer.getElevator().getPosition(),
-            robotContainer.getPivot().getAngle().getRadians());
+            robotContainer.getPivot().getAngle().getRadians(),
+            robotContainer.getIntake().hasCoralEither(),
+            robotContainer.getIntake().hasCoralSlapdown(),
+            robotContainer.getIntake().hasAlgae());
 
     // Print auto duration
     if (autoCommand != null) {
@@ -350,9 +288,9 @@ public class Robot extends LoggedRobot {
   /** This function is called once when the robot is disabled. */
   @Override
   public void disabledInit() {
-    robotContainer
-        .getChoreographer()
-        .setWantedChoreography(Choreographer.WantedChoreography.DEFAULT_STATE);
+    // robotContainer
+    // .getChoreographer()
+    // .setWantedChoreography(Choreographer.WantedChoreography.DEFAULT_STATE);
   }
 
   /** This function is called periodically when disabled. */
@@ -397,7 +335,23 @@ public class Robot extends LoggedRobot {
 
   /** This function is called once when the robot is first started up. */
   @Override
-  public void simulationInit() {}
+  public void simulationInit() {
+    robotContainer
+        .getDifferential()
+        .resetAngles(
+            ChoreographerPositions.PRE_MATCH.differentialPivotAngle(),
+            ChoreographerPositions.PRE_MATCH.differentialWristAngle());
+    robotContainer.getPivot().resetAngle(ChoreographerPositions.PRE_MATCH.pivotAngle());
+    robotContainer
+        .getElevator()
+        .resetPosition(ChoreographerPositions.PRE_MATCH.elevatorHeightMeters());
+    robotContainer
+        .getCoralSlapdown()
+        .resetAngle(ChoreographerPositions.PRE_MATCH.coralSlapdownAngle());
+    robotContainer
+        .getAlgaeSlapdown()
+        .resetAngle(ChoreographerPositions.PRE_MATCH.algaeSlapdownAngle());
+  }
 
   /** This function is called periodically whilst in simulation. */
   @Override
