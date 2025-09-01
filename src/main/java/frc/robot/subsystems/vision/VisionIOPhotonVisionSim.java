@@ -34,8 +34,6 @@ public class VisionIOPhotonVisionSim extends VisionIOPhotonVision {
     super(name, robotToCamera);
     this.poseSupplier = poseSupplier;
 
-    // Testing
-
     // Initialize vision sim
     if (visionSim == null) {
       visionSim = new VisionSystemSim("main");
