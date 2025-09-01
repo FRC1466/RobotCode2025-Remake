@@ -16,25 +16,17 @@ public interface PivotIO {
 
   @AutoLog
   class PivotIOInputs {
-    public PivotIOData data =
-        new PivotIOData(
-            new Rotation2d(0),
-            0,
-            0,
-            0,
-            0,
-            0,
-            0);
+    public PivotIOData data = new PivotIOData(new Rotation2d(0), 0, 0, 0, 0, 0, 0);
   }
 
   record PivotIOData(
-    Rotation2d angle,
-    double appliedVolts,
-    double supplyCurrentAmps,
-    double statorCurrentAmps,
-    double angularVelocityRotPerSec,
-    double angularAccelerationRadPerSecSquared,
-    double motorTemp) {}
+      Rotation2d angle,
+      double appliedVolts,
+      double supplyCurrentAmps,
+      double statorCurrentAmps,
+      double angularVelocityRotPerSec,
+      double angularAccelerationRadPerSecSquared,
+      double motorTemp) {}
 
   default void setTargetAngle(Rotation2d target) {}
 

@@ -64,6 +64,10 @@ public class AlgaeSlapdown extends SubsystemBase {
         getAngle().getRadians(), getGoalAngle().getRadians(), kAngleToleranceRad);
   }
 
+  public boolean atGoal(double toleranceRad) {
+    return MathUtil.isNear(getAngle().getRadians(), getGoalAngle().getRadians(), toleranceRad);
+  }
+
   public void setNeutralMode(NeutralModeValue neutralModeValue) {
     io.setNeutralMode(neutralModeValue);
   }

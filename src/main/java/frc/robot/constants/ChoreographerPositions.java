@@ -17,11 +17,12 @@ public class ChoreographerPositions {
   public static final Position CORAL_STOW = Position.fromDegrees(0, 0, 0, 30, 30, 0);
   public static final Position CORAL_STOW_L1 = Position.fromDegrees(75, 0, 0, 30, 120, 90);
   public static final Position ALGAE_STOW = Position.fromDegrees(0, 0, 0, 20, 20, 0);
+  public static final Position ALGAE_STOW_SAFE = Position.fromDegrees(0, 180, 0, 20, 20, 0);
   public static final Position CORAL_HANDOFF = Position.fromDegrees(75, 0, 0, 35, 120, 90);
   public static final Position CORAL_INTAKE = CORAL_HANDOFF.withCoralSlapdown(fromDegrees(225));
 
   // General scoring position(s)
-  public static final Position L1 = Position.fromDegrees(120, 0, 0, 30, 30, 0);
+  public static final Position L1 = Position.fromDegrees(120, 70, 0, 30, 30, 0);
   public static final Position L1_FINAL = Position.fromDegrees(120, 110, 0, 30, 30, 0);
 
   // Reef levels (FRONT side) - SCORE positions
@@ -36,6 +37,8 @@ public class ChoreographerPositions {
 
   // Algae specific (FRONT side)
   public static final Position ALGAE_GROUND_INTAKE = Position.fromDegrees(0, 140, 0, 60, 80, 0);
+  public static final Position ALGAE_GROUND_INTAKE_TRANSITIONING =
+      Position.fromDegrees(0, 180, 0, 60, 80, 0);
   public static final Position ALGAE_FRONT_INTAKE_L2 = Position.fromDegrees(0, 0, .35, 40, 50, 0);
   public static final Position ALGAE_FRONT_INTAKE_L3 = Position.fromDegrees(0, 0, 0.6, 30, 60, 0);
   public static final Position ALGAE_FRONT_PROCESSOR = Position.fromDegrees(0, 0, 0, 90, 10, 0);

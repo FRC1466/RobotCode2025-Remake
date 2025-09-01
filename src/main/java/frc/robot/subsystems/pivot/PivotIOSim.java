@@ -56,9 +56,9 @@ public class PivotIOSim implements PivotIO {
 
     inputs.data =
         new PivotIOData(
-          Rotation2d.fromRadians(sim.getAngleRads()),
-          sim.getVelocityRadPerSec(),
-          (sim.getVelocityRadPerSec() - prevVelocity) / 0.02,
+            Rotation2d.fromRadians(sim.getAngleRads()),
+            sim.getVelocityRadPerSec(),
+            (sim.getVelocityRadPerSec() - prevVelocity) / 0.02,
             appliedVoltage,
             Math.abs(appliedVoltage) * 10.0,
             Math.abs(appliedVoltage) * 10.0,

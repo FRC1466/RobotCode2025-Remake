@@ -317,7 +317,7 @@ public class RobotContainer {
     controller
         .y()
         .whileTrue(choreographer.setChoreographyCommand(WantedChoreography.INTAKE_ALGAE_GROUND))
-        .onFalse(choreographer.setChoreographyCommand(WantedChoreography.DEFAULT_STATE));
+        .onFalse(choreographer.setChoreographyCommand(WantedChoreography.MOVE_ALGAE_TO_SAFE));
 
     // Algae reef intake
     controller

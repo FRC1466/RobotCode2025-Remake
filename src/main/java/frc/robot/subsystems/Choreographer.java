@@ -17,7 +17,6 @@ import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -56,16 +55,11 @@ public class Choreographer extends SubsystemBase {
   // Debouncers
   private final Debouncer simCoralDebouncer = new Debouncer(0.5, Debouncer.DebounceType.kRising);
   private final Debouncer simAlgaeDebouncer = new Debouncer(0.5, Debouncer.DebounceType.kRising);
-
   private final Debouncer readyToScoreDebouncer =
       new Debouncer(0.5, Debouncer.DebounceType.kRising);
-
   private final Debouncer readyToScoreDebouncerAuto =
       new Debouncer(0.5, Debouncer.DebounceType.kRising);
-
   private final Debouncer intakeDebouncerAuto = new Debouncer(0.1, Debouncer.DebounceType.kRising);
-
-  private final Timer coralL1TopTimer = new Timer();
 
   public enum WantedCoralLocation {
     CLAW,
@@ -98,6 +92,7 @@ public class Choreographer extends SubsystemBase {
     INTAKE_ALGAE_REEF,
     INTAKE_ALGAE_GROUND,
     INTAKE_ALGAE_ICE_CREAM,
+    MOVE_ALGAE_TO_SAFE,
     MOVE_ALGAE_TO_NET_POSITION,
     SCORE_ALGAE_IN_NET,
     MOVE_ALGAE_TO_PROCESSOR_POSITION,
@@ -120,6 +115,7 @@ public class Choreographer extends SubsystemBase {
     INTAKE_ALGAE_REEF,
     INTAKE_ALGAE_GROUND,
     INTAKE_ALGAE_ICE_CREAM,
+    MOVE_ALGAE_TO_SAFE,
     MOVE_ALGAE_TO_NET_POSITION,
     SCORE_ALGAE_IN_NET,
     MOVE_ALGAE_TO_PROCESSOR_POSITION,
@@ -249,6 +245,9 @@ public class Choreographer extends SubsystemBase {
       case INTAKE_ALGAE_GROUND:
         currentChoreography = CurrentChoreography.INTAKE_ALGAE_GROUND;
         break;
+      case MOVE_ALGAE_TO_SAFE:
+        currentChoreography = CurrentChoreography.MOVE_ALGAE_TO_SAFE;
+        break;
       case MOVE_ALGAE_TO_NET_POSITION:
         currentChoreography = CurrentChoreography.MOVE_ALGAE_TO_NET_POSITION;
         break;
@@ -334,6 +333,9 @@ public class Choreographer extends SubsystemBase {
       case INTAKE_ALGAE_GROUND:
         intakeAlgaeFromGround();
         break;
+      case MOVE_ALGAE_TO_SAFE:
+        moveAlgaeToSafePosition();
+        break;
       case SCORE_ALGAE_IN_NET:
         scoreAlgaeNet();
         break;
@@ -378,7 +380,7 @@ public class Choreographer extends SubsystemBase {
   }
 
   private void holdingAlgae() {
-    subsystemsRunNoAlgaeSlapdown(ALGAE_STOW);
+    subsystemsRunAlgaeSlapdownLater(ALGAE_STOW);
 
     drive.setWantedState(Drive.WantedState.TELEOP_DRIVE);
     drive.setTeleopVelocityCoefficient(defaultTeleopTranslationCoefficient);
@@ -388,7 +390,6 @@ public class Choreographer extends SubsystemBase {
   }
 
   private void holdingCoral() {
-    coralL1TopTimer.stop();
     coralEject = false;
     if (wantedCoralLocation == WantedCoralLocation.SLAPDOWN) {
       subsystemsRun(CORAL_STOW_L1);
@@ -410,7 +411,6 @@ public class Choreographer extends SubsystemBase {
   }
 
   private void noPiece() {
-    coralL1TopTimer.stop();
     subsystemsRun(STOW);
     intake.setWantedState(Intake.WantedState.OFF);
     drive.setWantedState(Drive.WantedState.TELEOP_DRIVE);
@@ -483,16 +483,33 @@ public class Choreographer extends SubsystemBase {
   }
 
   private void intakeAlgaeFromGround() {
-    subsystemsRun(ALGAE_GROUND_INTAKE);
+    if (intake.hasAlgae()) {
+      intake.setWantedState(Intake.WantedState.HOLD_ALGAE);
+      setWantedChoreography(WantedChoreography.MOVE_ALGAE_TO_SAFE);
+      return;
+    }
+    subsystemsRun(ALGAE_STOW);
+    algaeSlapdownRun(ALGAE_GROUND_INTAKE);
+    intake.setWantedState(Intake.WantedState.INTAKE_ALGAE);
+    if (algaeSlapdown.atGoal(Units.degreesToRadians(40))) {
+      subsystemsRun(ALGAE_GROUND_INTAKE);
+    }
     if (Robot.isSimulation()) {
       if (simAlgaeDebouncer.calculate(mechanismsAtGoals())) {
-        intake.setWantedState(Intake.WantedState.INTAKE_ALGAE);
         intake.setHasAlgae(true);
       }
     }
   }
 
   private void intakeAlgaeIceCream() {}
+
+  private void moveAlgaeToSafePosition() {
+    if (pivot.getAngle().getDegrees() > 45) {
+      subsystemsRun(ALGAE_STOW_SAFE);
+    } else {
+      setWantedChoreography(WantedChoreography.DEFAULT_STATE);
+    }
+  }
 
   private void scoreL1Teleop(ScoringSide scoringSide) {
     setWantedCoralLocation(WantedCoralLocation.SLAPDOWN);
@@ -981,7 +998,7 @@ public class Choreographer extends SubsystemBase {
     }
   }
 
-  public void subsystemsRunNoAlgaeSlapdown(Position position) {
+  public void subsystemsRunAlgaeSlapdownLater(Position position) {
     double currentElevator = elevator.getPosition();
     double targetElevator = position.elevatorHeightMeters();
     Rotation2d targetPivot = position.pivotAngle();

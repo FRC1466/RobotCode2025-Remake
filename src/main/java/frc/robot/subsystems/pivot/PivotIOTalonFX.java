@@ -70,16 +70,16 @@ public class PivotIOTalonFX implements PivotIO {
 
   @Override
   public void updateInputs(PivotIOInputs inputs) {
-        inputs.data =
-            new PivotIOData(
-                Rotation2d.fromRadians(
-                    AlgaeSlapdownConstants.wristRotationsToRadians(rotorPosition.getValueAsDouble())),
-                motorVoltage.getValueAsDouble(),
-                supplyCurrent.getValueAsDouble(),
-                statorCurrent.getValueAsDouble(),
-                AlgaeSlapdownConstants.wristRotationsToRadians(rotorVelocity.getValueAsDouble()),
-                AlgaeSlapdownConstants.wristRotationsToRadians(rotorAcceleration.getValueAsDouble()),
-                deviceTemp.getValueAsDouble());
+    inputs.data =
+        new PivotIOData(
+            Rotation2d.fromRadians(
+                AlgaeSlapdownConstants.wristRotationsToRadians(rotorPosition.getValueAsDouble())),
+            motorVoltage.getValueAsDouble(),
+            supplyCurrent.getValueAsDouble(),
+            statorCurrent.getValueAsDouble(),
+            AlgaeSlapdownConstants.wristRotationsToRadians(rotorVelocity.getValueAsDouble()),
+            AlgaeSlapdownConstants.wristRotationsToRadians(rotorAcceleration.getValueAsDouble()),
+            deviceTemp.getValueAsDouble());
   }
 
   @Override
