@@ -19,7 +19,6 @@ import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
  * Class for a tunable number. Gets value from dashboard in tuning mode, returns default if not or
  * value not in dashboard.
  */
-@SuppressWarnings("unused")
 public class LoggedTunableNumber implements DoubleSupplier {
   private static final String tableKey = "/Tuning";
 

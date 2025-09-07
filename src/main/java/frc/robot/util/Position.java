@@ -8,7 +8,6 @@
 package frc.robot.util;
 
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.util.Units;
 
 /**
  * Immutable container for a combined mechanism pose: - Coral slapdown angle - Algae slapdown angle
@@ -25,18 +24,7 @@ public record Position(
     Rotation2d differentialPivotAngle,
     Rotation2d differentialWristAngle) {
 
-  public Position {
-    if (coralSlapdownAngle == null) throw new IllegalArgumentException("coralSlapdownAngle null");
-    if (algaeSlapdownAngle == null) throw new IllegalArgumentException("algaeSlapdownAngle null");
-    if (pivotAngle == null) throw new IllegalArgumentException("pivotAngle null");
-    if (differentialPivotAngle == null)
-      throw new IllegalArgumentException("differentialPivotAngle null");
-    if (differentialWristAngle == null)
-      throw new IllegalArgumentException("differentialWristAngle null");
-    if (Double.isNaN(elevatorHeightMeters) || Double.isInfinite(elevatorHeightMeters)) {
-      throw new IllegalArgumentException("elevatorHeightMeters invalid");
-    }
-  }
+  public Position {}
 
   // Full builders
   public static Position of(
@@ -159,10 +147,6 @@ public record Position(
 
   public Position withWrist(Rotation2d newWrist) {
     return withDifferentialWrist(newWrist);
-  }
-
-  public double elevatorHeightInInches() {
-    return Units.metersToInches(elevatorHeightMeters);
   }
 
   @Override
