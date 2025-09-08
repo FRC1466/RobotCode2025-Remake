@@ -93,7 +93,7 @@ public class Choreographer extends SubsystemBase {
     EJECT_CORAL
   }
 
-  public enum CurrentChoreography {
+  private enum CurrentChoreography {
     HOME,
     STOPPED,
     NO_PIECE,
