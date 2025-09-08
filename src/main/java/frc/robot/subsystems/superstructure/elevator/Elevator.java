@@ -388,20 +388,7 @@ public class Elevator {
   }
 
   public Command homingSequence() {
-    return Commands.startRun(
-            () -> {
-              stopProfile = true;
-              homed = false;
-              homingDebouncer = new Debouncer(homingTimeSecs.get());
-              homingDebouncer.calculate(false);
-            },
-            () -> {
-              if (disabledOverride.getAsBoolean() || coastOverride.getAsBoolean()) return;
-              io.runVolts(homingVolts.get());
-              homed =
-                  homingDebouncer.calculate(
-                      Math.abs(inputs.data.velocityRadPerSec()) <= homingVelocityThresh.get());
-            })
+    return Commands.runOnce(() -> homed = true)
         .until(() -> homed)
         .andThen(this::setHome)
         .finallyDo(

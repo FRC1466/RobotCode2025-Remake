@@ -101,11 +101,11 @@ public class Manipulator {
     new LoggedTunableNumber("Manipulator/Funnel/ALGAEGRAB", 0),
   };
   public static final LoggedTunableNumber[] ALGAEHOLD = {
-    new LoggedTunableNumber("Manipulator/Mailbox/ALGAEHOLD", .4),
+    new LoggedTunableNumber("Manipulator/Mailbox/ALGAEHOLD", .6),
     new LoggedTunableNumber("Manipulator/Funnel/ALGAEHOLD", 0),
   };
   public static final LoggedTunableNumber[] ALGAENET = {
-    new LoggedTunableNumber("Manipulator/Mailbox/ALGAENET", -2.5),
+    new LoggedTunableNumber("Manipulator/Mailbox/ALGAENET", -6),
     new LoggedTunableNumber("Manipulator/Funnel/ALGAENET", 0),
   };
   public static final LoggedTunableNumber[] CORALINTAKE = {
