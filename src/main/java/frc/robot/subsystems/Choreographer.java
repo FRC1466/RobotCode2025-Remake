@@ -81,14 +81,6 @@ public class Choreographer extends SubsystemBase {
     SCORE_L2,
     SCORE_L3,
     SCORE_L4,
-    SCORE_LEFT_L1,
-    SCORE_LEFT_L2,
-    SCORE_LEFT_L3,
-    SCORE_LEFT_L4,
-    SCORE_RIGHT_L1,
-    SCORE_RIGHT_L2,
-    SCORE_RIGHT_L3,
-    SCORE_RIGHT_L4,
     INTAKE_ALGAE_REEF,
     INTAKE_ALGAE_GROUND,
     INTAKE_ALGAE_ICE_CREAM,
@@ -202,38 +194,6 @@ public class Choreographer extends SubsystemBase {
         currentChoreography = CurrentChoreography.SCORE_L3;
         break;
       case SCORE_L4:
-        currentChoreography = CurrentChoreography.SCORE_L4;
-        break;
-      case SCORE_LEFT_L1:
-        targetScoringSide = ScoringSide.LEFT;
-        currentChoreography = CurrentChoreography.SCORE_L1;
-        break;
-      case SCORE_LEFT_L2:
-        targetScoringSide = ScoringSide.LEFT;
-        currentChoreography = CurrentChoreography.SCORE_L2;
-        break;
-      case SCORE_LEFT_L3:
-        targetScoringSide = ScoringSide.LEFT;
-        currentChoreography = CurrentChoreography.SCORE_L3;
-        break;
-      case SCORE_LEFT_L4:
-        targetScoringSide = ScoringSide.LEFT;
-        currentChoreography = CurrentChoreography.SCORE_L4;
-        break;
-      case SCORE_RIGHT_L1:
-        targetScoringSide = ScoringSide.RIGHT;
-        currentChoreography = CurrentChoreography.SCORE_L1;
-        break;
-      case SCORE_RIGHT_L2:
-        targetScoringSide = ScoringSide.RIGHT;
-        currentChoreography = CurrentChoreography.SCORE_L2;
-        break;
-      case SCORE_RIGHT_L3:
-        targetScoringSide = ScoringSide.RIGHT;
-        currentChoreography = CurrentChoreography.SCORE_L3;
-        break;
-      case SCORE_RIGHT_L4:
-        targetScoringSide = ScoringSide.RIGHT;
         currentChoreography = CurrentChoreography.SCORE_L4;
         break;
       case INTAKE_ALGAE_ICE_CREAM:
