@@ -7,8 +7,6 @@
 
 package frc.robot;
 
-import static frc.robot.subsystems.vision.VisionConstants.*;
-
 import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants;
@@ -27,46 +25,17 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.constants.Constants;
-import frc.robot.constants.FieldConstants;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.Choreographer;
-import frc.robot.subsystems.Choreographer.WantedChoreography;
-import frc.robot.subsystems.MechanismVisualizer;
-import frc.robot.subsystems.algaeSlapdown.AlgaeSlapdown;
-import frc.robot.subsystems.algaeSlapdown.AlgaeSlapdownIO;
-import frc.robot.subsystems.algaeSlapdown.AlgaeSlapdownIOSim;
-import frc.robot.subsystems.coralSlapdown.CoralSlapdown;
-import frc.robot.subsystems.coralSlapdown.CoralSlapdownIO;
-import frc.robot.subsystems.coralSlapdown.CoralSlapdownIOSim;
-import frc.robot.subsystems.diffwrist.DifferentialWristPivot;
-import frc.robot.subsystems.diffwrist.DifferentialWristPivotIO;
-import frc.robot.subsystems.diffwrist.DifferentialWristPivotIOSim;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.DriveIO;
 import frc.robot.subsystems.drive.DriveIOCTRE;
-import frc.robot.subsystems.elevator.Elevator;
-import frc.robot.subsystems.elevator.ElevatorIO;
-import frc.robot.subsystems.elevator.ElevatorIOSim;
 import frc.robot.subsystems.intake.Intake;
-import frc.robot.subsystems.intake.Intake.WantedState;
-import frc.robot.subsystems.overridePublisher.OverridePublisher;
-import frc.robot.subsystems.overridePublisher.OverridePublisherIO;
-import frc.robot.subsystems.overridePublisher.OverridePublisherIOReal;
-import frc.robot.subsystems.pivot.Pivot;
-import frc.robot.subsystems.pivot.PivotIO;
-import frc.robot.subsystems.pivot.PivotIOSim;
 import frc.robot.subsystems.rollers.RollerSystemIO;
 import frc.robot.subsystems.rollers.RollerSystemIOSim;
-import frc.robot.subsystems.sensors.CoralSensorIO;
-import frc.robot.subsystems.sensors.HomeSensorIO;
-import frc.robot.subsystems.vision.Vision;
-import frc.robot.subsystems.vision.VisionIO;
-import frc.robot.util.AllianceFlipUtil;
-import frc.robot.util.Container;
 import frc.robot.util.DoublePressTracker;
 import frc.robot.util.TriggerUtil;
 import java.util.Optional;
-import java.util.Set;
 import lombok.Getter;
 import lombok.experimental.ExtensionMethod;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
@@ -82,15 +51,7 @@ import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
 public class RobotContainer {
   // Subsystems
   @Getter private Drive drive;
-  @Getter private Elevator elevator;
-  @Getter private Pivot pivot;
-  @Getter private CoralSlapdown coralSlapdown;
-  @Getter private AlgaeSlapdown algaeSlapdown;
   @Getter private Intake intake;
-  @Getter private DifferentialWristPivot differential;
-  @Getter private Vision vision;
-  @Getter private OverridePublisher overridePublisher;
-  @Getter private MechanismVisualizer mechanismVisualizer;
 
   @Getter private Choreographer choreographer;
 
@@ -123,8 +84,6 @@ public class RobotContainer {
               moduleConstants[0].SpeedAt12Volts
                   / Math.hypot(moduleConstants[0].LocationX, moduleConstants[0].LocationY));
 
-      overridePublisher = new OverridePublisher(new OverridePublisherIOReal());
-
       switch (Constants.getRobot()) {
         case COMPBOT -> {
           break;
@@ -133,16 +92,7 @@ public class RobotContainer {
           break;
         }
         case SIMBOT -> {
-          elevator = new Elevator(new ElevatorIOSim(), new HomeSensorIO() {});
-          pivot = new Pivot(new PivotIOSim());
-          differential = new DifferentialWristPivot(new DifferentialWristPivotIOSim());
-          coralSlapdown = new CoralSlapdown(new CoralSlapdownIOSim());
-          algaeSlapdown = new AlgaeSlapdown(new AlgaeSlapdownIOSim());
-          intake =
-              new Intake(
-                  new RollerSystemIOSim(DCMotor.getKrakenX60(1), 1, 1),
-                  new RollerSystemIOSim(DCMotor.getNeoVortex(1), 1, 1),
-                  new CoralSensorIO() {});
+          intake = new Intake(new RollerSystemIOSim(DCMotor.getFalcon500(1), 3, 0.01));
           break;
         }
       }
@@ -158,49 +108,11 @@ public class RobotContainer {
               moduleConstants[0].SpeedAt12Volts
                   / Math.hypot(moduleConstants[0].LocationX, moduleConstants[0].LocationY));
     }
-    if (elevator == null) {
-      elevator = new Elevator(new ElevatorIO() {}, new HomeSensorIO() {});
-    }
-    if (pivot == null) {
-      pivot = new Pivot(new PivotIO() {});
-    }
-    if (differential == null) {
-      differential = new DifferentialWristPivot(new DifferentialWristPivotIO() {});
-    }
-    if (coralSlapdown == null) {
-      coralSlapdown = new CoralSlapdown(new CoralSlapdownIO() {});
-    }
-    if (algaeSlapdown == null) {
-      algaeSlapdown = new AlgaeSlapdown(new AlgaeSlapdownIO() {});
-    }
     if (intake == null) {
-      intake = new Intake(new RollerSystemIO() {}, new RollerSystemIO() {}, new CoralSensorIO() {});
+      intake = new Intake(new RollerSystemIO() {});
     }
-    if (vision == null) {
-      vision =
-          new Vision(
-              drive::addVisionMeasurement,
-              cameras.values().stream().map(config -> new VisionIO() {}).toArray(VisionIO[]::new));
-    }
-    if (overridePublisher == null) {
-      overridePublisher = new OverridePublisher(new OverridePublisherIO() {});
-    }
-    mechanismVisualizer = new MechanismVisualizer();
 
-    mechanismVisualizer.setStageTravel(new double[] {0.3, 0.297078, 0.297078, 0.296373});
-    mechanismVisualizer.setStageZeroOffsets(new double[] {0.0, 0.0, 0.0, 0.0});
-
-    choreographer =
-        new Choreographer(
-            drive,
-            intake,
-            elevator,
-            pivot,
-            coralSlapdown,
-            algaeSlapdown,
-            differential,
-            overridePublisher,
-            vision);
+    choreographer = new Choreographer(intake);
 
     // Configure the button bindings
     configureButtonBindings();
@@ -213,179 +125,16 @@ public class RobotContainer {
    * edu.wpi.first.wpilibj2.command.button.JoystickButton}.
    */
   private void configureButtonBindings() {
-    // Coral score level selection
-    final Container<Integer> selectedCoralScoreLevel = new Container<>(4);
-
-    controller
-        .povUp()
-        .onTrue(
-            Commands.runOnce(
-                () -> {
-                  selectedCoralScoreLevel.value = 4;
-                  choreographer.setWantedCoralLocation(Choreographer.WantedCoralLocation.CLAW);
-                }));
-    controller
-        .povLeft()
-        .onTrue(
-            Commands.runOnce(
-                () -> {
-                  selectedCoralScoreLevel.value = 3;
-                  choreographer.setWantedCoralLocation(Choreographer.WantedCoralLocation.CLAW);
-                }));
-    controller
-        .povRight()
-        .onTrue(
-            Commands.runOnce(
-                () -> {
-                  selectedCoralScoreLevel.value = 2;
-                  choreographer.setWantedCoralLocation(Choreographer.WantedCoralLocation.CLAW);
-                }));
-    controller
-        .povDown()
-        .onTrue(
-            Commands.runOnce(
-                () -> {
-                  selectedCoralScoreLevel.value = 1;
-                  choreographer.setWantedCoralLocation(Choreographer.WantedCoralLocation.SLAPDOWN);
-                }));
-
-    // Scoring side selection
-    controller.x().onTrue(choreographer.flipScoringSideCommand());
-
-    // Auto score
-    controller
-        .rightTrigger()
-        .whileTrue(
-            Commands.defer(
-                    () -> {
-                      return switch (selectedCoralScoreLevel.value) {
-                        case 1 -> choreographer.setChoreographyCommand(WantedChoreography.SCORE_L1);
-                        case 2 -> choreographer.setChoreographyCommand(WantedChoreography.SCORE_L2);
-                        case 3 -> choreographer.setChoreographyCommand(WantedChoreography.SCORE_L3);
-                        default ->
-                            choreographer.setChoreographyCommand(WantedChoreography.SCORE_L4);
-                      };
-                    },
-                    Set.of(choreographer))
-                .withName("Auto Score Selected Level"))
-        .onFalse(choreographer.setChoreographyCommand(WantedChoreography.DEFAULT_STATE));
-
-    // Manual coral eject
-    controller
-        .b()
-        .doublePress()
-        .whileTrue(Commands.run(() -> intake.setWantedState(WantedState.OUTTAKE_CORAL)))
-        .onFalse(
-            Commands.runOnce(() -> intake.setWantedState(WantedState.OFF))
-                .withName("Manual Coral Eject"));
-
-    // Coral intake from ground
+    // Simple intake / outtake bindings
     controller
         .leftTrigger()
-        .whileTrue(
-            choreographer
-                .setChoreographyCommand(WantedChoreography.INTAKE_CORAL_FROM_GROUND)
-                .withName("Coral Ground Intake"))
-        .onFalse(choreographer.setChoreographyCommand(WantedChoreography.DEFAULT_STATE));
+        .whileTrue(choreographer.intakeFromStationCommand().withName("Intake"))
+        .onFalse(choreographer.defaultStateCommand());
 
-    // Algae triggers
-    Trigger onOpposingSide =
-        new Trigger(
-            () ->
-                AllianceFlipUtil.applyX(
-                        RobotState.getInstance().getRobotPoseFromSwerveDriveOdometry().getX())
-                    > FieldConstants.FIELD_LENGTH / 2);
-
-    Trigger shouldProcess =
-        new Trigger(
-            () ->
-                AllianceFlipUtil.apply(
-                                RobotState.getInstance()
-                                    .getRobotPoseFromSwerveDriveOdometry()
-                                    .exp(
-                                        RobotState.getInstance()
-                                            .getRobotChassisSpeeds()
-                                            .toTwist2d(0.75)))
-                            .getY()
-                        < FieldConstants.FIELD_HEIGHT / 2 - Drive.robotWidth
-                    || onOpposingSide.getAsBoolean());
-
-    Container<Boolean> hasAlgae = new Container<>(false);
-    controller.leftBumper().onTrue(Commands.runOnce(() -> hasAlgae.value = intake.hasAlgae()));
-
-    // Algae ground intake
     controller
-        .y()
-        .whileTrue(choreographer.setChoreographyCommand(WantedChoreography.INTAKE_ALGAE_GROUND))
-        .onFalse(choreographer.setChoreographyCommand(WantedChoreography.MOVE_ALGAE_TO_SAFE));
-
-    // Algae reef intake
-    controller
-        .leftBumper()
-        .and(() -> !hasAlgae.value)
-        .whileTrue(
-            choreographer
-                .setChoreographyCommand(WantedChoreography.INTAKE_ALGAE_REEF)
-                .withName("Algae Reef Intake"))
-        .onFalse(choreographer.setChoreographyCommand(WantedChoreography.DEFAULT_STATE));
-
-    // Algae pre-processor
-    controller
-        .leftBumper()
-        .and(shouldProcess)
-        .and(() -> hasAlgae.value)
-        .and(controller.a().negate())
-        .whileTrue(
-            choreographer
-                .setChoreographyCommand(WantedChoreography.MOVE_ALGAE_TO_PROCESSOR_POSITION)
-                .withName("Algae Pre-Processor"))
-        .onFalse(choreographer.setChoreographyCommand(WantedChoreography.DEFAULT_STATE));
-
-    // Algae processor
-    controller
-        .leftBumper()
-        .and(shouldProcess)
-        .and(() -> hasAlgae.value)
-        .and(controller.a())
-        .whileTrue(
-            choreographer
-                .setChoreographyCommand(WantedChoreography.SCORE_ALGAE_IN_PROCESSOR)
-                .withName("Algae Processing"))
-        .onFalse(choreographer.setChoreographyCommand(WantedChoreography.DEFAULT_STATE));
-
-    // Algae pre-net
-    controller
-        .leftBumper()
-        .and(shouldProcess.negate())
-        .and(() -> hasAlgae.value)
-        .and(controller.a().negate())
-        .whileTrue(
-            choreographer
-                .setChoreographyCommand(WantedChoreography.MOVE_ALGAE_TO_NET_POSITION)
-                .withName("Algae Pre-Net"))
-        .onFalse(choreographer.setChoreographyCommand(WantedChoreography.DEFAULT_STATE));
-
-    // Algae net score
-    controller
-        .leftBumper()
-        .and(shouldProcess.negate())
-        .and(() -> hasAlgae.value)
-        .and(controller.a())
-        .whileTrue(
-            choreographer
-                .setChoreographyCommand(WantedChoreography.SCORE_ALGAE_IN_NET)
-                .withName("Algae Net Score"))
-        .onFalse(choreographer.setChoreographyCommand(WantedChoreography.DEFAULT_STATE));
-
-    // Algae toss
-    controller
-        .a()
-        .and(controller.leftBumper().negate())
-        .whileTrue(
-            choreographer
-                .setChoreographyCommand(WantedChoreography.EJECT_ALGAE)
-                .withName("Algae Toss"))
-        .onFalse(choreographer.setChoreographyCommand(WantedChoreography.DEFAULT_STATE));
+        .rightTrigger()
+        .whileTrue(choreographer.scoreL1Command().withName("Outtake"))
+        .onFalse(choreographer.defaultStateCommand());
 
     // Reset gyro
     var driverStartAndBack = controller.start().and(controller.back());

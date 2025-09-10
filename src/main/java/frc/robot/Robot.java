@@ -24,7 +24,6 @@ import edu.wpi.first.wpilibj.Watchdog;
 import edu.wpi.first.wpilibj.simulation.DriverStationSim;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
-import frc.robot.constants.ChoreographerPositions;
 import frc.robot.constants.Constants;
 import frc.robot.constants.Constants.RobotType;
 import frc.robot.util.DummyLogReceiver;
@@ -218,20 +217,6 @@ public class Robot extends LoggedRobot {
     CommandScheduler.getInstance().run();
     LoggedTracer.record("Commands");
 
-    robotContainer
-        .getMechanismVisualizer()
-        .update(
-            RobotState.getInstance().getRobotPoseFromSwerveDriveOdometry(),
-            robotContainer.getCoralSlapdown().getAngle().getRadians(),
-            robotContainer.getAlgaeSlapdown().getAngle().getRadians(),
-            robotContainer.getDifferential().getWristAngle().getRadians(),
-            robotContainer.getDifferential().getPivotAngle().getRadians(),
-            robotContainer.getElevator().getPosition(),
-            robotContainer.getPivot().getAngle().getRadians(),
-            robotContainer.getIntake().hasCoralEither(),
-            robotContainer.getIntake().hasCoralSlapdown(),
-            robotContainer.getIntake().hasAlgae());
-
     // Print auto duration
     if (autoCommand != null) {
       if (!autoMessagePrinted && !autoCommand.isScheduled()) {
@@ -305,7 +290,6 @@ public class Robot extends LoggedRobot {
         .getDrive()
         .resetTranslationAndRotation(
             robotContainer.getAutonomousStartingPose().orElse(new Pose2d()));
-    robotContainer.getIntake().setHasCoralSlapdown(true);
     autoCommand = robotContainer.getAutonomousCommand();
     autoCommand.schedule();
   }
@@ -335,23 +319,7 @@ public class Robot extends LoggedRobot {
 
   /** This function is called once when the robot is first started up. */
   @Override
-  public void simulationInit() {
-    robotContainer
-        .getDifferential()
-        .resetAngles(
-            ChoreographerPositions.PRE_MATCH.differentialPivotAngle(),
-            ChoreographerPositions.PRE_MATCH.differentialWristAngle());
-    robotContainer.getPivot().resetAngle(ChoreographerPositions.PRE_MATCH.pivotAngle());
-    robotContainer
-        .getElevator()
-        .resetPosition(ChoreographerPositions.PRE_MATCH.elevatorHeightMeters());
-    robotContainer
-        .getCoralSlapdown()
-        .resetAngle(ChoreographerPositions.PRE_MATCH.coralSlapdownAngle());
-    robotContainer
-        .getAlgaeSlapdown()
-        .resetAngle(ChoreographerPositions.PRE_MATCH.algaeSlapdownAngle());
-  }
+  public void simulationInit() {}
 
   /** This function is called periodically whilst in simulation. */
   @Override
