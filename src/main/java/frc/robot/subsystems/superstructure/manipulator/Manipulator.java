@@ -557,4 +557,8 @@ public class Manipulator {
   private static class StaticCharacterizationState {
     public double characterizationOutput = 0.0;
   }
+
+  public void setPosition(Rotation2d angle) {
+    pivotIO.setPosition(angle);
+  }
 }

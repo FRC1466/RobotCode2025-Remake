@@ -27,9 +27,9 @@ public record SuperstructurePose(DoubleSupplier elevatorHeight, Supplier<Rotatio
   private static final LoggedTunableNumber intakeHeight =
       new LoggedTunableNumber("Superstructure/Intake/Height", 0.00254);
   private static final LoggedTunableNumber intakeAngleAmplitude =
-      new LoggedTunableNumber("Superstructure/Intake/AmplitudeDegrees", .65);
+      new LoggedTunableNumber("Superstructure/Intake/AmplitudeDegrees", .35);
   private static final LoggedTunableNumber intakeAnglePeriodSec =
-      new LoggedTunableNumber("Superstructure/Intake/PeriodSec", .4);
+      new LoggedTunableNumber("Superstructure/Intake/PeriodSec", .8);
 
   private static final DoubleSupplier intakeAngle =
       () -> {

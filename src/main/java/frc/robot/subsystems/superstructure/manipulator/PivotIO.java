@@ -36,6 +36,8 @@ public interface PivotIO {
 
   default void stop() {}
 
+  default void setPosition(Rotation2d position) {}
+
   default void runPosition(Rotation2d position, double feedforward) {}
 
   default void setPID(double kP, double kI, double kD) {}

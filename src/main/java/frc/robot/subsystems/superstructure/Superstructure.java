@@ -117,18 +117,12 @@ public class Superstructure extends SubsystemBase {
         EdgeCommand.builder()
             .command(
                 runSuperstructureExtras(SuperstructureState.STOWTRAVEL)
+                    .andThen(elevator.homingSequence())
+                    .andThen(Commands.runOnce(() -> manipulator.setPosition(new Rotation2d())))
+                    .andThen(Commands.waitSeconds(.5))
                     .andThen(
-                        runManipulatorPivot(
-                            () ->
-                                SuperstructureState.STOWTRAVEL
-                                    .getValue()
-                                    .getPose()
-                                    .pivotAngle()
-                                    .get()),
-                        Commands.parallel(
-                            Commands.waitSeconds(0.2).andThen(elevator.homingSequence())),
-                        runSuperstructurePose(SuperstructureState.STOWTRAVEL.getValue().getPose()),
-                        Commands.waitUntil(this::mechanismsAtGoal)))
+                        runSuperstructurePose(SuperstructureState.STOWTRAVEL.getValue().getPose()))
+                    .andThen(Commands.waitUntil(this::mechanismsAtGoal)))
             .build());
 
     graph.addEdge(

@@ -179,4 +179,9 @@ public class PivotIOTalonFX implements PivotIO {
             })
         .start();
   }
+
+  @Override
+  public void setPosition(Rotation2d position) {
+    talon.setPosition(position.getRotations());
+  }
 }
