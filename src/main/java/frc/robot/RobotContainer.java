@@ -24,6 +24,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
+import frc.robot.autos.AutoFactory;
 import frc.robot.constants.Constants;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.Choreographer;
@@ -33,6 +34,7 @@ import frc.robot.subsystems.drive.DriveIOCTRE;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.rollers.RollerSystemIO;
 import frc.robot.subsystems.rollers.RollerSystemIOSim;
+import frc.robot.util.AllianceUtil;
 import frc.robot.util.DoublePressTracker;
 import frc.robot.util.TriggerUtil;
 import java.util.Optional;
@@ -54,6 +56,8 @@ public class RobotContainer {
   @Getter private Intake intake;
 
   @Getter private Choreographer choreographer;
+
+  @Getter private AutoFactory autoFactory;
 
   private final LoggedDashboardChooser<Pair<Pose2d, Command>> autoChooser =
       new LoggedDashboardChooser<>("Auto");
@@ -112,7 +116,13 @@ public class RobotContainer {
       intake = new Intake(new RollerSystemIO() {});
     }
 
-    choreographer = new Choreographer(intake);
+    choreographer = new Choreographer(drive, intake);
+
+    autoFactory = new AutoFactory(AllianceUtil.getAlliance(), this);
+
+    autoChooser.addDefaultOption("Idle Auto", autoFactory.createIdleCommand());
+    autoChooser.addOption("Taxi Auto", autoFactory.createTaxiCommand());
+    autoChooser.addOption("Taxi then L1 Auto", autoFactory.createTaxiThenScoreL1());
 
     // Configure the button bindings
     configureButtonBindings();

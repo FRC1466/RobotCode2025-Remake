@@ -11,8 +11,5 @@ package frc.robot.autos;
 public enum Auto {
   IDLE,
   TAXI,
-  JKL,
-  EDC,
-  IKLJ,
-  FDCE,
+  TAXI_L1
 }

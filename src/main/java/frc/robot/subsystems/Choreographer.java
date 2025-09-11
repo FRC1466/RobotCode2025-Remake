@@ -10,6 +10,7 @@ package frc.robot.subsystems;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.intake.Intake;
 import org.littletonrobotics.junction.Logger;
 
@@ -34,13 +35,15 @@ public class Choreographer extends SubsystemBase {
     SCORE_L1
   }
 
+  private final Drive drive;
   private final Intake intake;
 
   private WantedChoreography wantedChoreography = WantedChoreography.STOPPED;
   private CurrentChoreography currentChoreography = CurrentChoreography.STOPPED;
   private CurrentChoreography previousChoreography = CurrentChoreography.STOPPED;
 
-  public Choreographer(Intake intake) {
+  public Choreographer(Drive drive, Intake intake) {
+    this.drive = drive;
     this.intake = intake;
   }
 
@@ -67,14 +70,18 @@ public class Choreographer extends SubsystemBase {
 
   private void applyChoreography() {
     switch (currentChoreography) {
-      case STOPPED, DEFAULT_STATE -> intake.setWantedState(Intake.WantedState.OFF);
-      case INTAKE_CORAL_FROM_STATION -> {
-        // Currently treating everything except scoring as OFF.
-        // This could later be changed if we have a second pair of rollers or we notice the coral
-        // falling out
+      case STOPPED, DEFAULT_STATE -> {
+        drive.setWantedState(Drive.WantedState.TELEOP_DRIVE);
         intake.setWantedState(Intake.WantedState.OFF);
       }
-      case SCORE_L1 -> intake.setWantedState(Intake.WantedState.MOVE_ROLLER); // Outtake/on
+      case INTAKE_CORAL_FROM_STATION -> {
+        drive.setWantedState(Drive.WantedState.TELEOP_DRIVE);
+        intake.setWantedState(Intake.WantedState.OFF);
+      }
+      case SCORE_L1 -> {
+        drive.setWantedState(Drive.WantedState.TELEOP_DRIVE);
+        intake.setWantedState(Intake.WantedState.MOVE_ROLLER);
+      }
     }
   }
 

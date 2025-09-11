@@ -174,6 +174,10 @@ public class FieldConstants {
         : RIGHT_STATION_PICKUP_POSE_RED;
   }
 
+  public static Pose2d getMiddleStartingPose() {
+    return isBlueAlliance() ? FAR_LEFT_STARTING_POSE_BLUE : FAR_LEFT_STARTING_POSE_RED;
+  }
+
   public static Pose2d getFarLeftStartingPose() {
     return isBlueAlliance() ? FAR_LEFT_STARTING_POSE_BLUE : FAR_LEFT_STARTING_POSE_RED;
   }
