@@ -65,15 +65,15 @@ public class Elevator {
   private static final LoggedTunableNumber maxVelocityMetersPerSec =
       new LoggedTunableNumber("Elevator/MaxVelocityMetersPerSec", 2);
   private static final LoggedTunableNumber maxAccelerationMetersPerSec2 =
-      new LoggedTunableNumber("Elevator/MaxAccelerationMetersPerSec2", 4);
+      new LoggedTunableNumber("Elevator/MaxAccelerationMetersPerSec2", 3);
   private static final LoggedTunableNumber algaeMaxVelocityMetersPerSec =
       new LoggedTunableNumber("Elevator/AlgaeMaxVelocityMetersPerSec", 2);
   private static final LoggedTunableNumber algaeMaxAccelerationMetersPerSec2 =
-      new LoggedTunableNumber("Elevator/AlgaeMaxAccelerationMetersPerSec2", 4);
+      new LoggedTunableNumber("Elevator/AlgaeMaxAccelerationMetersPerSec2", 3);
   private static final LoggedTunableNumber downMaxVelocityMetersPerSec =
       new LoggedTunableNumber("Elevator/DownMaxVelocityMetersPerSec", 2);
   private static final LoggedTunableNumber downMaxAccelerationMetersPerSec2 =
-      new LoggedTunableNumber("Elevator/DownMaxAccelerationMetersPerSec2", 4);
+      new LoggedTunableNumber("Elevator/DownMaxAccelerationMetersPerSec2", 3);
   private static final LoggedTunableNumber homingVolts =
       new LoggedTunableNumber("Elevator/HomingVolts", -1);
   private static final LoggedTunableNumber homingTimeSecs =
