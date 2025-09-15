@@ -79,6 +79,7 @@ public class PivotIOTalonFX implements PivotIO {
     config.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
     PhoenixUtil.tryUntilOk(5, () -> talon.getConfigurator().apply(config, 0.25));
 
+    talon.setPosition(0);
     // Get status signals
     internalPosition = talon.getPosition();
     internalVelocity = talon.getVelocity();

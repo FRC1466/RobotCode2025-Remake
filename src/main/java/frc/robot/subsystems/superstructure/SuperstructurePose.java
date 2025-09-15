@@ -20,7 +20,7 @@ public record SuperstructurePose(DoubleSupplier elevatorHeight, Supplier<Rotatio
   private static final LoggedTunableNumber StowHeight =
       new LoggedTunableNumber("Superstructure/Stow/Height", 0.00254);
   private static final LoggedTunableNumber StowTravelAngle =
-      new LoggedTunableNumber("Superstructure/Stow/TravelSafeAngle", .6);
+      new LoggedTunableNumber("Superstructure/Stow/TravelSafeAngle", .7);
   private static final LoggedTunableNumber StowRestAngle =
       new LoggedTunableNumber("Superstructure/Stow/RestAngle", 0);
 
@@ -29,7 +29,7 @@ public record SuperstructurePose(DoubleSupplier elevatorHeight, Supplier<Rotatio
   private static final LoggedTunableNumber intakeAngleAmplitude =
       new LoggedTunableNumber("Superstructure/Intake/AmplitudeDegrees", .35);
   private static final LoggedTunableNumber intakeAnglePeriodSec =
-      new LoggedTunableNumber("Superstructure/Intake/PeriodSec", .8);
+      new LoggedTunableNumber("Superstructure/Intake/PeriodSec", .6);
 
   private static final DoubleSupplier intakeAngle =
       () -> {
@@ -75,12 +75,12 @@ public record SuperstructurePose(DoubleSupplier elevatorHeight, Supplier<Rotatio
   private static final LoggedTunableNumber l2Height =
       new LoggedTunableNumber("Superstructure/ReefScore/L2/Height", 0.38);
   private static final LoggedTunableNumber l2Angle =
-      new LoggedTunableNumber("Superstructure/ReefScore/L2/Angle", .6);
+      new LoggedTunableNumber("Superstructure/ReefScore/L2/Angle", .7);
 
   private static final LoggedTunableNumber l3Height =
       new LoggedTunableNumber("Superstructure/ReefScore/L3/Height", 0.8);
   private static final LoggedTunableNumber l3Angle =
-      new LoggedTunableNumber("Superstructure/ReefScore/L3/Angle", .6);
+      new LoggedTunableNumber("Superstructure/ReefScore/L3/Angle", .7);
 
   private static final LoggedTunableNumber l4Height =
       new LoggedTunableNumber("Superstructure/ReefScore/L4/Height", 1.67);
