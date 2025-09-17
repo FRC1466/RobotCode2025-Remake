@@ -219,7 +219,7 @@ public class Robot extends LoggedRobot {
     LoggedTracer.record("Commands");
 
     robotContainer
-        .getMechanismVisualizer()
+        .getMechanismVisualizerMeasured()
         .update(
             RobotState.getInstance().getRobotPoseFromSwerveDriveOdometry(),
             robotContainer.getCoralSlapdown().getAngle().getRadians(),
@@ -228,6 +228,20 @@ public class Robot extends LoggedRobot {
             robotContainer.getDifferential().getPivotAngle().getRadians(),
             robotContainer.getElevator().getPosition(),
             robotContainer.getPivot().getAngle().getRadians(),
+            robotContainer.getIntake().hasCoralEither(),
+            robotContainer.getIntake().hasCoralSlapdown(),
+            robotContainer.getIntake().hasAlgae());
+
+    robotContainer
+        .getMechanismVisualizerSetpoint()
+        .update(
+            RobotState.getInstance().getRobotPoseFromSwerveDriveOdometry(),
+            robotContainer.getCoralSlapdown().getGoalAngle().getRadians(),
+            robotContainer.getAlgaeSlapdown().getGoalAngle().getRadians(),
+            robotContainer.getDifferential().getGoalWrist().getRadians(),
+            robotContainer.getDifferential().getGoalPivot().getRadians(),
+            robotContainer.getElevator().getGoalPosition(),
+            robotContainer.getPivot().getGoalAngle().getRadians(),
             robotContainer.getIntake().hasCoralEither(),
             robotContainer.getIntake().hasCoralSlapdown(),
             robotContainer.getIntake().hasAlgae());

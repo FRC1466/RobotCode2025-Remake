@@ -90,7 +90,8 @@ public class RobotContainer {
   @Getter private DifferentialWristPivot differential;
   @Getter private Vision vision;
   @Getter private OverridePublisher overridePublisher;
-  @Getter private MechanismVisualizer mechanismVisualizer;
+  @Getter private MechanismVisualizer mechanismVisualizerMeasured;
+  @Getter private MechanismVisualizer mechanismVisualizerSetpoint;
 
   @Getter private Choreographer choreographer;
 
@@ -185,10 +186,8 @@ public class RobotContainer {
     if (overridePublisher == null) {
       overridePublisher = new OverridePublisher(new OverridePublisherIO() {});
     }
-    mechanismVisualizer = new MechanismVisualizer();
-
-    mechanismVisualizer.setStageTravel(new double[] {0.3, 0.297078, 0.297078, 0.296373});
-    mechanismVisualizer.setStageZeroOffsets(new double[] {0.0, 0.0, 0.0, 0.0});
+    mechanismVisualizerMeasured = new MechanismVisualizer("Measured");
+    mechanismVisualizerSetpoint = new MechanismVisualizer("Setpoint");
 
     choreographer =
         new Choreographer(

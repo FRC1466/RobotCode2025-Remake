@@ -14,6 +14,7 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import lombok.Getter;
 import org.littletonrobotics.junction.Logger;
 
 /**
@@ -38,8 +39,8 @@ public class DifferentialWristPivot extends SubsystemBase {
   private WantedState wantedState = WantedState.IDLE;
   private SystemState systemState = SystemState.IDLING;
 
-  private Rotation2d goalPivot = defaultPivotAngle;
-  private Rotation2d goalWrist = defaultWristAngle;
+  @Getter private Rotation2d goalPivot = defaultPivotAngle;
+  @Getter private Rotation2d goalWrist = defaultWristAngle;
 
   public DifferentialWristPivot(DifferentialWristPivotIO io) {
     this.io = io;
