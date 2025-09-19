@@ -26,6 +26,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
+import frc.robot.autos.AutoFactory;
 import frc.robot.constants.Constants;
 import frc.robot.constants.FieldConstants;
 import frc.robot.generated.TunerConstants;
@@ -62,6 +63,7 @@ import frc.robot.subsystems.sensors.HomeSensorIO;
 import frc.robot.subsystems.vision.Vision;
 import frc.robot.subsystems.vision.VisionIO;
 import frc.robot.util.AllianceFlipUtil;
+import frc.robot.util.AllianceUtil;
 import frc.robot.util.Container;
 import frc.robot.util.DoublePressTracker;
 import frc.robot.util.TriggerUtil;
@@ -94,6 +96,8 @@ public class RobotContainer {
   @Getter private MechanismVisualizer mechanismVisualizerSetpoint;
 
   @Getter private Choreographer choreographer;
+
+  @Getter private AutoFactory autoFactory;
 
   private final LoggedDashboardChooser<Pair<Pose2d, Command>> autoChooser =
       new LoggedDashboardChooser<>("Auto");
@@ -189,6 +193,8 @@ public class RobotContainer {
     mechanismVisualizerMeasured = new MechanismVisualizer("Measured");
     mechanismVisualizerSetpoint = new MechanismVisualizer("Setpoint");
 
+    autoFactory = new AutoFactory(AllianceUtil.getAlliance(), this);
+
     choreographer =
         new Choreographer(
             drive,
@@ -203,6 +209,8 @@ public class RobotContainer {
 
     // Configure the button bindings
     configureButtonBindings();
+
+    autoChooser.addOption("idk", autoFactory.createIKLJAuto());
   }
 
   /**
