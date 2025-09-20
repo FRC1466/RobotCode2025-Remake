@@ -210,7 +210,7 @@ public class RobotContainer {
     // Configure the button bindings
     configureButtonBindings();
 
-    autoChooser.addOption("idk", autoFactory.createIKLJAuto());
+    autoChooser.addOption("idk", autoFactory.createJKLAuto());
   }
 
   /**

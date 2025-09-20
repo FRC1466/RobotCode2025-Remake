@@ -319,7 +319,7 @@ public class Robot extends LoggedRobot {
         .getDrive()
         .resetTranslationAndRotation(
             robotContainer.getAutonomousStartingPose().orElse(new Pose2d()));
-    robotContainer.getIntake().setHasCoralSlapdown(true);
+    robotContainer.getIntake().setHasCoralClaw(true);
     autoCommand = robotContainer.getAutonomousCommand();
     autoCommand.schedule();
   }

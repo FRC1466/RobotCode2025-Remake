@@ -278,11 +278,7 @@ public class Choreographer extends SubsystemBase {
         }
         break;
       case SCORE_L4:
-        if (DriverStation.isAutonomous()) {
-          scoreL4Auto(targetScoringSide);
-        } else {
-          scoreL4Teleop(targetScoringSide);
-        }
+        scoreL4Teleop(targetScoringSide);
         break;
       case INTAKE_ALGAE_ICE_CREAM:
         intakeAlgaeIceCream();

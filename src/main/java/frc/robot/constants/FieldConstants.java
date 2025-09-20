@@ -99,7 +99,7 @@ public class FieldConstants {
           Rotation2d.kZero);
 
   public static final Pose2d LEFT_STATION_PICKUP_POSE_BLUE =
-      new Pose2d(0.6, 7.85, Rotation2d.fromDegrees(-54));
+      new Pose2d(0.6, 7.85, Rotation2d.fromDegrees(180 + -54));
 
   public static final Pose2d LEFT_STATION_PICKUP_POSE_RED =
       new Pose2d(
@@ -299,6 +299,13 @@ public class FieldConstants {
       ChoreographerConstants.ScoringSide scoringSide,
       ChoreographerConstants.ScoringDirection scoringDirection) {
     return getDesiredPointToDriveToForCoralScoring(tagID, scoringSide, scoringDirection, 1);
+  }
+
+  public static Pose2d getDesiredFarScoringPoseForCoral(
+      int tagID,
+      ChoreographerConstants.ScoringSide scoringSide,
+      ChoreographerConstants.ScoringDirection scoringDirection) {
+    return getDesiredPointToDriveToForCoralScoring(tagID, scoringSide, scoringDirection, 2);
   }
 
   public static Pose2d getDesiredPointToDriveToForCoralScoring(
