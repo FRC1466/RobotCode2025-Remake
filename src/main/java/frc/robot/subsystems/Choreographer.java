@@ -257,25 +257,13 @@ public class Choreographer extends SubsystemBase {
         holdingAlgae();
         break;
       case SCORE_L1:
-        if (DriverStation.isAutonomous()) {
-          scoreL1Auto(targetScoringSide);
-        } else {
-          scoreL1Teleop(targetScoringSide);
-        }
+        scoreL1Teleop(targetScoringSide);
         break;
       case SCORE_L2:
-        if (DriverStation.isAutonomous()) {
-          scoreL2Auto(targetScoringSide);
-        } else {
-          scoreL2Teleop(targetScoringSide);
-        }
+        scoreL2Teleop(targetScoringSide);
         break;
       case SCORE_L3:
-        if (DriverStation.isAutonomous()) {
-          scoreL3Auto(targetScoringSide);
-        } else {
-          scoreL3Teleop(targetScoringSide);
-        }
+        scoreL3Teleop(targetScoringSide);
         break;
       case SCORE_L4:
         scoreL4Teleop(targetScoringSide);
@@ -486,18 +474,6 @@ public class Choreographer extends SubsystemBase {
     }
   }
 
-  private void scoreL1Auto(ScoringSide scoringSide) {
-    subsystemsRun(L1);
-
-    if (isReadyToEjectInAutoPeriod()) {
-      coralEject = true;
-    }
-
-    if (coralEject) {
-      intake.setWantedState(Intake.WantedState.OUTTAKE_CORAL);
-    }
-  }
-
   private void scoreL2Teleop(ScoringSide scoringSide) {
     setWantedCoralLocation(WantedCoralLocation.CLAW);
     if (intake.hasCoralClaw()) {
@@ -520,22 +496,6 @@ public class Choreographer extends SubsystemBase {
       }
     } else {
       handleCoralLocationChoreography();
-    }
-  }
-
-  private void scoreL2Auto(ScoringSide scoringSide) {
-    if (scoringDirection == ScoringDirection.FRONT) {
-      subsystemsRun(L2_FRONT_SCORE);
-    } else {
-      subsystemsRun(L2_BACK_SCORE);
-    }
-
-    if (isReadyToEjectInAutoPeriod()) {
-      coralEject = true;
-    }
-
-    if (coralEject) {
-      intake.setWantedState(Intake.WantedState.OUTTAKE_CORAL);
     }
   }
 
@@ -563,22 +523,6 @@ public class Choreographer extends SubsystemBase {
     }
   }
 
-  private void scoreL3Auto(ScoringSide scoringSide) {
-    if (scoringDirection == ScoringDirection.FRONT) {
-      subsystemsRun(L3_FRONT_SCORE);
-    } else {
-      subsystemsRun(L3_BACK_SCORE);
-    }
-
-    if (isReadyToEjectInAutoPeriod()) {
-      coralEject = true;
-    }
-
-    if (coralEject) {
-      intake.setWantedState(Intake.WantedState.OUTTAKE_CORAL);
-    }
-  }
-
   private void scoreL4Teleop(ScoringSide scoringSide) {
     setWantedCoralLocation(WantedCoralLocation.CLAW);
     if (intake.hasCoralClaw()) {
@@ -600,22 +544,6 @@ public class Choreographer extends SubsystemBase {
       }
     } else {
       handleCoralLocationChoreography();
-    }
-  }
-
-  private void scoreL4Auto(ScoringSide scoringSide) {
-    if (scoringDirection == ScoringDirection.FRONT) {
-      subsystemsRun(L4_FRONT_SCORE);
-    } else {
-      subsystemsRun(L4_BACK_SCORE);
-    }
-
-    if (isReadyToEjectInAutoPeriod()) {
-      coralEject = true;
-    }
-
-    if (coralEject) {
-      intake.setWantedState(Intake.WantedState.OUTTAKE_CORAL);
     }
   }
 
