@@ -10,154 +10,23 @@ package frc.robot.util;
 import edu.wpi.first.math.geometry.Rotation2d;
 
 /**
- * Immutable container for a combined mechanism pose: - Coral slapdown angle - Algae slapdown angle
- * - Elevator height (meters) - Main pivot angle - Differential pivot angle - Differential wrist
+ * Immutable container for a mechanism pose consisting of: - Elevator height (meters) - Main pivot
  * angle
- *
- * <p>Designed for storing preset positions and later commanding all mechanisms together.
  */
-public record Position(
-    Rotation2d coralSlapdownAngle,
-    Rotation2d algaeSlapdownAngle,
-    double elevatorHeightMeters,
-    Rotation2d pivotAngle,
-    Rotation2d differentialPivotAngle,
-    Rotation2d differentialWristAngle) {
+public record Position(double elevatorHeightMeters, Rotation2d pivotAngle) {
 
   public Position {}
 
-  // Full builders
-  public static Position of(
-      Rotation2d coralSlapdown,
-      Rotation2d algaeSlapdown,
-      double elevatorMeters,
-      Rotation2d pivot,
-      Rotation2d differentialPivot,
-      Rotation2d differentialWrist) {
-    return new Position(
-        coralSlapdown, algaeSlapdown, elevatorMeters, pivot, differentialPivot, differentialWrist);
+  // Preferred simple factories
+  public static Position of(double elevatorMeters, Rotation2d pivot) {
+    return new Position(elevatorMeters, pivot);
   }
 
-  public static Position fromDegrees(
-      double coralSlapdownDeg,
-      double algaeSlapdownDeg,
-      double elevatorMeters,
-      double pivotDeg,
-      double differentialPivotDeg,
-      double differentialWristDeg) {
-    return of(
-        Rotation2d.fromDegrees(coralSlapdownDeg),
-        Rotation2d.fromDegrees(algaeSlapdownDeg),
-        elevatorMeters,
-        Rotation2d.fromDegrees(pivotDeg),
-        Rotation2d.fromDegrees(differentialPivotDeg),
-        Rotation2d.fromDegrees(differentialWristDeg));
+  public static Position fromDegrees(double elevatorMeters, double pivotDeg) {
+    return of(elevatorMeters, Rotation2d.fromDegrees(pivotDeg));
   }
 
-  public static Position fromRadians(
-      double coralSlapdownRad,
-      double algaeSlapdownRad,
-      double elevatorMeters,
-      double pivotRad,
-      double differentialPivotRad,
-      double differentialWristRad) {
-    return of(
-        new Rotation2d(coralSlapdownRad),
-        new Rotation2d(algaeSlapdownRad),
-        elevatorMeters,
-        new Rotation2d(pivotRad),
-        new Rotation2d(differentialPivotRad),
-        new Rotation2d(differentialWristRad));
-  }
-
-  // Withers
-  public Position withCoralSlapdown(Rotation2d newCoralSlapdown) {
-    return new Position(
-        newCoralSlapdown,
-        algaeSlapdownAngle,
-        elevatorHeightMeters,
-        pivotAngle,
-        differentialPivotAngle,
-        differentialWristAngle);
-  }
-
-  public Position withAlgaeSlapdown(Rotation2d newAlgaeSlapdown) {
-    return new Position(
-        coralSlapdownAngle,
-        newAlgaeSlapdown,
-        elevatorHeightMeters,
-        pivotAngle,
-        differentialPivotAngle,
-        differentialWristAngle);
-  }
-
-  public Position withElevator(double newElevatorMeters) {
-    return new Position(
-        coralSlapdownAngle,
-        algaeSlapdownAngle,
-        newElevatorMeters,
-        pivotAngle,
-        differentialPivotAngle,
-        differentialWristAngle);
-  }
-
-  public Position withPivot(Rotation2d newPivot) {
-    return new Position(
-        coralSlapdownAngle,
-        algaeSlapdownAngle,
-        elevatorHeightMeters,
-        newPivot,
-        differentialPivotAngle,
-        differentialWristAngle);
-  }
-
-  public Position withDifferentialPivot(Rotation2d newDifferentialPivot) {
-    return new Position(
-        coralSlapdownAngle,
-        algaeSlapdownAngle,
-        elevatorHeightMeters,
-        pivotAngle,
-        newDifferentialPivot,
-        differentialWristAngle);
-  }
-
-  public Position withDifferentialWrist(Rotation2d newDifferentialWrist) {
-    return new Position(
-        coralSlapdownAngle,
-        algaeSlapdownAngle,
-        elevatorHeightMeters,
-        pivotAngle,
-        differentialPivotAngle,
-        newDifferentialWrist);
-  }
-
-  // Legacy/compat accessors
-  public Rotation2d slapdownAngle() {
-    // Prefer coral slapdown for legacy single-slapdown code paths
-    return coralSlapdownAngle;
-  }
-
-  public Rotation2d wristAngle() {
-    return differentialWristAngle;
-  }
-
-  public Position withSlapdown(Rotation2d newSlapdown) {
-    return withCoralSlapdown(newSlapdown);
-  }
-
-  public Position withWrist(Rotation2d newWrist) {
-    return withDifferentialWrist(newWrist);
-  }
-
-  @Override
-  public String toString() {
-    return "Position(coralSlapdownDeg=%.2f, algaeSlapdownDeg=%.2f, pivotDeg=%.2f, diffPivotDeg=%.2f, diffWristDeg=%.2f, elevator=%.3fm)"
-        .formatted(
-            coralSlapdownAngle.getDegrees(),
-            algaeSlapdownAngle.getDegrees(),
-            pivotAngle.getDegrees(),
-            differentialPivotAngle.getDegrees(),
-            differentialWristAngle.getDegrees(),
-            elevatorHeightMeters);
+  public static Position fromRadians(double elevatorMeters, double pivotRad) {
+    return of(elevatorMeters, new Rotation2d(pivotRad));
   }
 }

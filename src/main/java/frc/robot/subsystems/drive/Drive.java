@@ -19,7 +19,6 @@ import com.ctre.phoenix6.swerve.utility.PhoenixPIDController;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.controller.PIDController;
-import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
@@ -32,10 +31,13 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
-import frc.robot.RobotState;
+import frc.robot.constants.FieldConstants;
+import frc.robot.constants.ReefConstants;
 import frc.robot.util.AllianceUtil;
 import frc.robot.util.LoggedTracer;
 import frc.robot.util.SysIdMechanism;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import lombok.Getter;
 import org.littletonrobotics.junction.Logger;
@@ -53,10 +55,6 @@ public class Drive extends SubsystemBase {
   public static final double driveToPointStaticFrictionCompensation = 0.02;
 
   public static final double rotationLockErrorMarginDegrees = 10.0;
-
-  public final SlewRateLimiter xLimiter = new SlewRateLimiter(3.0);
-  public final SlewRateLimiter yLimiter = new SlewRateLimiter(3.0);
-  public final SlewRateLimiter thetaLimiter = new SlewRateLimiter(3.0);
 
   public double maxVelocityOutputForDriveToPoint = Units.feetToMeters(10.0);
 
@@ -241,7 +239,7 @@ public class Drive extends SubsystemBase {
 
     Logger.recordOutput("Subsystems/Drive/SystemState", systemState);
     Logger.recordOutput("Subsystems/Drive/DesiredState", wantedState);
-    Logger.recordOutput("Subsystems/Drive/Pose", swerveInputs.Pose);
+    Logger.recordOutput("Subsystems/Drive/Pose", getPose());
     applyStates();
 
     // Record cycle time
@@ -296,7 +294,7 @@ public class Drive extends SubsystemBase {
             Logger.recordOutput(
                 "Subsystems/Drive/Choreo/sample/Module Forces Y", sample.moduleForcesY());
             synchronized (swerveInputs) {
-              var pose = swerveInputs.Pose;
+              var pose = getPose();
 
               var targetSpeeds = sample.getChassisSpeeds();
               targetSpeeds.vxMetersPerSecond += choreoXController.calculate(pose.getX(), sample.x);
@@ -323,7 +321,7 @@ public class Drive extends SubsystemBase {
         break;
       case DRIVE_TO_POINT:
         var translationToDesiredPoint =
-            desiredPoseForDriveToPoint.getTranslation().minus(swerveInputs.Pose.getTranslation());
+            desiredPoseForDriveToPoint.getTranslation().minus(getPose().getTranslation());
         var linearDistance = translationToDesiredPoint.getNorm();
         var frictionConstant = 0.0;
         if (linearDistance >= Units.inchesToMeters(0.5)) {
@@ -430,9 +428,6 @@ public class Drive extends SubsystemBase {
     double yMagnitude = MathUtil.applyDeadband(controller.getLeftX(), controllerDeadband);
     double angularMagnitude = MathUtil.applyDeadband(controller.getRightX(), controllerDeadband);
 
-    xMagnitude = xLimiter.calculate(xMagnitude);
-    yMagnitude = yLimiter.calculate(yMagnitude);
-
     // Commented out, enable for smoother driving
     // xMagnitude = Math.copySign(xMagnitude * xMagnitude, xMagnitude);
     // yMagnitude = Math.copySign(yMagnitude * yMagnitude, yMagnitude);
@@ -451,9 +446,8 @@ public class Drive extends SubsystemBase {
 
     return ChassisSpeeds.fromRobotRelativeSpeeds(
         ChassisSpeeds.fromFieldRelativeSpeeds(
-            new ChassisSpeeds(xVelocity, yVelocity, -angularVelocity),
-            swerveInputs.Pose.getRotation()),
-        swerveInputs.Pose.getRotation().plus(skewCompensationFactor));
+            new ChassisSpeeds(xVelocity, yVelocity, -angularVelocity), getPose().getRotation()),
+        getPose().getRotation().plus(skewCompensationFactor));
   }
 
   public void resetTranslationAndRotation(Pose2d pose2d) {
@@ -495,16 +489,10 @@ public class Drive extends SubsystemBase {
   public boolean isAtDriveToPointSetpoint(
       double translationTolerance, Rotation2d rotationTolerance) {
     var translationDistance =
-        desiredPoseForDriveToPoint
-            .getTranslation()
-            .minus(swerveInputs.Pose.getTranslation())
-            .getNorm();
+        desiredPoseForDriveToPoint.getTranslation().minus(getPose().getTranslation()).getNorm();
     var rotationError =
         Math.abs(
-            desiredPoseForDriveToPoint
-                .getRotation()
-                .minus(swerveInputs.Pose.getRotation())
-                .getRadians());
+            desiredPoseForDriveToPoint.getRotation().minus(getPose().getRotation()).getRadians());
 
     Logger.recordOutput("Subsystems/Drive/DriveToPoint/distanceFromEndpoint", translationDistance);
     Logger.recordOutput("Subsystems/Drive/DriveToPoint/rotationError", rotationError);
@@ -533,11 +521,11 @@ public class Drive extends SubsystemBase {
     }
     return MathUtil.isNear(
             desiredChoreoTrajectory.getFinalPose(false).get().getX(),
-            swerveInputs.Pose.getX(),
+            getPose().getX(),
             releasePieceTranslationErrorMarginMeters)
         && MathUtil.isNear(
             desiredChoreoTrajectory.getFinalPose(false).get().getY(),
-            swerveInputs.Pose.getY(),
+            getPose().getY(),
             releasePieceTranslationErrorMarginMeters);
   }
 
@@ -545,11 +533,11 @@ public class Drive extends SubsystemBase {
     if (desiredChoreoTrajectory != null) {
       return (MathUtil.isNear(
                   desiredChoreoTrajectory.getFinalPose(false).get().getX(),
-                  swerveInputs.Pose.getX(),
+                  getPose().getX(),
                   releasePieceTranslationErrorMarginMeters)
               && MathUtil.isNear(
                   desiredChoreoTrajectory.getFinalPose(false).get().getY(),
-                  swerveInputs.Pose.getY(),
+                  getPose().getY(),
                   releasePieceTranslationErrorMarginMeters))
           || isAtDriveToPointSetpoint();
     } else {
@@ -564,7 +552,7 @@ public class Drive extends SubsystemBase {
             desiredChoreoTrajectory
                 .getFinalPose(false)
                 .get()
-                .minus(RobotState.getInstance().getRobotPoseFromSwerveDriveOdometry())
+                .minus(getPose())
                 .getTranslation()
                 .getNorm());
     Logger.recordOutput("Choreo/DistanceFromEndpoint", distance);
@@ -573,10 +561,7 @@ public class Drive extends SubsystemBase {
 
   public double getDistanceFromDriveToPointSetpoint() {
     var diff =
-        desiredPoseForDriveToPoint
-            .getTranslation()
-            .minus(swerveInputs.Pose.getTranslation())
-            .getNorm();
+        desiredPoseForDriveToPoint.getTranslation().minus(getPose().getTranslation()).getNorm();
     Logger.recordOutput("DistanceFromDriveToPointSetpoint", diff);
     return diff;
   }
@@ -592,5 +577,77 @@ public class Drive extends SubsystemBase {
   public void addVisionMeasurement(
       Pose2d visionPose, double timestampSeconds, Matrix<N3, N1> visionStdDevs) {
     io.addVisionMeasurement(visionPose, timestampSeconds, visionStdDevs);
+  }
+
+  public Pose2d getPose() {
+    return swerveInputs.Pose;
+  }
+
+  public ReefConstants.ScoringCoralMappingRotationToTagID
+      getValidTagIDsFromClosest60DegreeRotation() {
+    return getValidTagIDsFromClosest60DegreeRotation(getClosest60Degrees());
+  }
+
+  public ReefConstants.ScoringCoralMappingRotationToTagID getValidTagIDsFromClosest60DegreeRotation(
+      Rotation2d closest60Degrees) {
+    var ids =
+        FieldConstants.isBlueAlliance()
+            ? ReefConstants.blueAllianceAngleToTagIdsMap.get(closest60Degrees)
+            : ReefConstants.redAllianceAngleToTagIdsMap.get(closest60Degrees);
+    return ids;
+  }
+
+  public Rotation2d getClosest60Degrees() {
+    double[] list = {60, 120, 180, -60, -120, 0};
+    double desiredRotation = 0;
+    for (double e : list) {
+      var rotation = Rotation2d.fromDegrees(e);
+      if (this.getPose().getRotation().minus(rotation).getDegrees() < 30.0
+          && this.getPose().getRotation().minus(rotation).getDegrees() >= -30) {
+        desiredRotation = e;
+      }
+    }
+    Logger.recordOutput("RobotState/Closest60DegreeAngle", desiredRotation);
+    return Rotation2d.fromDegrees(desiredRotation);
+  }
+
+  public Rotation2d getClosestRotationToFaceNearestReefFace() {
+    int correctTagID = getClosestTagId();
+    Logger.recordOutput("ClosestTagId", correctTagID);
+
+    var mapToUse =
+        FieldConstants.isBlueAlliance()
+            ? ReefConstants.blueAllianceAngleToTagIdsMap
+            : ReefConstants.redAllianceAngleToTagIdsMap;
+    Rotation2d frontScoreRotation = new Rotation2d();
+
+    for (Map.Entry<Rotation2d, ReefConstants.ScoringCoralMappingRotationToTagID> entry :
+        mapToUse.entrySet()) {
+      if (entry.getValue().frontId == correctTagID) {
+        frontScoreRotation = entry.getKey();
+      }
+    }
+    return frontScoreRotation;
+  }
+
+  public int getClosestTagId() {
+    var pose = getPose();
+    List<Pose2d> possiblePoses = List.of();
+    int correctTagID = 0;
+
+    if (FieldConstants.isBlueAlliance()) {
+      possiblePoses = ReefConstants.blueAlliancePoseToTagIdsMap.keySet().stream().toList();
+      correctTagID = ReefConstants.blueAlliancePoseToTagIdsMap.get(pose.nearest(possiblePoses));
+
+    } else {
+      possiblePoses = ReefConstants.redAlliancePoseToTagIdsMap.keySet().stream().toList();
+      correctTagID = ReefConstants.redAlliancePoseToTagIdsMap.get(pose.nearest(possiblePoses));
+    }
+
+    return correctTagID;
+  }
+
+  public ChassisSpeeds getChassisSpeeds() {
+    return swerveInputs.Speeds;
   }
 }

@@ -18,7 +18,6 @@ import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
-import frc.robot.RobotState;
 import org.littletonrobotics.junction.AutoLog;
 
 public interface DriveIO {
@@ -46,8 +45,6 @@ public interface DriveIO {
       this.FailedDaqs = state.FailedDaqs;
       this.OdometryPeriod = state.OdometryPeriod;
       this.Timestamp = state.OdometryPeriod;
-      RobotState.getInstance()
-          .addPoseObservation(new RobotState.SwerveDriveObservation(this.Pose, this.Speeds));
     }
   }
 

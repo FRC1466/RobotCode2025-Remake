@@ -9,7 +9,6 @@ package frc.robot.subsystems.intake;
 
 import static frc.robot.constants.IntakeConstants.*;
 
-import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Robot;
 import frc.robot.subsystems.rollers.RollerSystemIO;
@@ -28,11 +27,12 @@ import org.littletonrobotics.junction.Logger;
  * machine, transitioning between different states like intaking, holding, and ejecting game pieces.
  */
 public class Intake extends SubsystemBase {
-  private final RollerSystemIO clawIO;
-  private final RollerSystemIOInputsAutoLogged clawInputs = new RollerSystemIOInputsAutoLogged();
+  private final RollerSystemIO endEffectorIO;
+  private final RollerSystemIOInputsAutoLogged endEffectorInputs =
+      new RollerSystemIOInputsAutoLogged();
 
-  private final RollerSystemIO slapdownIO;
-  private final RollerSystemIOInputsAutoLogged slapdownInputs =
+  private final RollerSystemIO starWheelIO;
+  private final RollerSystemIOInputsAutoLogged starWheelInputs =
       new RollerSystemIOInputsAutoLogged();
 
   private final CoralSensorIO coralSensorIO;
@@ -42,10 +42,10 @@ public class Intake extends SubsystemBase {
   /** Represents the desired state of the Intake subsystem */
   public enum WantedState {
     INTAKE_CORAL,
-    HOLD_CORAL,
-    HANDOFF_CORAL,
-    RETURN_CORAL,
+    GRIP_CORAL,
     OUTTAKE_CORAL,
+    OUTTAKE_CORAL_L1,
+    BACKUP_CORAL,
     INTAKE_ALGAE,
     HOLD_ALGAE,
     HOLD_ALGAE_HARDER,
@@ -57,12 +57,12 @@ public class Intake extends SubsystemBase {
    * Represents the actual, internal state of the Intake subsystem. This state is determined by the
    * subsystem's logic in the periodic loop, based on the wantedState and sensor feedback.
    */
-  private enum SystemState {
+  public enum SystemState {
     INTAKING_CORAL,
-    HOLDING_CORAL,
-    HANDING_OFF_CORAL,
-    RETURNING_CORAL,
+    GRIPPING_CORAL,
     OUTTAKING_CORAL,
+    OUTTAKING_CORAL_L1,
+    BACKING_UP_CORAL,
     INTAKING_ALGAE,
     HOLDING_ALGAE,
     HOLDING_ALGAE_HARDER,
@@ -77,29 +77,29 @@ public class Intake extends SubsystemBase {
    * @param starWheelRollerSystemIO The I/O interface for the star wheel roller system.
    * @param coralSensorIO The I/O interface for the Coral distance sensor.
    */
-  public Intake(RollerSystemIO clawIO, RollerSystemIO slapdownIO, CoralSensorIO coralSensorIO) {
-    this.clawIO = clawIO;
-    this.slapdownIO = slapdownIO;
+  public Intake(
+      RollerSystemIO endEffectorRollerSystemIO,
+      RollerSystemIO starWheelRollerSystemIO,
+      CoralSensorIO coralSensorIO) {
+    this.endEffectorIO = endEffectorRollerSystemIO;
+    this.starWheelIO = starWheelRollerSystemIO;
     this.coralSensorIO = coralSensorIO;
   }
 
   @Getter private WantedState wantedState = WantedState.OFF;
   @Getter private SystemState systemState = SystemState.OFF;
 
-  private Debouncer ejectDebouncer = new Debouncer(.1);
-
   @Setter private boolean hasAlgae = false;
 
-  @Setter private boolean hasCoralSlapdown = false;
-  @Setter private boolean hasCoralClaw = false;
+  @Setter private boolean hasCoral = false;
 
   @Override
   public void periodic() {
     // Update and log all inputs
-    clawIO.updateInputs(clawInputs);
-    Logger.processInputs("Subsystems/Intake/ClawRoller", clawInputs);
-    slapdownIO.updateInputs(slapdownInputs);
-    Logger.processInputs("Subsystems/Intake/SlapdownRoller", slapdownInputs);
+    endEffectorIO.updateInputs(endEffectorInputs);
+    Logger.processInputs("Subsystems/Intake/EndEffectorRoller", endEffectorInputs);
+    starWheelIO.updateInputs(starWheelInputs);
+    Logger.processInputs("Subsystems/Intake/StarWheelRoller", starWheelInputs);
     coralSensorIO.updateInputs(coralSensorInputs);
     Logger.processInputs("Subsystems/Intake/CoralSensor", coralSensorInputs);
 
@@ -113,34 +113,17 @@ public class Intake extends SubsystemBase {
     }
 
     if (Robot.isReal()) {
-      hasCoralSlapdown = coralSensorInputs.data.distanceMeters() < distanceThresholdCoralIntake;
+      hasCoral = coralSensorInputs.data.distanceMeters() < distanceThresholdCoralIntake;
     }
-
-    if (systemState == SystemState.OUTTAKING_CORAL) {
-      if (ejectDebouncer.calculate(true)) {
-        setHasCoralClaw(false);
-        setHasCoralSlapdown(false);
-      }
-    } else {
-      ejectDebouncer.calculate(false);
-    }
-    /* if (systemState != SystemState.OFF
-        && systemState != SystemState.HOLDING_CORAL
-        && systemState != SystemState.INTAKING_CORAL
-        && systemState != SystemState.RETURNING_CORAL) {
-      hasCoralSlapdown = false;
-    }
-
     if (systemState != SystemState.OFF
-        && systemState != SystemState.HOLDING_CORAL
-        && systemState != SystemState.INTAKING_CORAL
-        && systemState != SystemState.HANDING_OFF_CORAL) {
-      hasCoralClaw = false;
-    } */
+        && systemState != SystemState.GRIPPING_CORAL
+        && systemState != SystemState.INTAKING_CORAL) {
+      hasCoral = false;
+    }
 
     // Perform state-specific actions
     if (systemState == SystemState.INTAKING_ALGAE && !hasAlgae && Robot.isReal()) {
-      if (clawInputs.data.torqueCurrentAmps() >= currentThresholdAlgaeIntake) {
+      if (endEffectorInputs.data.torqueCurrentAmps() >= currentThresholdAlgaeIntake) {
         hasAlgae = true;
         systemState = SystemState.HOLDING_ALGAE;
       }
@@ -152,8 +135,7 @@ public class Intake extends SubsystemBase {
     Logger.recordOutput("Subsystems/Intake/SystemState", systemState);
     Logger.recordOutput("Subsystems/Intake/WantedState", wantedState);
     Logger.recordOutput("Subsystems/Intake/HasAlgae", hasAlgae);
-    Logger.recordOutput("Subsystems/Intake/HasCoralClaw", hasCoralClaw);
-    Logger.recordOutput("Subsystems/Intake/HasCoralSlapdown", hasCoralSlapdown);
+    Logger.recordOutput("Subsystems/Intake/HasCoral", hasCoral);
 
     LoggedTracer.record("Intake");
   }
@@ -166,14 +148,11 @@ public class Intake extends SubsystemBase {
    */
   private SystemState handleStateTransition() {
     return switch (wantedState) {
-      case INTAKE_CORAL ->
-          hasCoralSlapdown ? SystemState.HOLDING_CORAL : SystemState.INTAKING_CORAL;
-      case HOLD_CORAL -> SystemState.HOLDING_CORAL;
-      case HANDOFF_CORAL ->
-          hasCoralClaw ? SystemState.HOLDING_CORAL : SystemState.HANDING_OFF_CORAL;
-      case RETURN_CORAL ->
-          hasCoralSlapdown ? SystemState.HOLDING_CORAL : SystemState.RETURNING_CORAL;
+      case INTAKE_CORAL -> hasCoral ? SystemState.OFF : SystemState.INTAKING_CORAL;
+      case GRIP_CORAL -> SystemState.GRIPPING_CORAL;
       case OUTTAKE_CORAL -> SystemState.OUTTAKING_CORAL;
+      case OUTTAKE_CORAL_L1 -> SystemState.OUTTAKING_CORAL_L1;
+      case BACKUP_CORAL -> SystemState.BACKING_UP_CORAL;
       case INTAKE_ALGAE -> hasAlgae ? SystemState.HOLDING_ALGAE : SystemState.INTAKING_ALGAE;
       case HOLD_ALGAE -> SystemState.HOLDING_ALGAE;
       case HOLD_ALGAE_HARDER -> SystemState.HOLDING_ALGAE_HARDER;
@@ -191,10 +170,10 @@ public class Intake extends SubsystemBase {
 
     switch (systemState) {
       case INTAKING_CORAL -> voltages = coralIntake;
-      case HOLDING_CORAL -> voltages = coralGrip;
-      case HANDING_OFF_CORAL -> voltages = coralHandoff;
-      case RETURNING_CORAL -> voltages = coralReturn;
+      case GRIPPING_CORAL -> voltages = coralGrip;
       case OUTTAKING_CORAL -> voltages = coralOuttake;
+      case OUTTAKING_CORAL_L1 -> voltages = coralOuttakeL1;
+      case BACKING_UP_CORAL -> voltages = coralBackup;
       case INTAKING_ALGAE -> voltages = algaeIntake;
       case HOLDING_ALGAE -> voltages = algaeHold;
       case HOLDING_ALGAE_HARDER -> voltages = algaeHold; // Or a different voltage if needed
@@ -202,8 +181,8 @@ public class Intake extends SubsystemBase {
       default -> voltages = new RollerVoltages(0.0, 0.0);
     }
 
-    clawIO.runVolts(voltages.clawVoltage);
-    slapdownIO.runVolts(voltages.slapdownVoltage);
+    endEffectorIO.runVolts(voltages.endEffectorVoltage);
+    starWheelIO.runVolts(voltages.starWheelVoltage);
   }
 
   /**
@@ -211,16 +190,8 @@ public class Intake extends SubsystemBase {
    *
    * @return True if the sensor distance is less than the defined threshold, false otherwise.
    */
-  public boolean hasCoralClaw() {
-    return hasCoralClaw;
-  }
-
-  public boolean hasCoralSlapdown() {
-    return hasCoralSlapdown;
-  }
-
-  public boolean hasCoralEither() {
-    return hasCoralClaw || hasCoralSlapdown;
+  public boolean hasCoral() {
+    return hasCoral;
   }
 
   /**

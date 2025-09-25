@@ -32,16 +32,7 @@ import frc.robot.constants.FieldConstants;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.Choreographer;
 import frc.robot.subsystems.Choreographer.WantedChoreography;
-import frc.robot.subsystems.MechanismVisualizer;
-import frc.robot.subsystems.algaeSlapdown.AlgaeSlapdown;
-import frc.robot.subsystems.algaeSlapdown.AlgaeSlapdownIO;
-import frc.robot.subsystems.algaeSlapdown.AlgaeSlapdownIOSim;
-import frc.robot.subsystems.coralSlapdown.CoralSlapdown;
-import frc.robot.subsystems.coralSlapdown.CoralSlapdownIO;
-import frc.robot.subsystems.coralSlapdown.CoralSlapdownIOSim;
-import frc.robot.subsystems.diffwrist.DifferentialWristPivot;
-import frc.robot.subsystems.diffwrist.DifferentialWristPivotIO;
-import frc.robot.subsystems.diffwrist.DifferentialWristPivotIOSim;
+import frc.robot.subsystems.SubsystemVisualizer;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.DriveIO;
 import frc.robot.subsystems.drive.DriveIOCTRE;
@@ -85,15 +76,14 @@ public class RobotContainer {
   // Subsystems
   @Getter private Drive drive;
   @Getter private Elevator elevator;
-  @Getter private Pivot pivot;
-  @Getter private CoralSlapdown coralSlapdown;
-  @Getter private AlgaeSlapdown algaeSlapdown;
+  @Getter private Pivot wrist;
   @Getter private Intake intake;
-  @Getter private DifferentialWristPivot differential;
+
   @Getter private Vision vision;
   @Getter private OverridePublisher overridePublisher;
-  @Getter private MechanismVisualizer mechanismVisualizerMeasured;
-  @Getter private MechanismVisualizer mechanismVisualizerSetpoint;
+
+  @Getter private SubsystemVisualizer subsystemVisualizerMeasured;
+  @Getter private SubsystemVisualizer subsystemVisualizerGoal;
 
   @Getter private Choreographer choreographer;
 
@@ -139,10 +129,7 @@ public class RobotContainer {
         }
         case SIMBOT -> {
           elevator = new Elevator(new ElevatorIOSim(), new HomeSensorIO() {});
-          pivot = new Pivot(new PivotIOSim());
-          differential = new DifferentialWristPivot(new DifferentialWristPivotIOSim());
-          coralSlapdown = new CoralSlapdown(new CoralSlapdownIOSim());
-          algaeSlapdown = new AlgaeSlapdown(new AlgaeSlapdownIOSim());
+          wrist = new Pivot(new PivotIOSim());
           intake =
               new Intake(
                   new RollerSystemIOSim(DCMotor.getKrakenX60(1), 1, 1),
@@ -166,17 +153,8 @@ public class RobotContainer {
     if (elevator == null) {
       elevator = new Elevator(new ElevatorIO() {}, new HomeSensorIO() {});
     }
-    if (pivot == null) {
-      pivot = new Pivot(new PivotIO() {});
-    }
-    if (differential == null) {
-      differential = new DifferentialWristPivot(new DifferentialWristPivotIO() {});
-    }
-    if (coralSlapdown == null) {
-      coralSlapdown = new CoralSlapdown(new CoralSlapdownIO() {});
-    }
-    if (algaeSlapdown == null) {
-      algaeSlapdown = new AlgaeSlapdown(new AlgaeSlapdownIO() {});
+    if (wrist == null) {
+      wrist = new Pivot(new PivotIO() {});
     }
     if (intake == null) {
       intake = new Intake(new RollerSystemIO() {}, new RollerSystemIO() {}, new CoralSensorIO() {});
@@ -190,27 +168,32 @@ public class RobotContainer {
     if (overridePublisher == null) {
       overridePublisher = new OverridePublisher(new OverridePublisherIO() {});
     }
-    mechanismVisualizerMeasured = new MechanismVisualizer("Measured");
-    mechanismVisualizerSetpoint = new MechanismVisualizer("Setpoint");
+    subsystemVisualizerMeasured =
+        new SubsystemVisualizer(
+            "Measured",
+            elevator::getPosition,
+            () -> wrist.getAngle().getRadians(),
+            intake::hasCoral,
+            intake::hasAlgae,
+            drive::getPose);
+
+    subsystemVisualizerGoal =
+        new SubsystemVisualizer(
+            "Goal",
+            elevator::getGoalPosition,
+            wrist.getGoalAngle()::getRadians,
+            intake::hasCoral,
+            intake::hasAlgae,
+            drive::getPose);
 
     autoFactory = new AutoFactory(AllianceUtil.getAlliance(), this);
 
-    choreographer =
-        new Choreographer(
-            drive,
-            intake,
-            elevator,
-            pivot,
-            coralSlapdown,
-            algaeSlapdown,
-            differential,
-            overridePublisher,
-            vision);
+    choreographer = new Choreographer(drive, intake, elevator, wrist, overridePublisher, vision);
 
     // Configure the button bindings
     configureButtonBindings();
 
-    autoChooser.addOption("idk", autoFactory.createJKLAuto());
+    autoChooser.addOption("idk", autoFactory.createIKLJAuto());
   }
 
   /**
@@ -229,7 +212,6 @@ public class RobotContainer {
             Commands.runOnce(
                 () -> {
                   selectedCoralScoreLevel.value = 4;
-                  choreographer.setWantedCoralLocation(Choreographer.WantedCoralLocation.CLAW);
                 }));
     controller
         .povLeft()
@@ -237,7 +219,6 @@ public class RobotContainer {
             Commands.runOnce(
                 () -> {
                   selectedCoralScoreLevel.value = 3;
-                  choreographer.setWantedCoralLocation(Choreographer.WantedCoralLocation.CLAW);
                 }));
     controller
         .povRight()
@@ -245,7 +226,6 @@ public class RobotContainer {
             Commands.runOnce(
                 () -> {
                   selectedCoralScoreLevel.value = 2;
-                  choreographer.setWantedCoralLocation(Choreographer.WantedCoralLocation.CLAW);
                 }));
     controller
         .povDown()
@@ -253,7 +233,6 @@ public class RobotContainer {
             Commands.runOnce(
                 () -> {
                   selectedCoralScoreLevel.value = 1;
-                  choreographer.setWantedCoralLocation(Choreographer.WantedCoralLocation.SLAPDOWN);
                 }));
 
     // Scoring side selection
@@ -286,45 +265,32 @@ public class RobotContainer {
             Commands.runOnce(() -> intake.setWantedState(WantedState.OFF))
                 .withName("Manual Coral Eject"));
 
-    // Coral intake from ground
+    // Coral intake from station
     controller
         .leftTrigger()
         .whileTrue(
             choreographer
-                .setChoreographyCommand(WantedChoreography.INTAKE_CORAL_FROM_GROUND)
-                .withName("Coral Ground Intake"))
+                .setChoreographyCommand(WantedChoreography.INTAKE_CORAL_FROM_STATION)
+                .withName("Coral Station Intake"))
         .onFalse(choreographer.setChoreographyCommand(WantedChoreography.DEFAULT_STATE));
 
     // Algae triggers
     Trigger onOpposingSide =
         new Trigger(
             () ->
-                AllianceFlipUtil.applyX(
-                        RobotState.getInstance().getRobotPoseFromSwerveDriveOdometry().getX())
-                    > FieldConstants.FIELD_LENGTH / 2);
+                AllianceFlipUtil.applyX(drive.getPose().getX()) > FieldConstants.FIELD_LENGTH / 2);
 
     Trigger shouldProcess =
         new Trigger(
             () ->
                 AllianceFlipUtil.apply(
-                                RobotState.getInstance()
-                                    .getRobotPoseFromSwerveDriveOdometry()
-                                    .exp(
-                                        RobotState.getInstance()
-                                            .getRobotChassisSpeeds()
-                                            .toTwist2d(0.75)))
+                                drive.getPose().exp(drive.getChassisSpeeds().toTwist2d(0.75)))
                             .getY()
                         < FieldConstants.FIELD_HEIGHT / 2 - Drive.robotWidth
                     || onOpposingSide.getAsBoolean());
 
     Container<Boolean> hasAlgae = new Container<>(false);
     controller.leftBumper().onTrue(Commands.runOnce(() -> hasAlgae.value = intake.hasAlgae()));
-
-    // Algae ground intake
-    controller
-        .y()
-        .whileTrue(choreographer.setChoreographyCommand(WantedChoreography.INTAKE_ALGAE_GROUND))
-        .onFalse(choreographer.setChoreographyCommand(WantedChoreography.MOVE_ALGAE_TO_SAFE));
 
     // Algae reef intake
     controller

@@ -17,15 +17,10 @@ public class ChoreographerConstants {
   public static final double xOffsetFromTagForBackoutIntakingAlgaeInches = 50.0;
   public static final double xOffsetFromTagForL1BackoutInches = 10.0;
 
-  public static final double xOffsetFromPoseBackL1Inches = 0;
-  public static final double xOffsetFromPoseBackL2Inches = 8;
-  public static final double xOffsetFromPoseBackL3Inches = 8;
-  public static final double xOffsetFromPoseBackL4Inches = 4;
-
-  public static final double xOffsetFromPoseFrontL1Inches = 0;
-  public static final double xOffsetFromPoseFrontL2Inches = 0;
-  public static final double xOffsetFromPoseFrontL3Inches = 0;
-  public static final double xOffsetFromPoseFrontL4Inches = -1.5;
+  public static final double xOffsetFromPoseL1Inches = 0;
+  public static final double xOffsetFromPoseL2Inches = 8;
+  public static final double xOffsetFromPoseL3Inches = 8;
+  public static final double xOffsetFromPoseL4Inches = 4;
 
   public static final double yOffsetFromTagForScoringOnReefInchesBase = 6.5;
   public static final double yOffsetFromTagForScoringL1Inches = 0;
@@ -33,11 +28,6 @@ public class ChoreographerConstants {
   public enum ScoringSide {
     RIGHT,
     LEFT
-  }
-
-  public enum ScoringDirection {
-    FRONT,
-    BACK
   }
 
   public enum ReefSelectionMethod {

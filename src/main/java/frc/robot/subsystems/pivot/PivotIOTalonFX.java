@@ -7,7 +7,7 @@
 
 package frc.robot.subsystems.pivot;
 
-import static frc.robot.constants.AlgaeSlapdownConstants.*;
+import static frc.robot.constants.PivotConstants.*;
 
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.Slot0Configs;
@@ -19,7 +19,6 @@ import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.units.measure.*;
-import frc.robot.constants.AlgaeSlapdownConstants;
 import frc.robot.util.TalonFXFactory;
 
 public class PivotIOTalonFX implements PivotIO {
@@ -51,10 +50,8 @@ public class PivotIOTalonFX implements PivotIO {
     cfg.Slot0.kS = kS.get();
 
     cfg.MotorOutput.NeutralMode = NeutralModeValue.Brake;
-    cfg.MotionMagic.MotionMagicAcceleration =
-        AlgaeSlapdownConstants.wristRadiansToRotations(accelerationConstraint);
-    cfg.MotionMagic.MotionMagicCruiseVelocity =
-        AlgaeSlapdownConstants.wristRadiansToRotations(velocityConstraint);
+    cfg.MotionMagic.MotionMagicAcceleration = wristRadiansToRotations(accelerationConstraint);
+    cfg.MotionMagic.MotionMagicCruiseVelocity = wristRadiansToRotations(velocityConstraint);
     cfg.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
 
     slapdown.getConfigurator().apply(cfg);
@@ -72,26 +69,23 @@ public class PivotIOTalonFX implements PivotIO {
   public void updateInputs(PivotIOInputs inputs) {
     inputs.data =
         new PivotIOData(
-            Rotation2d.fromRadians(
-                AlgaeSlapdownConstants.wristRotationsToRadians(rotorPosition.getValueAsDouble())),
+            Rotation2d.fromRadians(wristRotationsToRadians(rotorPosition.getValueAsDouble())),
             motorVoltage.getValueAsDouble(),
             supplyCurrent.getValueAsDouble(),
             statorCurrent.getValueAsDouble(),
-            AlgaeSlapdownConstants.wristRotationsToRadians(rotorVelocity.getValueAsDouble()),
-            AlgaeSlapdownConstants.wristRotationsToRadians(rotorAcceleration.getValueAsDouble()),
+            wristRotationsToRadians(rotorVelocity.getValueAsDouble()),
+            wristRotationsToRadians(rotorAcceleration.getValueAsDouble()),
             deviceTemp.getValueAsDouble());
   }
 
   @Override
   public void setTargetAngle(Rotation2d target) {
-    slapdown.setControl(
-        positionVoltage.withPosition(
-            AlgaeSlapdownConstants.wristRadiansToRotations(target.getRadians())));
+    slapdown.setControl(positionVoltage.withPosition(wristRadiansToRotations(target.getRadians())));
   }
 
   @Override
   public void resetAngle(Rotation2d angle) {
-    slapdown.setPosition(AlgaeSlapdownConstants.wristRadiansToRotations(angle.getRadians()));
+    slapdown.setPosition(wristRadiansToRotations(angle.getRadians()));
   }
 
   @Override
