@@ -413,7 +413,7 @@ public class Choreographer extends SubsystemBase {
       }
     } else {
       if (!wrist.atGoal() && !elevator.atGoal(Units.inchesToMeters(1.0))) {
-        drive.setDesiredPoseForDriveToPoint(getDesiredPointToDriveToForAlgaeIntaking(id));
+        drive.setDesiredPoseForDriveToPoint(getIntermediatePointToDriveToForAlgaeIntaking(id));
       } else {
         drive.setDesiredPoseForDriveToPoint(getDesiredPointToDriveToForAlgaeIntaking(id));
       }
