@@ -20,6 +20,7 @@ import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.GenericHID.RumbleType;
+import edu.wpi.first.wpilibj.I2C;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -39,6 +40,7 @@ import frc.robot.subsystems.drive.DriveIOCTRE;
 import frc.robot.subsystems.elevator.Elevator;
 import frc.robot.subsystems.elevator.ElevatorIO;
 import frc.robot.subsystems.elevator.ElevatorIOSim;
+import frc.robot.subsystems.elevator.ElevatorIOTalonFX;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.intake.Intake.WantedState;
 import frc.robot.subsystems.overridePublisher.OverridePublisher;
@@ -47,9 +49,13 @@ import frc.robot.subsystems.overridePublisher.OverridePublisherIOReal;
 import frc.robot.subsystems.pivot.Pivot;
 import frc.robot.subsystems.pivot.PivotIO;
 import frc.robot.subsystems.pivot.PivotIOSim;
+import frc.robot.subsystems.pivot.PivotIOTalonFX;
 import frc.robot.subsystems.rollers.RollerSystemIO;
 import frc.robot.subsystems.rollers.RollerSystemIOSim;
+import frc.robot.subsystems.rollers.RollerSystemIOSpark;
+import frc.robot.subsystems.rollers.RollerSystemIOTalonFX;
 import frc.robot.subsystems.sensors.CoralSensorIO;
+import frc.robot.subsystems.sensors.CoralSensorIOColorSensor;
 import frc.robot.subsystems.sensors.HomeSensorIO;
 import frc.robot.subsystems.vision.Vision;
 import frc.robot.subsystems.vision.VisionIO;
@@ -122,6 +128,13 @@ public class RobotContainer {
 
       switch (Constants.getRobot()) {
         case COMPBOT -> {
+          elevator = new Elevator(new ElevatorIOTalonFX(), new HomeSensorIO() {});
+          wrist = new Pivot(new PivotIOTalonFX());
+          intake =
+              new Intake(
+                  new RollerSystemIOTalonFX(15, "rio", 40, false, false, 1),
+                  new RollerSystemIOSpark(19, false),
+                  new CoralSensorIOColorSensor(I2C.Port.kOnboard));
           break;
         }
         case DEVBOT -> {

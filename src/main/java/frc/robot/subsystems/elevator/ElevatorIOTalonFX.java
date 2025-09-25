@@ -23,7 +23,6 @@ import edu.wpi.first.units.measure.*;
 import frc.robot.constants.ElevatorConstants;
 import frc.robot.subsystems.elevator.Elevator.ElevatorProfile;
 import frc.robot.util.PhoenixUtil;
-import frc.robot.util.TalonFXFactory;
 
 public class ElevatorIOTalonFX implements ElevatorIO {
   private final TalonFX masterTalonFX;
@@ -45,8 +44,8 @@ public class ElevatorIOTalonFX implements ElevatorIO {
   private final StatusSignal<Temperature> followerTemp;
 
   public ElevatorIOTalonFX() {
-    masterTalonFX = TalonFXFactory.createDefaultTalon(masterMotorId);
-    followerTalonFX = TalonFXFactory.createDefaultTalon(followerMotorId);
+    masterTalonFX = new TalonFX(masterMotorId);
+    followerTalonFX = new TalonFX(followerMotorId);
     followControlRequest = new Follower(masterMotorId, false);
 
     TalonFXConfiguration config = new TalonFXConfiguration();

@@ -19,7 +19,7 @@ import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.units.measure.*;
-import frc.robot.util.TalonFXFactory;
+import frc.robot.util.PhoenixUtil;
 
 public class PivotIOTalonFX implements PivotIO {
   private TalonFX pivot;
@@ -36,7 +36,7 @@ public class PivotIOTalonFX implements PivotIO {
   private final StatusSignal<AngularAcceleration> pivotAngularAcceleration;
 
   public PivotIOTalonFX() {
-    pivot = TalonFXFactory.createDefaultTalon(motorId);
+    pivot = new TalonFX(motorId);
 
     TalonFXConfiguration config = new TalonFXConfiguration();
     config.CurrentLimits.SupplyCurrentLimitEnable = true;
@@ -50,12 +50,10 @@ public class PivotIOTalonFX implements PivotIO {
     config.Slot0.kS = kS.get();
 
     config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
-    config.MotionMagic.MotionMagicAcceleration =
-        wristRadiansToRotations(accelerationConstraint);
-    config.MotionMagic.MotionMagicCruiseVelocity =
-        wristRadiansToRotations(velocityConstraint);
+    config.MotionMagic.MotionMagicAcceleration = wristRadiansToRotations(accelerationConstraint);
+    config.MotionMagic.MotionMagicCruiseVelocity = wristRadiansToRotations(velocityConstraint);
     config.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
-    pivot.getConfigurator().apply(config);
+    PhoenixUtil.tryUntilOk(5, () -> pivot.getConfigurator().apply(config));
 
     pivotPosition = pivot.getRotorPosition();
     pivotVoltage = pivot.getMotorVoltage();
@@ -64,13 +62,23 @@ public class PivotIOTalonFX implements PivotIO {
     pivotTemperature = pivot.getDeviceTemp();
     pivotAngularVelocity = pivot.getRotorVelocity();
     pivotAngularAcceleration = pivot.getAcceleration();
+
+    // Register signals for refresh
+    PhoenixUtil.registerSignals(
+        false,
+        pivotPosition,
+        pivotAngularVelocity,
+        pivotAngularAcceleration,
+        pivotVoltage,
+        pivotStatorCurrent,
+        pivotSupplyCurrent,
+        pivotTemperature);
   }
 
   @Override
   public void updateInputs(PivotIOInputs inputs) {
     inputs.pivotAngle =
-        Rotation2d.fromRadians(
-            wristRotationsToRadians(pivotPosition.getValueAsDouble()));
+        Rotation2d.fromRadians(wristRotationsToRadians(pivotPosition.getValueAsDouble()));
 
     inputs.pivotAppliedVolts = pivotVoltage.getValueAsDouble();
     inputs.pivotSupplyCurrentAmps = pivotSupplyCurrent.getValueAsDouble();
@@ -86,8 +94,7 @@ public class PivotIOTalonFX implements PivotIO {
 
   @Override
   public void setTargetAngle(Rotation2d target) {
-    pivot.setControl(
-        positionVoltage.withPosition(wristRadiansToRotations(target.getRadians())));
+    pivot.setControl(positionVoltage.withPosition(wristRadiansToRotations(target.getRadians())));
   }
 
   @Override

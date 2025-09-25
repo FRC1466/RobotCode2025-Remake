@@ -10,7 +10,6 @@ package frc.robot.subsystems.rollers;
 import static frc.robot.util.PhoenixUtil.tryUntilOk;
 
 import com.ctre.phoenix6.BaseStatusSignal;
-import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.NeutralOut;
@@ -51,7 +50,7 @@ public class RollerSystemIOTalonFX implements RollerSystemIO {
   public RollerSystemIOTalonFX(
       int id, String bus, int currentLimitAmps, boolean invert, boolean brake, double reduction) {
     this.reduction = reduction;
-    talon = new TalonFX(id, bus);
+    talon = new TalonFX(id);
 
     config.MotorOutput.Inverted =
         invert ? InvertedValue.Clockwise_Positive : InvertedValue.CounterClockwise_Positive;
@@ -86,7 +85,7 @@ public class RollerSystemIOTalonFX implements RollerSystemIO {
 
     // Register signals for refresh
     PhoenixUtil.registerSignals(
-        new CANBus(bus).isNetworkFD(),
+        false,
         position,
         velocity,
         appliedVoltage,

@@ -44,7 +44,7 @@ public final class TalonFXFactory {
    * @return A configured TalonFX instance.
    */
   public static TalonFX createDefaultTalon(int deviceId) {
-    return createDefaultTalon(deviceId, "rio", true);
+    return createDefaultTalon(deviceId, "", true);
   }
 
   public static TalonFX createDefaultTalon(int deviceId, String canBus) {
