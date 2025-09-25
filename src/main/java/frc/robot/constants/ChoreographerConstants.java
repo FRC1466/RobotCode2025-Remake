@@ -9,7 +9,7 @@ package frc.robot.constants;
 
 public class ChoreographerConstants {
   // public static final double xOffsetFromTagForL1BaseScoringInches = 22.0;
-  public static final double xOffsetFromTagForL1TopScoringInches = 18;
+  public static final double xOffsetFromTagForL1TopScoringInches = 25;
 
   public static final double xOffsetFromTagForScoringInches = 18.0;
   public static final double xOffsetFromTagForIntakingAlgaeInches = 18.0;
@@ -17,12 +17,7 @@ public class ChoreographerConstants {
   public static final double xOffsetFromTagForBackoutIntakingAlgaeInches = 50.0;
   public static final double xOffsetFromTagForL1BackoutInches = 10.0;
 
-  public static final double xOffsetFromPoseL1Inches = 0;
-  public static final double xOffsetFromPoseL2Inches = 8;
-  public static final double xOffsetFromPoseL3Inches = 8;
-  public static final double xOffsetFromPoseL4Inches = 4;
-
-  public static final double yOffsetFromTagForScoringOnReefInchesBase = 6.5;
+  public static final double yOffsetFromTagForScoringOnReefInches = 6.5;
   public static final double yOffsetFromTagForScoringL1Inches = 0;
 
   public enum ScoringSide {

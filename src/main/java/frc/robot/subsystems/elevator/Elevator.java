@@ -17,6 +17,7 @@ import frc.robot.constants.ElevatorConstants;
 import frc.robot.subsystems.sensors.HomeSensorIO;
 import frc.robot.subsystems.sensors.HomeSensorIOInputsAutoLogged;
 import frc.robot.util.LoggedTracer;
+import java.util.function.Supplier;
 import lombok.Getter;
 import lombok.Setter;
 import org.littletonrobotics.junction.Logger;
@@ -41,14 +42,14 @@ public class Elevator extends SubsystemBase {
 
   /** Defines motion profiles with different velocity and acceleration constraints. */
   public enum ElevatorProfile {
-    DEFAULT(velocityConstraint, accelerationConstraint),
-    DOWN(velocityConstraint, accelerationConstraintDown),
-    ALGAE(velocityConstraintAlgae, accelerationConstraintAlgae);
+    DEFAULT(() -> velocityConstraint.get(), () -> accelerationConstraint.get()),
+    DOWN(() -> velocityConstraint.get(), () -> accelerationConstraintDown.get()),
+    ALGAE(() -> velocityConstraintAlgae.get(), () -> accelerationConstraintAlgae.get());
 
-    public final Double velocity;
-    public final Double acceleration;
+    public final Supplier<Double> velocity;
+    public final Supplier<Double> acceleration;
 
-    ElevatorProfile(double velocity, double acceleration) {
+    ElevatorProfile(Supplier<Double> velocity, Supplier<Double> acceleration) {
       this.velocity = velocity;
       this.acceleration = acceleration;
     }

@@ -29,36 +29,36 @@ public class ElevatorConstants {
   public static final LoggedTunableNumber kS = new LoggedTunableNumber("Elevator/kS", 0.0);
 
   // Motion Magic Constants
-  public static final double accelerationConstraint = 8.0;
-  public static final double accelerationConstraintAlgae = 6.0;
-  public static final double accelerationConstraintDown = 6.0;
+  public static final LoggedTunableNumber accelerationConstraint =
+      new LoggedTunableNumber("Elevator/AccelerationConstraint", 8);
+  public static final LoggedTunableNumber accelerationConstraintAlgae =
+      new LoggedTunableNumber("Elevator/AccelerationConstraintAlgae", 6);
+  public static final LoggedTunableNumber accelerationConstraintDown =
+      new LoggedTunableNumber("Elevator/AccelerationConstraintDown", 6);
 
-  public static final double velocityConstraint = 3.0;
-  public static final double velocityConstraintAlgae = 2.8;
+  public static final LoggedTunableNumber velocityConstraint =
+      new LoggedTunableNumber("Elevator/VelocityConstraint", 3);
+  public static final LoggedTunableNumber velocityConstraintAlgae =
+      new LoggedTunableNumber("Elevator/VelocityConstraintAlgae", 2.8);
 
-  // Pulley specs
-  public static final double pulleyTeeth = 24.0;
-  public static final double beltPitchMm = 5.0; // HTD-5mm
-
-  // Derived pitch radius in inches
-  public static final double pulleyRadiusInches =
-      ((pulleyTeeth * (beltPitchMm / 25.4)) / Math.PI) / 2.0; // (PD in inches) / 2
-
-  // Gear ratio: motor revs per pulley rev
-  public static final double elevatorGearRatio = 36.0 / 9.0; // 4.0
+  public static final double cascadeCarriageMultiplier = 2.0;
+  public static final double pulleyRadiusInches = 1.0;
+  public static final double elevatorGearRatio = 3.0 * 4.0;
 
   public static final double elevatorRotationsToMeters(double rotations) {
     return (rotations / elevatorGearRatio)
+        * cascadeCarriageMultiplier
         * (2 * Math.PI)
         * Units.inchesToMeters(pulleyRadiusInches);
   }
 
   public static final double elevatorMetersToRotations(double meters) {
-    return (meters / ((2 * Math.PI) * Units.inchesToMeters(pulleyRadiusInches)))
+    return (meters
+            / (cascadeCarriageMultiplier
+                * (2 * Math.PI)
+                * Units.inchesToMeters(pulleyRadiusInches)))
         * elevatorGearRatio;
   }
-
-  public static final double maxHeightMeters = 1.507;
 
   public static final LoggedTunableNumber stowed =
       new LoggedTunableNumber("Elevator/StowedPosition", elevatorRotationsToMeters(0.1));

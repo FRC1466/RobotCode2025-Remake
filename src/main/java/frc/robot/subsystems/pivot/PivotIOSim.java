@@ -7,7 +7,7 @@
 
 package frc.robot.subsystems.pivot;
 
-import static frc.robot.constants.PivotConstants.*;
+import static frc.robot.constants.WristConstants.*;
 
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -18,19 +18,21 @@ import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.simulation.SingleJointedArmSim;
 
 /**
- * Simulated implementation of the SlapdownIO interface for development and testing when not at the
- * lab. This class simulates the slapdown mechanism's behavior using the WPILib physics sim tools.
+ * Simulated implementation of the WristIO interface for development and testing when not at the
+ * lab. This class simulates the pivot's behavior using the WristSim class from WPILib. To learn
+ * more on implementing WPILib simulations, view their documentation here:
+ * https://docs.wpilib.org/en/stable/docs/software/wpilib-tools/robot-simulation/physics-sim.html
  */
 public class PivotIOSim implements PivotIO {
-  private static final double minAngleRads = -Math.PI;
-  private static final double maxAngleRads = Math.PI;
+  private static final double minAngleRads = 0.0;
+  private static final double maxAngleRads = Math.PI * 2;
   private static final double armLength = 0.4;
   private static final double massKg = 4;
 
   private final SingleJointedArmSim sim =
       new SingleJointedArmSim(
           DCMotor.getKrakenX60Foc(1),
-          slapdownReduction,
+          wristReduction,
           SingleJointedArmSim.estimateMOI(armLength, massKg),
           armLength,
           minAngleRads,
@@ -43,7 +45,10 @@ public class PivotIOSim implements PivotIO {
           kP.get(),
           kI.get(),
           kD.get(),
-          new TrapezoidProfile.Constraints(velocityConstraint, accelerationConstraint));
+          new TrapezoidProfile.Constraints(
+              velocityConstraint, // Max velocity (rad/s)
+              accelerationConstraint // Max acceleration (rad/s^2)
+              ));
   private double appliedVoltage = 0.0;
   private boolean closedLoop = false;
 
@@ -52,17 +57,17 @@ public class PivotIOSim implements PivotIO {
     sim.setInputVoltage(appliedVoltage);
     sim.update(0.02);
 
-    double prevVelocity = inputs.data.angularVelocityRotPerSec();
+    double prevVelocity = inputs.pivotAngularVelocityRadPerSec;
 
-    inputs.data =
-        new PivotIOData(
-            Rotation2d.fromRadians(sim.getAngleRads()),
-            sim.getVelocityRadPerSec(),
-            (sim.getVelocityRadPerSec() - prevVelocity) / 0.02,
-            appliedVoltage,
-            Math.abs(appliedVoltage) * 10.0,
-            Math.abs(appliedVoltage) * 10.0,
-            40.0);
+    inputs.pivotAngle = Rotation2d.fromRadians(sim.getAngleRads());
+    inputs.pivotAngularVelocityRadPerSec = sim.getVelocityRadPerSec();
+    inputs.pivotAngularAccelerationRadPerSecSquared =
+        (inputs.pivotAngularVelocityRadPerSec - prevVelocity) / 0.02;
+
+    inputs.pivotAppliedVolts = appliedVoltage;
+    inputs.pivotSupplyCurrentAmps = Math.abs(appliedVoltage) * 10.0;
+    inputs.pivotStatorCurrentAmps = inputs.pivotSupplyCurrentAmps;
+    inputs.pivotMotorTemp = 40.0;
 
     if (!DriverStation.isEnabled()) {
       appliedVoltage = 0.0;
@@ -85,7 +90,7 @@ public class PivotIOSim implements PivotIO {
   }
 
   @Override
-  public void resetAngle(Rotation2d angle) {
+  public void resetPivotAngle(Rotation2d angle) {
     sim.setState(angle.getRadians(), 0.0);
     pid.reset(angle.getRadians());
   }

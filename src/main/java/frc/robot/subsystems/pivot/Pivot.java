@@ -7,25 +7,31 @@
 
 package frc.robot.subsystems.pivot;
 
-import static frc.robot.constants.PivotConstants.*;
+import static frc.robot.constants.WristConstants.*;
 
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.constants.PivotConstants;
+import frc.robot.constants.WristConstants;
 import frc.robot.util.LoggedTracer;
 import lombok.Getter;
 import org.littletonrobotics.junction.Logger;
 
-/** The Pivot subsystem controls the slapdown arm rotation using a simple state machine. */
+/**
+ * The Wrist subsystem is responsible for controlling the rotational movement of the robot's wrist
+ * mechanism. It uses a state machine to manage its behavior, such as moving to a specific position
+ * or remaining idle.
+ */
 public class Pivot extends SubsystemBase {
+  /** Represents the desired state of the wrist, typically set by external commands. */
   public enum WantedState {
     IDLE,
     MOVE_TO_POSITION
   }
 
+  /** Represents the internal operational state of the wrist. */
   private enum SystemState {
     IDLING,
     MOVING_TO_POSITION
@@ -39,69 +45,116 @@ public class Pivot extends SubsystemBase {
 
   @Getter private Rotation2d goalAngle;
 
-  private static final double kAngleToleranceRad = Units.degreesToRadians(2.0);
-
   public Pivot(PivotIO io) {
     this.io = io;
-    this.goalAngle = Rotation2d.fromRadians(stowedPosition.get());
+    this.goalAngle =
+        Rotation2d.fromRadians(stowedPosition.get()); // Default to stowed position on startup
   }
 
+  /**
+   * Sets the desired state for the wrist. This is the primary way commands interact with the
+   * subsystem's state machine.
+   *
+   * @param wantedState The desired state.
+   */
   public void setWantedState(WantedState wantedState) {
     this.wantedState = wantedState;
   }
 
+  /**
+   * Sets the desired state for the wrist and the target position to move to.
+   *
+   * @param wantedState The desired state.
+   * @param goalAngle The target position in meters to move the wrist to.
+   */
   public void setWantedState(WantedState wantedState, Rotation2d goalAngle) {
     this.wantedState = wantedState;
     setGoalPosition(goalAngle);
   }
 
+  /**
+   * Commands the wrist to move to a specific position. Does NOT change the wanted state
+   *
+   * @param goal The target angle.
+   */
   private void setGoalPosition(Rotation2d goal) {
     this.goalAngle = goal;
   }
 
+  /**
+   * Checks if the wrist is at its target position within a specified tolerance.
+   *
+   * @return True if the wrist is at the goal, false otherwise.
+   */
   public boolean atGoal() {
     return MathUtil.isNear(
-        getAngle().getRadians(), getGoalAngle().getRadians(), kAngleToleranceRad);
+        getAngle().getRadians(), getGoalAngle().getRadians(), Units.inchesToMeters(5.0));
   }
 
-  public boolean atGoal(Rotation2d tolerance) {
-    return MathUtil.isNear(
-        getAngle().getRadians(), getGoalAngle().getRadians(), tolerance.getRadians());
-  }
-
+  /**
+   * Sets the neutral mode for the wrist motors (e.g., Brake or Coast).
+   *
+   * @param neutralModeValue The neutral mode to set.
+   */
   public void setNeutralMode(NeutralModeValue neutralModeValue) {
     io.setNeutralMode(neutralModeValue);
   }
 
+  /**
+   * Gets the current position of the wrist.
+   *
+   * @return The current position in meters.
+   */
   public Rotation2d getAngle() {
-    return inputs.data.angle();
+    return inputs.pivotAngle;
   }
 
+  /**
+   * Gets the current velocity of the wrist.
+   *
+   * @return The current velocity in meters per second.
+   */
   public double getVelocity() {
-    return inputs.data.angularVelocityRotPerSec();
+    return inputs.pivotAngularVelocityRadPerSec;
   }
 
+  /**
+   * Gets the current acceleration of the wrist.
+   *
+   * @return The current acceleration in meters per second squared.
+   */
   public double getAcceleration() {
-    return inputs.data.angularAccelerationRadPerSecSquared();
+    return inputs.pivotAngularAccelerationRadPerSecSquared;
   }
 
   @Override
   public void periodic() {
+    // Update and log inputs from the hardware layer
     io.updateInputs(inputs);
-    Logger.processInputs("Subsystems/Pivot", inputs);
+    Logger.processInputs("Subsystems/Wrist", inputs);
 
-    if (PivotConstants.kP.hasChanged(hashCode())
-        || PivotConstants.kI.hasChanged(hashCode())
-        || PivotConstants.kD.hasChanged(hashCode())) {
+    if (WristConstants.kP.hasChanged(hashCode())
+        || WristConstants.kI.hasChanged(hashCode())
+        || WristConstants.kD.hasChanged(hashCode())) {
+      // Reconfigure the wrist if PID constants have changed
       io.setPID(kP.get(), kI.get(), kD.get());
     }
 
-    systemState = handleStateTransitions();
+    // Run the state machine logic
+    this.systemState = handleStateTransitions();
     applyStates();
+
+    // Log subsystem state for debugging and analysis
     logState();
-    LoggedTracer.record("Pivot");
+
+    // Record cycle time
+    LoggedTracer.record("Wrist");
   }
 
+  /**
+   * Determines the current system state based on the wanted state. This is the "transition" part of
+   * the state machine.
+   */
   private SystemState handleStateTransitions() {
     switch (wantedState) {
       case IDLE:
@@ -113,6 +166,10 @@ public class Pivot extends SubsystemBase {
     }
   }
 
+  /**
+   * Executes actions based on the current system state. This is the "action" part of the state
+   * machine.
+   */
   private void applyStates() {
     switch (systemState) {
       case IDLING:
@@ -124,16 +181,13 @@ public class Pivot extends SubsystemBase {
     }
   }
 
-  public void resetAngle(Rotation2d angle) {
-    io.resetAngle(angle);
-  }
-
+  /** Logs the essential state of the subsystem to AdvantageKit Logger. */
   private void logState() {
-    Logger.recordOutput("Subsystems/Pivot/SystemState", systemState.name());
-    Logger.recordOutput("Subsystems/Pivot/WantedState", wantedState.name());
-    Logger.recordOutput("Subsystems/Pivot/GoalAngle", goalAngle);
-    Logger.recordOutput("Subsystems/Pivot/AtGoal", atGoal());
-    Logger.recordOutput("Subsystems/Pivot/Angle", getAngle());
-    Logger.recordOutput("Subsystems/Pivot/VelocityRadPerSec", getVelocity());
+    Logger.recordOutput("Subsystems/Wrist/SystemState", systemState.name());
+    Logger.recordOutput("Subsystems/Wrist/WantedState", wantedState.name());
+    Logger.recordOutput("Subsystems/Wrist/GoalAngle", goalAngle);
+    Logger.recordOutput("Subsystems/Wrist/AtGoal", atGoal());
+    Logger.recordOutput("Subsystems/Wrist/Angle", getAngle());
+    Logger.recordOutput("Subsystems/Wrist/VelocityMetersPerSec", getVelocity());
   }
 }

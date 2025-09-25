@@ -7,7 +7,7 @@
 
 package frc.robot.subsystems.pivot;
 
-import static frc.robot.constants.PivotConstants.*;
+import static frc.robot.constants.WristConstants.*;
 
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.Slot0Configs;
@@ -22,88 +22,95 @@ import edu.wpi.first.units.measure.*;
 import frc.robot.util.TalonFXFactory;
 
 public class PivotIOTalonFX implements PivotIO {
-  private final TalonFX slapdown;
+  private TalonFX pivot;
 
-  private final DutyCycleOut dutyCycleOut = new DutyCycleOut(0.0);
-  private final MotionMagicVoltage positionVoltage = new MotionMagicVoltage(0).withSlot(0);
+  DutyCycleOut dutyCycleOut = new DutyCycleOut(0.0);
+  MotionMagicVoltage positionVoltage = new MotionMagicVoltage(0).withSlot(0);
 
-  private final StatusSignal<Angle> rotorPosition;
-  private final StatusSignal<Voltage> motorVoltage;
-  private final StatusSignal<Current> supplyCurrent;
-  private final StatusSignal<Current> statorCurrent;
-  private final StatusSignal<Temperature> deviceTemp;
-  private final StatusSignal<AngularVelocity> rotorVelocity;
-  private final StatusSignal<AngularAcceleration> rotorAcceleration;
+  private final StatusSignal<Angle> pivotPosition;
+  private final StatusSignal<Voltage> pivotVoltage;
+  private final StatusSignal<Current> pivotSupplyCurrent;
+  private final StatusSignal<Current> pivotStatorCurrent;
+  private final StatusSignal<Temperature> pivotTemperature;
+  private final StatusSignal<AngularVelocity> pivotAngularVelocity;
+  private final StatusSignal<AngularAcceleration> pivotAngularAcceleration;
 
   public PivotIOTalonFX() {
-    slapdown = TalonFXFactory.createDefaultTalon(motorId);
+    pivot = TalonFXFactory.createDefaultTalon(motorId);
 
-    TalonFXConfiguration cfg = new TalonFXConfiguration();
-    cfg.CurrentLimits.SupplyCurrentLimitEnable = true;
-    cfg.CurrentLimits.StatorCurrentLimitEnable = true;
-    cfg.CurrentLimits.SupplyCurrentLimit = 30.0;
-    cfg.CurrentLimits.StatorCurrentLimit = 80.0;
+    TalonFXConfiguration config = new TalonFXConfiguration();
+    config.CurrentLimits.SupplyCurrentLimitEnable = true;
+    config.CurrentLimits.StatorCurrentLimitEnable = true;
+    config.CurrentLimits.SupplyCurrentLimit = 30.0;
+    config.CurrentLimits.StatorCurrentLimit = 80.0;
 
-    cfg.Slot0.kP = kP.get();
-    cfg.Slot0.kI = kI.get();
-    cfg.Slot0.kD = kD.get();
-    cfg.Slot0.kS = kS.get();
+    config.Slot0.kP = kP.get();
+    config.Slot0.kI = kI.get();
+    config.Slot0.kD = kD.get();
+    config.Slot0.kS = kS.get();
 
-    cfg.MotorOutput.NeutralMode = NeutralModeValue.Brake;
-    cfg.MotionMagic.MotionMagicAcceleration = wristRadiansToRotations(accelerationConstraint);
-    cfg.MotionMagic.MotionMagicCruiseVelocity = wristRadiansToRotations(velocityConstraint);
-    cfg.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
+    config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
+    config.MotionMagic.MotionMagicAcceleration =
+        wristRadiansToRotations(accelerationConstraint);
+    config.MotionMagic.MotionMagicCruiseVelocity =
+        wristRadiansToRotations(velocityConstraint);
+    config.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
+    pivot.getConfigurator().apply(config);
 
-    slapdown.getConfigurator().apply(cfg);
-
-    rotorPosition = slapdown.getRotorPosition();
-    motorVoltage = slapdown.getMotorVoltage();
-    supplyCurrent = slapdown.getSupplyCurrent();
-    statorCurrent = slapdown.getStatorCurrent();
-    deviceTemp = slapdown.getDeviceTemp();
-    rotorVelocity = slapdown.getRotorVelocity();
-    rotorAcceleration = slapdown.getAcceleration();
+    pivotPosition = pivot.getRotorPosition();
+    pivotVoltage = pivot.getMotorVoltage();
+    pivotSupplyCurrent = pivot.getSupplyCurrent();
+    pivotStatorCurrent = pivot.getStatorCurrent();
+    pivotTemperature = pivot.getDeviceTemp();
+    pivotAngularVelocity = pivot.getRotorVelocity();
+    pivotAngularAcceleration = pivot.getAcceleration();
   }
 
   @Override
   public void updateInputs(PivotIOInputs inputs) {
-    inputs.data =
-        new PivotIOData(
-            Rotation2d.fromRadians(wristRotationsToRadians(rotorPosition.getValueAsDouble())),
-            motorVoltage.getValueAsDouble(),
-            supplyCurrent.getValueAsDouble(),
-            statorCurrent.getValueAsDouble(),
-            wristRotationsToRadians(rotorVelocity.getValueAsDouble()),
-            wristRotationsToRadians(rotorAcceleration.getValueAsDouble()),
-            deviceTemp.getValueAsDouble());
+    inputs.pivotAngle =
+        Rotation2d.fromRadians(
+            wristRotationsToRadians(pivotPosition.getValueAsDouble()));
+
+    inputs.pivotAppliedVolts = pivotVoltage.getValueAsDouble();
+    inputs.pivotSupplyCurrentAmps = pivotSupplyCurrent.getValueAsDouble();
+    inputs.pivotStatorCurrentAmps = pivotStatorCurrent.getValueAsDouble();
+    inputs.pivotMotorTemp = pivotTemperature.getValueAsDouble();
+
+    inputs.pivotAngularVelocityRadPerSec =
+        wristRotationsToRadians(pivotAngularVelocity.getValueAsDouble());
+
+    inputs.pivotAngularAccelerationRadPerSecSquared =
+        wristRotationsToRadians(pivotAngularAcceleration.getValueAsDouble());
   }
 
   @Override
   public void setTargetAngle(Rotation2d target) {
-    slapdown.setControl(positionVoltage.withPosition(wristRadiansToRotations(target.getRadians())));
+    pivot.setControl(
+        positionVoltage.withPosition(wristRadiansToRotations(target.getRadians())));
   }
 
   @Override
-  public void resetAngle(Rotation2d angle) {
-    slapdown.setPosition(wristRadiansToRotations(angle.getRadians()));
+  public void resetPivotAngle(Rotation2d angle) {
+    pivot.setPosition(wristRadiansToRotations(angle.getRadians()));
   }
 
   @Override
   public void setDutyCycle(double dutyCycle) {
-    slapdown.setControl(dutyCycleOut.withOutput(dutyCycle));
+    pivot.setControl(dutyCycleOut.withOutput(dutyCycle));
   }
 
   @Override
   public void setNeutralMode(NeutralModeValue neutralMode) {
-    slapdown.setNeutralMode(neutralMode);
+    pivot.setNeutralMode(neutralMode);
   }
 
   @Override
   public void setPID(double kP, double kI, double kD) {
-    Slot0Configs slot0 = new Slot0Configs();
-    slot0.kP = kP;
-    slot0.kI = kI;
-    slot0.kD = kD;
-    slapdown.getConfigurator().apply(slot0);
+    var slot0Config = new Slot0Configs();
+    slot0Config.kP = kP;
+    slot0Config.kI = kI;
+    slot0Config.kD = kD;
+    pivot.getConfigurator().apply(slot0Config);
   }
 }

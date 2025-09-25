@@ -273,7 +273,7 @@ public class FieldConstants {
                   + Units.metersToInches(distanceFromFinalScoringPoseMeters));
 
       double yOffset =
-          -Units.inchesToMeters(ChoreographerConstants.yOffsetFromTagForScoringOnReefInchesBase);
+          -Units.inchesToMeters(ChoreographerConstants.yOffsetFromTagForScoringOnReefInches);
       if (scoringSide == ChoreographerConstants.ScoringSide.RIGHT) {
         yOffset *= -1;
       }
