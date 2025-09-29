@@ -20,19 +20,12 @@ public interface ElevatorIO {
     public double elevatorVelocityMetersPerSec;
     public double elevatorAccelerationMetersPerSecSquared;
 
-    public double elevatorMasterAppliedVolts;
-    public double elevatorMasterSupplyCurrentAmps;
-    public double elevatorMasterStatorCurrentAmps;
-
-    public double elevatorFollowerAppliedVolts;
-    public double elevatorFollowerSupplyCurrentAmps;
-    public double elevatorFollowerStatorCurrentAmps;
+    public double elevatorAppliedVolts;
+    public double elevatorSupplyCurrentAmps;
+    public double elevatorStatorCurrentAmps;
 
     public double elevatorMasterMotorTemp;
     public double elevatorFollowerMotorTemp;
-
-    public boolean elevatorMasterConnected;
-    public boolean elevatorFollowerConnected;
   }
 
   default void setTargetPosition(double positionInMeters) {}

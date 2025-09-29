@@ -47,13 +47,11 @@ public class ElevatorIOSim implements ElevatorIO {
     inputs.elevatorAccelerationMetersPerSecSquared =
         (inputs.elevatorVelocityMetersPerSec - prevVelocity) / 0.02;
 
-    inputs.elevatorMasterAppliedVolts = appliedVoltage;
-    inputs.elevatorMasterSupplyCurrentAmps = Math.abs(appliedVoltage) * 10.0;
-    inputs.elevatorMasterStatorCurrentAmps = inputs.elevatorMasterSupplyCurrentAmps;
+    inputs.elevatorAppliedVolts = appliedVoltage;
+    inputs.elevatorSupplyCurrentAmps = Math.abs(appliedVoltage) * 10.0;
+    inputs.elevatorStatorCurrentAmps = inputs.elevatorSupplyCurrentAmps;
     inputs.elevatorMasterMotorTemp = 40.0;
     inputs.elevatorFollowerMotorTemp = 40.0;
-
-    inputs.elevatorMasterConnected = true;
 
     if (!DriverStation.isEnabled()) {
       appliedVoltage = 0.0;
