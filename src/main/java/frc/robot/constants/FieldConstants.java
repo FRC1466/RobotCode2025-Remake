@@ -79,6 +79,13 @@ public class FieldConstants {
           FIELD_LENGTH - LEFT_STARTING_POSE_BLUE.getX(),
           FIELD_HEIGHT - LEFT_STARTING_POSE_BLUE.getY(),
           Rotation2d.kZero);
+  public static final Pose2d MIDDLE_STARTING_POSE_BLUE =
+      new Pose2d((FIELD_LENGTH / 2) - 2, FIELD_HEIGHT / 2, Rotation2d.k180deg);
+  public static final Pose2d MIDDLE_STARTING_POSE_RED =
+      new Pose2d(
+          FIELD_LENGTH - LEFT_STARTING_POSE_BLUE.getX(),
+          FIELD_HEIGHT - LEFT_STARTING_POSE_BLUE.getY(),
+          Rotation2d.kZero);
   public static final Pose2d RIGHT_STARTING_POSE_BLUE =
       new Pose2d(
           LEFT_STARTING_POSE_BLUE.getX(),
@@ -140,6 +147,12 @@ public class FieldConstants {
     return alliance == DriverStation.Alliance.Blue
         ? FAR_RIGHT_STARTING_POSE_BLUE
         : FAR_RIGHT_STARTING_POSE_RED;
+  }
+
+  public static Pose2d getMiddleStartingPose(DriverStation.Alliance alliance) {
+    return alliance == DriverStation.Alliance.Blue
+        ? MIDDLE_STARTING_POSE_BLUE
+        : MIDDLE_STARTING_POSE_RED;
   }
 
   public static Pose2d getLeftStartingPose(DriverStation.Alliance alliance) {

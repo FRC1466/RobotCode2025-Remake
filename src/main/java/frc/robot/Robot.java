@@ -26,6 +26,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.constants.Constants;
 import frc.robot.constants.Constants.RobotType;
+import frc.robot.subsystems.Choreographer;
 import frc.robot.util.DummyLogReceiver;
 import frc.robot.util.LoggedTracer;
 import frc.robot.util.NTClientLogger;
@@ -273,9 +274,9 @@ public class Robot extends LoggedRobot {
   /** This function is called once when the robot is disabled. */
   @Override
   public void disabledInit() {
-    // robotContainer
-    // .getChoreographer()
-    // .setWantedChoreography(Choreographer.WantedChoreography.DEFAULT_STATE);
+    robotContainer
+        .getChoreographer()
+        .setWantedChoreography(Choreographer.WantedChoreography.DEFAULT_STATE);
   }
 
   /** This function is called periodically when disabled. */
@@ -292,7 +293,9 @@ public class Robot extends LoggedRobot {
             robotContainer.getAutonomousStartingPose().orElse(new Pose2d()));
     robotContainer.getIntake().setHasCoral(true);
     autoCommand = robotContainer.getAutonomousCommand();
-    autoCommand.schedule();
+    if (autoCommand != null) {
+      autoCommand.schedule();
+    }
   }
 
   /** This function is called periodically during autonomous. */

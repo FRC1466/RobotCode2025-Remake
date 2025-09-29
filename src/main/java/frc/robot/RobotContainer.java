@@ -206,7 +206,11 @@ public class RobotContainer {
     // Configure the button bindings
     configureButtonBindings();
 
-    autoChooser.addOption("idk", autoFactory.createIKLJAuto());
+    autoChooser.addDefaultOption("Taxi", autoFactory.createTaxiCommand());
+    autoChooser.addOption("IKLJ", autoFactory.createIKLJAuto());
+    autoChooser.addOption("EDC", autoFactory.createEDCAuto());
+    autoChooser.addOption("FDCE", autoFactory.createFDCEAuto());
+    autoChooser.addOption("Idle", autoFactory.createIdleCommand());
   }
 
   /**
