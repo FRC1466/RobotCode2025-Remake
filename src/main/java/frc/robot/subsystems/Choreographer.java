@@ -508,7 +508,7 @@ public class Choreographer extends SubsystemBase {
   }
 
   private void moveAlgaeToNetPosition() {
-    Rotation2d rotation = FieldConstants.isBlueAlliance() ? Rotation2d.kZero : Rotation2d.k180deg;
+    Rotation2d rotation = FieldConstants.isBlueAlliance() ? Rotation2d.k180deg : Rotation2d.kZero;
     /*if (Math.abs(
             drive
                 .getRobotPoseFromSwerveDriveOdometry()
