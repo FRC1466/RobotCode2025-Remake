@@ -46,7 +46,7 @@ public class ElevatorIOTalonFX implements ElevatorIO {
   public ElevatorIOTalonFX() {
     masterTalonFX = new TalonFX(masterMotorId);
     followerTalonFX = new TalonFX(followerMotorId);
-    followControlRequest = new Follower(masterMotorId, false);
+    followControlRequest = new Follower(masterMotorId, true);
 
     TalonFXConfiguration config = new TalonFXConfiguration();
 
