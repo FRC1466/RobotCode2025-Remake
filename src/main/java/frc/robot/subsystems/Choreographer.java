@@ -99,6 +99,8 @@ public class Choreographer extends SubsystemBase {
 
   private WantedChoreography wantedChoreography = WantedChoreography.STOPPED;
   private CurrentChoreography currentChoreography = CurrentChoreography.STOPPED;
+
+  @Getter private boolean disabled = false; // For testing system
   private CurrentChoreography previousChoreography;
 
   private ScoringSide targetScoringSide = ScoringSide.LEFT;
@@ -129,14 +131,34 @@ public class Choreographer extends SubsystemBase {
 
   @Override
   public void periodic() {
+    // Skip if disabled by testing system
+    if (disabled) {
+      Logger.recordOutput("Choreographer/Disabled", true);
+      return;
+    }
+    
     Logger.recordOutput("Choreographer/Wanted", wantedChoreography);
     Logger.recordOutput("Choreographer/Current", currentChoreography);
     Logger.recordOutput("Choreographer/Previous", previousChoreography);
-
+    Logger.recordOutput("Choreographer/Disabled", false);
     Logger.recordOutput("Choreographer/TargetScoringSide", targetScoringSide);
 
     currentChoreography = computeChoreography();
     applyChoreography();
+  }
+  
+  /**
+   * Enable or disable the choreographer (used by testing system).
+   * When disabled, choreographer will not run and subsystems can be controlled directly.
+   * @param disabled true to disable, false to enable
+   */
+  public void setDisabled(boolean disabled) {
+    this.disabled = disabled;
+    if (disabled) {
+      System.out.println("⚠️ CHOREOGRAPHER DISABLED - Subsystems can be controlled directly");
+    } else {
+      System.out.println("✅ CHOREOGRAPHER ENABLED - Normal operation resumed");
+    }
   }
 
   private CurrentChoreography computeChoreography() {

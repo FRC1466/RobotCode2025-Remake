@@ -17,9 +17,7 @@ import frc.robot.constants.ElevatorConstants;
 import frc.robot.subsystems.sensors.HomeSensorIO;
 import frc.robot.subsystems.sensors.HomeSensorIOInputsAutoLogged;
 import frc.robot.util.LoggedTracer;
-import java.util.function.Supplier;
 import lombok.Getter;
-import lombok.Setter;
 import org.littletonrobotics.junction.Logger;
 
 /**
@@ -40,21 +38,6 @@ public class Elevator extends SubsystemBase {
     MOVING_TO_POSITION
   }
 
-  /** Defines motion profiles with different velocity and acceleration constraints. */
-  public enum ElevatorProfile {
-    DEFAULT(() -> velocityConstraint.get(), () -> accelerationConstraint.get()),
-    DOWN(() -> velocityConstraint.get(), () -> accelerationConstraintDown.get()),
-    ALGAE(() -> velocityConstraintAlgae.get(), () -> accelerationConstraintAlgae.get());
-
-    public final Supplier<Double> velocity;
-    public final Supplier<Double> acceleration;
-
-    ElevatorProfile(Supplier<Double> velocity, Supplier<Double> acceleration) {
-      this.velocity = velocity;
-      this.acceleration = acceleration;
-    }
-  }
-
   private final ElevatorIO io;
   private final ElevatorIOInputsAutoLogged inputs = new ElevatorIOInputsAutoLogged();
 
@@ -65,9 +48,6 @@ public class Elevator extends SubsystemBase {
   private SystemState systemState = SystemState.IDLING;
 
   @Getter private double goalPosition;
-
-  @Getter @Setter private ElevatorProfile currentElevatorProfile = ElevatorProfile.DEFAULT;
-  private ElevatorProfile lastProfile = ElevatorProfile.DEFAULT;
 
   public Elevator(ElevatorIO io, HomeSensorIO homeSensorIO) {
     this.io = io;
@@ -133,7 +113,7 @@ public class Elevator extends SubsystemBase {
    * @return The current position in meters.
    */
   public double getPosition() {
-    return inputs.elevatorPositionMeters;
+    return inputs.data.elevatorPositionMeters();
   }
 
   /**
@@ -142,7 +122,7 @@ public class Elevator extends SubsystemBase {
    * @return The current velocity in meters per second.
    */
   public double getVelocity() {
-    return inputs.elevatorVelocityMetersPerSec;
+    return inputs.data.elevatorVelocityMetersPerSec();
   }
 
   /**
@@ -151,7 +131,7 @@ public class Elevator extends SubsystemBase {
    * @return The current acceleration in meters per second squared.
    */
   public double getAcceleration() {
-    return inputs.elevatorAccelerationMetersPerSecSquared;
+    return inputs.data.elevatorAccelerationMetersPerSecSquared();
   }
 
   public boolean getHomeSensor() {
@@ -177,9 +157,6 @@ public class Elevator extends SubsystemBase {
       // Reconfigure the elevator if PID constants have changed
       io.setPID(kP.get(), kI.get(), kD.get());
     }
-
-    // Update the motion profile if it has changed
-    updateMotionProfile();
 
     // Run the state machine logic
     this.systemState = handleStateTransitions();
@@ -222,22 +199,10 @@ public class Elevator extends SubsystemBase {
     }
   }
 
-  /**
-   * Checks if the current motion profile has been changed and applies the new constraints to the
-   * hardware layer if necessary.
-   */
-  private void updateMotionProfile() {
-    if (currentElevatorProfile != lastProfile) {
-      io.setMotionProfileConstraints(currentElevatorProfile);
-      lastProfile = currentElevatorProfile;
-    }
-  }
-
   /** Logs the essential state of the subsystem to AdvantageKit Logger. */
   private void logState() {
     Logger.recordOutput("Subsystems/Elevator/SystemState", systemState.name());
     Logger.recordOutput("Subsystems/Elevator/WantedState", wantedState.name());
-    Logger.recordOutput("Subsystems/Elevator/MotionProfile", currentElevatorProfile.name());
     Logger.recordOutput("Subsystems/Elevator/GoalPositionMeters", goalPosition);
     Logger.recordOutput("Subsystems/Elevator/AtGoal", atGoal());
     Logger.recordOutput("Subsystems/Elevator/PositionMeters", getPosition());

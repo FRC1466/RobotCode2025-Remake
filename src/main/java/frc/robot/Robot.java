@@ -30,7 +30,7 @@ import frc.robot.subsystems.Choreographer;
 import frc.robot.util.DummyLogReceiver;
 import frc.robot.util.LoggedTracer;
 import frc.robot.util.NTClientLogger;
-import frc.robot.util.PhoenixUtil;
+import frc.robot.util.phoenix.PhoenixUtil;
 import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;

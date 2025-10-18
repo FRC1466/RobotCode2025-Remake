@@ -33,7 +33,7 @@ public class RollerSystem {
     this.io = io;
 
     disconnected = new Alert(name + " motor disconnected!", Alert.AlertType.kWarning);
-    tempFault = new Alert(name + " motor too hot!", Alert.AlertType.kWarning);
+    tempFault = new Alert(name + " motor too hot! 🥵", Alert.AlertType.kWarning);
   }
 
   public void periodic() {

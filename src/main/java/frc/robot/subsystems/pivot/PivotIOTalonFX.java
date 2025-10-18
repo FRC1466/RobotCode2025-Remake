@@ -19,7 +19,7 @@ import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.units.measure.*;
-import frc.robot.util.PhoenixUtil;
+import frc.robot.util.phoenix.PhoenixUtil;
 
 public class PivotIOTalonFX implements PivotIO {
   private TalonFX pivot;

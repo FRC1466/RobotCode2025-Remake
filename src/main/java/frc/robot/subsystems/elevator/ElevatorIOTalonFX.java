@@ -9,9 +9,8 @@ package frc.robot.subsystems.elevator;
 
 import static frc.robot.constants.ElevatorConstants.*;
 
+import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
-import com.ctre.phoenix6.configs.MotionMagicConfigs;
-import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.DutyCycleOut;
 import com.ctre.phoenix6.controls.Follower;
@@ -20,149 +19,125 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.units.measure.*;
-import frc.robot.constants.ElevatorConstants;
-import frc.robot.subsystems.elevator.Elevator.ElevatorProfile;
-import frc.robot.util.PhoenixUtil;
 
 public class ElevatorIOTalonFX implements ElevatorIO {
-  private final TalonFX masterTalonFX;
-  private final TalonFX followerTalonFX;
-  Follower followControlRequest;
-  DutyCycleOut dutyCycleOut = new DutyCycleOut(0.0);
-  MotionMagicVoltage positionVoltage = new MotionMagicVoltage(0).withSlot(0);
+  private final TalonFX elevatorMaster;
+  private final TalonFX elevatorFollower;
 
-  private final StatusSignal<Angle> positionInRotations;
-  private final StatusSignal<AngularVelocity> velocityRotationsPerSec;
-  private final StatusSignal<AngularAcceleration> accelerationRotationsPerSecSquared;
-  private final StatusSignal<Voltage> masterAppliedVolts;
-  private final StatusSignal<Current> masterStatorCurrentAmps;
-  private final StatusSignal<Current> masterSupplyCurrentAmps;
-  private final StatusSignal<Temperature> masterTemp;
-  private final StatusSignal<Voltage> followerAppliedVolts;
-  private final StatusSignal<Current> followerStatorCurrentAmps;
-  private final StatusSignal<Current> followerSupplyCurrentAmps;
-  private final StatusSignal<Temperature> followerTemp;
+  private final Follower followControlRequest;
+  private final DutyCycleOut dutyCycleOut = new DutyCycleOut(0.0);
+  private final MotionMagicVoltage positionVoltage = new MotionMagicVoltage(0).withSlot(0);
+
+  private final StatusSignal<Angle> elevatorPositionMeters;
+  private final StatusSignal<Voltage> elevatorAppliedVolts;
+  private final StatusSignal<Current> elevatorSupplyCurrentAmps;
+  private final StatusSignal<Current> elevatorStatorCurrentAmps;
+  private final StatusSignal<AngularVelocity> elevatorVelocityMetersPerSec;
+  private final StatusSignal<AngularAcceleration> elevatorAccelerationMetersPerSecSquared;
+  private final StatusSignal<Temperature> elevatorMasterMotorTemp;
+  private final StatusSignal<Temperature> elevatorFollowerMotorTemp;
 
   public ElevatorIOTalonFX() {
-    masterTalonFX = new TalonFX(masterMotorId);
-    followerTalonFX = new TalonFX(followerMotorId);
+    elevatorMaster = new TalonFX(masterMotorId, "");
+    elevatorFollower = new TalonFX(followerMotorId, "");
     followControlRequest = new Follower(masterMotorId, true);
 
-    TalonFXConfiguration config = new TalonFXConfiguration();
+    TalonFXConfiguration talonConfig = new TalonFXConfiguration();
 
-    config.CurrentLimits.SupplyCurrentLimitEnable = true;
-    config.CurrentLimits.StatorCurrentLimitEnable = true;
-    config.CurrentLimits.SupplyCurrentLimit = 60.0;
-    config.CurrentLimits.StatorCurrentLimit = 120.0;
+    talonConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
+    talonConfig.CurrentLimits.StatorCurrentLimitEnable = true;
+    talonConfig.CurrentLimits.SupplyCurrentLimit = 60.0;
+    talonConfig.CurrentLimits.StatorCurrentLimit = 120.0;
+    talonConfig.Slot0.kP = kP.get();
+    talonConfig.Slot0.kI = kI.get();
+    talonConfig.Slot0.kD = kD.get();
+    talonConfig.Slot0.kS = kS.get();
 
-    config.Slot0.kP = kP.get();
-    config.Slot0.kI = kI.get();
-    config.Slot0.kD = kD.get();
-    config.Slot0.kS = kS.get();
-    config.Slot0.kG = kG.get();
+    talonConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
 
-    config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
+    talonConfig.MotionMagic.MotionMagicAcceleration = accelerationConstraint.get();
+    talonConfig.MotionMagic.MotionMagicCruiseVelocity = velocityConstraint.get();
+    talonConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
 
-    config.MotionMagic.MotionMagicAcceleration =
-        ElevatorConstants.elevatorMetersToRotations(ElevatorProfile.DEFAULT.acceleration.get());
-    config.MotionMagic.MotionMagicCruiseVelocity =
-        ElevatorConstants.elevatorMetersToRotations(ElevatorProfile.DEFAULT.velocity.get());
+    elevatorMaster.getConfigurator().apply(talonConfig);
+    elevatorFollower.getConfigurator().apply(talonConfig);
 
-    config.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
+    elevatorFollower.setControl(followControlRequest);
 
-    PhoenixUtil.tryUntilOk(5, () -> masterTalonFX.getConfigurator().apply(config));
-    PhoenixUtil.tryUntilOk(5, () -> followerTalonFX.getConfigurator().apply(config));
+    elevatorPositionMeters = elevatorMaster.getPosition();
+    elevatorAppliedVolts = elevatorMaster.getMotorVoltage();
+    elevatorSupplyCurrentAmps = elevatorMaster.getSupplyCurrent();
+    elevatorStatorCurrentAmps = elevatorMaster.getStatorCurrent();
+    elevatorVelocityMetersPerSec = elevatorMaster.getRotorVelocity();
+    elevatorAccelerationMetersPerSecSquared = elevatorMaster.getAcceleration();
+    elevatorMasterMotorTemp = elevatorMaster.getDeviceTemp();
+    elevatorFollowerMotorTemp = elevatorFollower.getDeviceTemp();
 
-    followerTalonFX.setControl(followControlRequest);
-
-    positionInRotations = masterTalonFX.getPosition();
-    velocityRotationsPerSec = masterTalonFX.getRotorVelocity();
-    accelerationRotationsPerSecSquared = masterTalonFX.getAcceleration();
-    masterAppliedVolts = masterTalonFX.getMotorVoltage();
-    masterStatorCurrentAmps = masterTalonFX.getStatorCurrent();
-    masterSupplyCurrentAmps = masterTalonFX.getSupplyCurrent();
-    masterTemp = masterTalonFX.getDeviceTemp();
-    followerAppliedVolts = followerTalonFX.getMotorVoltage();
-    followerStatorCurrentAmps = followerTalonFX.getStatorCurrent();
-    followerSupplyCurrentAmps = followerTalonFX.getSupplyCurrent();
-    followerTemp = followerTalonFX.getDeviceTemp();
-
-    // Register signals for refresh
-    PhoenixUtil.registerSignals(
-        false,
-        positionInRotations,
-        velocityRotationsPerSec,
-        accelerationRotationsPerSecSquared,
-        masterAppliedVolts,
-        masterStatorCurrentAmps,
-        masterSupplyCurrentAmps,
-        masterTemp,
-        followerAppliedVolts,
-        followerStatorCurrentAmps,
-        followerSupplyCurrentAmps,
-        followerTemp);
+    BaseStatusSignal.setUpdateFrequencyForAll(
+        50.0,
+        elevatorPositionMeters,
+        elevatorAppliedVolts,
+        elevatorSupplyCurrentAmps,
+        elevatorStatorCurrentAmps,
+        elevatorVelocityMetersPerSec,
+        elevatorAccelerationMetersPerSecSquared,
+        elevatorMasterMotorTemp,
+        elevatorFollowerMotorTemp);
   }
 
   @Override
   public void updateInputs(ElevatorIOInputs inputs) {
-    inputs.elevatorPositionMeters =
-        ElevatorConstants.elevatorRotationsToMeters(positionInRotations.getValueAsDouble());
-    inputs.elevatorVelocityMetersPerSec =
-        ElevatorConstants.elevatorRotationsToMeters(velocityRotationsPerSec.getValueAsDouble());
-    inputs.elevatorAccelerationMetersPerSecSquared =
-        ElevatorConstants.elevatorRotationsToMeters(
-            accelerationRotationsPerSecSquared.getValueAsDouble());
+    BaseStatusSignal.refreshAll(
+        elevatorPositionMeters,
+        elevatorAppliedVolts,
+        elevatorSupplyCurrentAmps,
+        elevatorStatorCurrentAmps,
+        elevatorVelocityMetersPerSec,
+        elevatorAccelerationMetersPerSecSquared,
+        elevatorMasterMotorTemp,
+        elevatorFollowerMotorTemp);
 
-    inputs.elevatorAppliedVolts = masterAppliedVolts.getValueAsDouble();
-    inputs.elevatorSupplyCurrentAmps = masterSupplyCurrentAmps.getValueAsDouble();
-    inputs.elevatorStatorCurrentAmps = masterStatorCurrentAmps.getValueAsDouble();
-
-    inputs.elevatorMasterMotorTemp = masterTemp.getValueAsDouble();
-    inputs.elevatorFollowerMotorTemp = followerTemp.getValueAsDouble();
+    inputs.data =
+        new ElevatorIOData(
+            elevatorMaster.isAlive(),
+            elevatorFollower.isAlive(),
+            elevatorPositionMeters.getValueAsDouble(),
+            elevatorVelocityMetersPerSec.getValueAsDouble(),
+            elevatorAccelerationMetersPerSecSquared.getValueAsDouble(),
+            elevatorAppliedVolts.getValueAsDouble(),
+            elevatorSupplyCurrentAmps.getValueAsDouble(),
+            elevatorStatorCurrentAmps.getValueAsDouble(),
+            elevatorMasterMotorTemp.getValueAsDouble(),
+            elevatorFollowerMotorTemp.getValueAsDouble());
   }
 
   @Override
   public void setTargetPosition(double positionInMeters) {
-    masterTalonFX.setControl(
-        positionVoltage.withPosition(
-            ElevatorConstants.elevatorMetersToRotations(positionInMeters)));
+    elevatorMaster.setControl(positionVoltage.withPosition(positionInMeters));
   }
 
   @Override
   public void resetElevatorPosition(double positionInMeters) {
-    masterTalonFX.setPosition(ElevatorConstants.elevatorMetersToRotations(positionInMeters));
+    elevatorMaster.setPosition(positionInMeters);
   }
 
   @Override
   public void setNeutralMode(NeutralModeValue neutralMode) {
-    masterTalonFX.setNeutralMode(neutralMode);
-    followerTalonFX.setNeutralMode(neutralMode);
+    elevatorMaster.setNeutralMode(neutralMode);
+    elevatorFollower.setNeutralMode(neutralMode);
   }
 
   @Override
   public void setDutyCycle(double dutyCycle) {
-    masterTalonFX.setControl(dutyCycleOut.withOutput(dutyCycle));
-  }
-
-  @Override
-  public void setMotionProfileConstraints(ElevatorProfile elevatorProfile) {
-    masterTalonFX
-        .getConfigurator()
-        .apply(
-            new MotionMagicConfigs()
-                .withMotionMagicCruiseVelocity(
-                    ElevatorConstants.elevatorMetersToRotations(elevatorProfile.velocity.get()))
-                .withMotionMagicAcceleration(
-                    ElevatorConstants.elevatorMetersToRotations(
-                        elevatorProfile.acceleration.get())));
+    elevatorMaster.setControl(dutyCycleOut.withOutput(dutyCycle));
   }
 
   @Override
   public void setPID(double kP, double kI, double kD) {
-    var slot0Config = new Slot0Configs();
-    slot0Config.kP = kP;
-    slot0Config.kI = kI;
-    slot0Config.kD = kD;
-    masterTalonFX.getConfigurator().apply(slot0Config);
+    TalonFXConfiguration config = new TalonFXConfiguration();
+    config.Slot0.kP = kP;
+    config.Slot0.kI = kI;
+    config.Slot0.kD = kD;
+    elevatorMaster.getConfigurator().apply(config);
   }
 }

@@ -40,18 +40,7 @@ public class ElevatorIOSim implements ElevatorIO {
     sim.setInputVoltage(appliedVoltage);
     sim.update(0.02);
 
-    double prevVelocity = inputs.elevatorVelocityMetersPerSec;
-
-    inputs.elevatorPositionMeters = sim.getPositionMeters();
-    inputs.elevatorVelocityMetersPerSec = sim.getVelocityMetersPerSecond();
-    inputs.elevatorAccelerationMetersPerSecSquared =
-        (inputs.elevatorVelocityMetersPerSec - prevVelocity) / 0.02;
-
-    inputs.elevatorAppliedVolts = appliedVoltage;
-    inputs.elevatorSupplyCurrentAmps = Math.abs(appliedVoltage) * 10.0;
-    inputs.elevatorStatorCurrentAmps = inputs.elevatorSupplyCurrentAmps;
-    inputs.elevatorMasterMotorTemp = 40.0;
-    inputs.elevatorFollowerMotorTemp = 40.0;
+    double prevVelocity = inputs.data.elevatorVelocityMetersPerSec();
 
     if (!DriverStation.isEnabled()) {
       appliedVoltage = 0.0;
@@ -59,6 +48,19 @@ public class ElevatorIOSim implements ElevatorIO {
       appliedVoltage = pid.calculate(sim.getPositionMeters(), targetPosition);
       appliedVoltage = Math.max(-12.0, Math.min(12.0, appliedVoltage));
     }
+
+    inputs.data =
+        new ElevatorIOData(
+            true,
+            true,
+            sim.getPositionMeters(),
+            sim.getVelocityMetersPerSecond(),
+            (sim.getVelocityMetersPerSecond() - prevVelocity) / 0.02,
+            appliedVoltage,
+            sim.getCurrentDrawAmps(),
+            sim.getCurrentDrawAmps(),
+            40,
+            40);
   }
 
   @Override

@@ -8,25 +8,27 @@
 package frc.robot.subsystems.elevator;
 
 import com.ctre.phoenix6.signals.NeutralModeValue;
-import frc.robot.subsystems.elevator.Elevator.ElevatorProfile;
 import org.littletonrobotics.junction.AutoLog;
 
 public interface ElevatorIO {
-  default void updateInputs(ElevatorIOInputs inputs) {}
-
   @AutoLog
   class ElevatorIOInputs {
-    public double elevatorPositionMeters;
-    public double elevatorVelocityMetersPerSec;
-    public double elevatorAccelerationMetersPerSecSquared;
-
-    public double elevatorAppliedVolts;
-    public double elevatorSupplyCurrentAmps;
-    public double elevatorStatorCurrentAmps;
-
-    public double elevatorMasterMotorTemp;
-    public double elevatorFollowerMotorTemp;
+    public ElevatorIOData data = new ElevatorIOData(false, false, 0, 0, 0, 0, 0, 0, 0, 0);
   }
+
+  record ElevatorIOData(
+      boolean elevatorMasterMotorConnected,
+      boolean elevatorFollowerMotorConnected,
+      double elevatorPositionMeters,
+      double elevatorVelocityMetersPerSec,
+      double elevatorAccelerationMetersPerSecSquared,
+      double elevatorAppliedVolts,
+      double elevatorSupplyCurrentAmps,
+      double elevatorStatorCurrentAmps,
+      double elevatorMasterMotorTemp,
+      double elevatorFollowerMotorTemp) {}
+
+  default void updateInputs(ElevatorIOInputs inputs) {}
 
   default void setTargetPosition(double positionInMeters) {}
 
@@ -35,8 +37,6 @@ public interface ElevatorIO {
   default void setDutyCycle(double dutyCycle) {}
 
   default void setNeutralMode(NeutralModeValue neutralMode) {}
-
-  default void setMotionProfileConstraints(ElevatorProfile elevatorProfile) {}
 
   default void setPID(double kP, double kI, double kD) {}
 }

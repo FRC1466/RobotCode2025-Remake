@@ -22,7 +22,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import frc.robot.util.AllianceUtil;
-import frc.robot.util.PhoenixUtil;
+import frc.robot.util.phoenix.PhoenixUtil;
 import java.util.HashMap;
 import java.util.Map;
 

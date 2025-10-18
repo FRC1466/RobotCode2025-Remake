@@ -59,6 +59,13 @@ import frc.robot.subsystems.sensors.CoralSensorIOColorSensor;
 import frc.robot.subsystems.sensors.HomeSensorIO;
 import frc.robot.subsystems.vision.Vision;
 import frc.robot.subsystems.vision.VisionIO;
+import frc.robot.testing.TestDashboard;
+import frc.robot.testing.TestManager;
+import frc.robot.testing.SubsystemTestMode;
+import frc.robot.testing.testers.DriveTester;
+import frc.robot.testing.testers.ElevatorTester;
+import frc.robot.testing.testers.IntakeTester;
+import frc.robot.testing.testers.PivotTester;
 import frc.robot.util.AllianceFlipUtil;
 import frc.robot.util.AllianceUtil;
 import frc.robot.util.Container;
@@ -94,6 +101,10 @@ public class RobotContainer {
   @Getter private Choreographer choreographer;
 
   @Getter private AutoFactory autoFactory;
+
+  // Testing system
+  @Getter private TestManager testManager;
+  @Getter private TestDashboard testDashboard;
 
   private final LoggedDashboardChooser<Pair<Pose2d, Command>> autoChooser =
       new LoggedDashboardChooser<>("Auto");
@@ -202,6 +213,22 @@ public class RobotContainer {
     autoFactory = new AutoFactory(AllianceUtil.getAlliance(), this);
 
     choreographer = new Choreographer(drive, intake, elevator, wrist, overridePublisher, vision);
+
+    // Initialize testing system
+    testManager = new TestManager();
+    testDashboard = new TestDashboard(testManager);
+    
+    // Connect choreographer disable callback for testing
+    testManager.setChoreographerDisableCallback(choreographer::setDisabled);
+    
+    // Register subsystem testers
+    testManager.registerTester(SubsystemTestMode.DRIVE, new DriveTester(drive));
+    testManager.registerTester(SubsystemTestMode.ELEVATOR, new ElevatorTester(elevator));
+    testManager.registerTester(SubsystemTestMode.PIVOT, new PivotTester(wrist));
+    testManager.registerTester(SubsystemTestMode.INTAKE, new IntakeTester(intake));
+    
+    // Publish test instructions to dashboard
+    testDashboard.publishInstructions();
 
     // Configure the button bindings
     configureButtonBindings();
@@ -384,6 +411,16 @@ public class RobotContainer {
             .withName("Reset Gyro")
             .ignoringDisable(true));
 
+    // === TESTING SYSTEM CONTROLS ===
+    // Note: These are typically used in test mode, not during competition
+    // Start test: Hold Y + Start
+    controller.y().and(controller.start())
+        .onTrue(testManager.startSelectedTest().withName("Start Selected Test"));
+    
+    // Stop test: Hold B + Start  
+    controller.b().and(controller.start())
+        .onTrue(testManager.stopTestCommand().withName("Stop Test"));
+
     // Endgame alerts
     new Trigger(
             () ->
@@ -415,6 +452,9 @@ public class RobotContainer {
   // Update dashboard data
   public void updateDashboardOutputs() {
     SmartDashboard.putNumber("Match Time", DriverStation.getMatchTime());
+    
+    // Update test dashboard
+    testDashboard.updateDashboard();
   }
 
   public void updateAlerts() {

@@ -7,9 +7,10 @@
 
 package frc.robot.subsystems.rollers;
 
-import static frc.robot.util.PhoenixUtil.tryUntilOk;
+import static frc.robot.util.phoenix.PhoenixUtil.tryUntilOk;
 
 import com.ctre.phoenix6.BaseStatusSignal;
+import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.NeutralOut;
@@ -24,7 +25,7 @@ import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.units.measure.Temperature;
 import edu.wpi.first.units.measure.Voltage;
-import frc.robot.util.PhoenixUtil;
+import frc.robot.util.phoenix.PhoenixUtil;
 
 /** Generic roller IO implementation for a roller or series of rollers using a Kraken. */
 public class RollerSystemIOTalonFX implements RollerSystemIO {
@@ -50,7 +51,7 @@ public class RollerSystemIOTalonFX implements RollerSystemIO {
   public RollerSystemIOTalonFX(
       int id, String bus, int currentLimitAmps, boolean invert, boolean brake, double reduction) {
     this.reduction = reduction;
-    talon = new TalonFX(id);
+    talon = new TalonFX(id, bus);
 
     config.MotorOutput.Inverted =
         invert ? InvertedValue.Clockwise_Positive : InvertedValue.CounterClockwise_Positive;
@@ -85,7 +86,7 @@ public class RollerSystemIOTalonFX implements RollerSystemIO {
 
     // Register signals for refresh
     PhoenixUtil.registerSignals(
-        false,
+        new CANBus(bus).isNetworkFD(),
         position,
         velocity,
         appliedVoltage,
