@@ -197,17 +197,17 @@ protected void defineTestSteps() {
     protected void onStart() {
       System.out.println("Checking sensor...");
     }
-    
+
     @Override
     protected void onExecute() {
       // Run test logic each cycle
     }
-    
+
     @Override
     protected boolean isStepComplete() {
       return true; // or check condition
     }
-    
+
     @Override
     protected boolean validateStep() {
       if (sensorValue < threshold) {

@@ -18,8 +18,28 @@ This testing system allows you to:
 1. **Isolate subsystems** - Test one subsystem at a time
 2. **Disable interference** - Automatically disables Choreographer during tests
 3. **Validate functionality** - Run automated test sequences
-4. **Track health** - Get clear pass/fail indicators for each component
-5. **Identify issues** - Detailed logging shows exactly what failed and why
+4. **Manual setpoint tuning** - Create and test positions via NetworkTables
+5. **Track health** - Get clear pass/fail indicators for each component
+6. **Identify issues** - Detailed logging shows exactly what failed and why
+7. **Run repeatedly** - Tests can be run multiple times without restarting robot
+
+---
+
+## Available Test Modes
+
+### Automated Testing Modes
+- **Drive Test** - Tests gyro, odometry, module response, stability
+- **Elevator Test** - Tests sensors, position control, stability
+- **Pivot Test** - Tests angle sensor, position control to multiple angles
+- **Intake Test** - Tests rollers, sensors, grip, outtake
+- **All Subsystems** - Runs all tests sequentially
+- **None** - Normal robot operation (default)
+
+### Manual Testing Mode
+- **Manual Tuning** - Control elevator and pivot positions directly via NetworkTables
+  - Perfect for creating and testing setpoints
+  - Works in both simulation and on real robot
+  - See [MANUAL_TUNING.md](MANUAL_TUNING.md) for detailed guide
 
 ---
 
@@ -178,7 +198,7 @@ All test data is logged under `Testing/` in AdvantageKit logs:
 When a test fails, the console will show:
 ```
 ❌ Test FAILED at step: Position Control Test (Mid)
-   Reason: Failed to reach target position within timeout. 
+   Reason: Failed to reach target position within timeout.
    Current: 8.23 in, Target: 12.00 in
 ```
 
@@ -267,14 +287,14 @@ public class MySubsystemTester extends SubsystemTester {
     super("MySubsystem");
     // ...
   }
-  
+
   @Override
   protected void defineTestSteps() {
     testSteps.add(new TestStep("My Test", false) {
       // Implement test logic
     });
   }
-  
+
   @Override
   protected void returnToSafeState() {
     // Stop subsystem safely
@@ -285,7 +305,7 @@ public class MySubsystemTester extends SubsystemTester {
 2. **Register in RobotContainer**:
 ```java
 testManager.registerTester(
-    SubsystemTestMode.MY_SUBSYSTEM, 
+    SubsystemTestMode.MY_SUBSYSTEM,
     new MySubsystemTester(mySubsystem)
 );
 ```

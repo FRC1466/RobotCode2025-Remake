@@ -48,7 +48,7 @@ public void periodic() {
     Logger.recordOutput("Choreographer/Disabled", true);
     return;
   }
-  
+
   // Normal choreographer logic...
 }
 
@@ -96,16 +96,16 @@ testManager.setChoreographerDisableCallback(choreographer::setDisabled);
 ## Why This Matters
 
 ### Without Auto-Disable:
-❌ Choreographer would fight with test commands  
-❌ Elevator test tries to move to 12" → Choreographer says "No, go to stow!"  
-❌ Test results would be invalid  
-❌ Hard to tell if subsystem works  
+❌ Choreographer would fight with test commands
+❌ Elevator test tries to move to 12" → Choreographer says "No, go to stow!"
+❌ Test results would be invalid
+❌ Hard to tell if subsystem works
 
 ### With Auto-Disable:
-✅ Test has full control of subsystem  
-✅ Elevator moves exactly where test commands  
-✅ Accurate validation of functionality  
-✅ Clear pass/fail results  
+✅ Test has full control of subsystem
+✅ Elevator moves exactly where test commands
+✅ Accurate validation of functionality
+✅ Clear pass/fail results
 
 ---
 
@@ -221,11 +221,11 @@ choreographer.periodic() {
 
 ## Summary
 
-✅ **Automatic** - No manual intervention needed  
-✅ **Safe** - Always re-enables after test  
-✅ **Clear** - Console messages show state  
-✅ **Logged** - AdvantageKit records everything  
-✅ **Essential** - Required for accurate testing  
+✅ **Automatic** - No manual intervention needed
+✅ **Safe** - Always re-enables after test
+✅ **Clear** - Console messages show state
+✅ **Logged** - AdvantageKit records everything
+✅ **Essential** - Required for accurate testing
 
 **This feature ensures your subsystem tests actually test the subsystems, not the fight between test and choreographer!**
 
@@ -233,10 +233,10 @@ choreographer.periodic() {
 
 ## Status
 
-✅ Implemented in Choreographer  
-✅ Integrated in TestManager  
-✅ Connected in RobotContainer  
-✅ Documented in all guides  
-✅ Ready to use  
+✅ Implemented in Choreographer
+✅ Integrated in TestManager
+✅ Connected in RobotContainer
+✅ Documented in all guides
+✅ Ready to use
 
 **The testing system is now fully isolated and won't be interfered with by the superstructure!**

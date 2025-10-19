@@ -136,7 +136,7 @@ public class Choreographer extends SubsystemBase {
       Logger.recordOutput("Choreographer/Disabled", true);
       return;
     }
-    
+
     Logger.recordOutput("Choreographer/Wanted", wantedChoreography);
     Logger.recordOutput("Choreographer/Current", currentChoreography);
     Logger.recordOutput("Choreographer/Previous", previousChoreography);
@@ -146,10 +146,11 @@ public class Choreographer extends SubsystemBase {
     currentChoreography = computeChoreography();
     applyChoreography();
   }
-  
+
   /**
-   * Enable or disable the choreographer (used by testing system).
-   * When disabled, choreographer will not run and subsystems can be controlled directly.
+   * Enable or disable the choreographer (used by testing system). When disabled, choreographer will
+   * not run and subsystems can be controlled directly.
+   *
    * @param disabled true to disable, false to enable
    */
   public void setDisabled(boolean disabled) {

@@ -1,0 +1,286 @@
+{
+  "version": 1.0,
+  "grid_size": 128,
+  "tabs": [
+    {
+      "name": "🧪 Subsystem Testing",
+      "grid_layout": {
+        "layouts": [
+          {
+            "title": "Test Controls",
+            "x": 0.0,
+            "y": 0.0,
+            "width": 512.0,
+            "height": 384.0,
+            "type": "List Layout",
+            "properties": {
+              "label_position": "TOP"
+            },
+            "children": [
+              {
+                "title": "Test Mode Selector",
+                "x": 0.0,
+                "y": 0.0,
+                "width": 256.0,
+                "height": 128.0,
+                "type": "ComboBox Chooser",
+                "properties": {
+                  "topic": "/SmartDashboard/Subsystem Test Mode",
+                  "period": 0.06,
+                  "sort_options": false
+                }
+              },
+              {
+                "title": "Test Active",
+                "x": 256.0,
+                "y": 0.0,
+                "width": 256.0,
+                "height": 128.0,
+                "type": "Boolean Box",
+                "properties": {
+                  "topic": "/SmartDashboard/Test Active",
+                  "period": 0.06,
+                  "data_type": "boolean",
+                  "true_color": 4283215696,
+                  "false_color": 4286611584,
+                  "true_icon": "None",
+                  "false_icon": "None"
+                }
+              },
+              {
+                "title": "Current Test Mode",
+                "x": 0.0,
+                "y": 128.0,
+                "width": 512.0,
+                "height": 128.0,
+                "type": "Text View",
+                "properties": {
+                  "topic": "/SmartDashboard/Test Mode",
+                  "period": 0.06
+                }
+              }
+            ]
+          },
+          {
+            "title": "Test Progress",
+            "x": 512.0,
+            "y": 0.0,
+            "width": 512.0,
+            "height": 384.0,
+            "type": "List Layout",
+            "properties": {
+              "label_position": "TOP"
+            },
+            "children": [
+              {
+                "title": "Progress %",
+                "x": 0.0,
+                "y": 0.0,
+                "width": 512.0,
+                "height": 128.0,
+                "type": "Number Bar",
+                "properties": {
+                  "topic": "/SmartDashboard/Test/Progress",
+                  "period": 0.06,
+                  "data_type": "double",
+                  "min": 0.0,
+                  "max": 100.0,
+                  "center": 50.0,
+                  "orientation": "horizontal",
+                  "num_tick_marks": 5
+                }
+              },
+              {
+                "title": "Overall Health",
+                "x": 0.0,
+                "y": 128.0,
+                "width": 256.0,
+                "height": 128.0,
+                "type": "Text View",
+                "properties": {
+                  "topic": "/SmartDashboard/Test/Health",
+                  "period": 0.06
+                }
+              },
+              {
+                "title": "State",
+                "x": 256.0,
+                "y": 128.0,
+                "width": 256.0,
+                "height": 128.0,
+                "type": "Text View",
+                "properties": {
+                  "topic": "/SmartDashboard/Test/State",
+                  "period": 0.06
+                }
+              }
+            ]
+          },
+          {
+            "title": "Test Results",
+            "x": 1024.0,
+            "y": 0.0,
+            "width": 512.0,
+            "height": 384.0,
+            "type": "List Layout",
+            "properties": {
+              "label_position": "TOP"
+            },
+            "children": [
+              {
+                "title": "Passed Checks",
+                "x": 0.0,
+                "y": 0.0,
+                "width": 170.0,
+                "height": 128.0,
+                "type": "Number Bar",
+                "properties": {
+                  "topic": "/SmartDashboard/Test/Passed",
+                  "period": 0.06,
+                  "data_type": "double",
+                  "min": 0.0,
+                  "max": 10.0,
+                  "center": 5.0,
+                  "orientation": "vertical",
+                  "num_tick_marks": 5
+                }
+              },
+              {
+                "title": "Failed Checks",
+                "x": 170.0,
+                "y": 0.0,
+                "width": 170.0,
+                "height": 128.0,
+                "type": "Number Bar",
+                "properties": {
+                  "topic": "/SmartDashboard/Test/Failed",
+                  "period": 0.06,
+                  "data_type": "double",
+                  "min": 0.0,
+                  "max": 10.0,
+                  "center": 5.0,
+                  "orientation": "vertical",
+                  "num_tick_marks": 5
+                }
+              },
+              {
+                "title": "Warnings",
+                "x": 340.0,
+                "y": 0.0,
+                "width": 172.0,
+                "height": 128.0,
+                "type": "Number Bar",
+                "properties": {
+                  "topic": "/SmartDashboard/Test/Warnings",
+                  "period": 0.06,
+                  "data_type": "double",
+                  "min": 0.0,
+                  "max": 10.0,
+                  "center": 5.0,
+                  "orientation": "vertical",
+                  "num_tick_marks": 5
+                }
+              }
+            ]
+          },
+          {
+            "title": "Instructions & Summary",
+            "x": 0.0,
+            "y": 384.0,
+            "width": 1536.0,
+            "height": 512.0,
+            "type": "List Layout",
+            "properties": {
+              "label_position": "TOP"
+            },
+            "children": [
+              {
+                "title": "Test Summary",
+                "x": 0.0,
+                "y": 0.0,
+                "width": 768.0,
+                "height": 512.0,
+                "type": "Text View",
+                "properties": {
+                  "topic": "/SmartDashboard/Test/Summary",
+                  "period": 0.06
+                }
+              },
+              {
+                "title": "Instructions",
+                "x": 768.0,
+                "y": 0.0,
+                "width": 768.0,
+                "height": 512.0,
+                "type": "Text View",
+                "properties": {
+                  "topic": "/SmartDashboard/Test/Instructions",
+                  "period": 0.06
+                }
+              }
+            ]
+          }
+        ],
+        "containers": [
+          {
+            "title": "Choreographer Status",
+            "x": 1536.0,
+            "y": 0.0,
+            "width": 256.0,
+            "height": 256.0,
+            "type": "Boolean Box",
+            "properties": {
+              "topic": "/AdvantageKit/RealOutputs/Choreographer/Disabled",
+              "period": 0.06,
+              "data_type": "boolean",
+              "true_color": 4294923520,
+              "false_color": 4283215696,
+              "true_icon": "None",
+              "false_icon": "None"
+            }
+          },
+          {
+            "title": "Test Alerts",
+            "x": 1792.0,
+            "y": 0.0,
+            "width": 256.0,
+            "height": 896.0,
+            "type": "Alerts",
+            "properties": {
+              "topic": "/SmartDashboard/Alerts",
+              "period": 0.06
+            }
+          },
+          {
+            "title": "Total Test Checks",
+            "x": 1536.0,
+            "y": 256.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Number Slider",
+            "properties": {
+              "topic": "/SmartDashboard/Test/TotalChecks",
+              "period": 0.06,
+              "data_type": "double",
+              "min": 0.0,
+              "max": 20.0,
+              "block_increment": 1.0
+            }
+          },
+          {
+            "title": "Quick Controls Help",
+            "x": 1536.0,
+            "y": 384.0,
+            "width": 256.0,
+            "height": 512.0,
+            "type": "Text View",
+            "properties": {
+              "topic": "/SmartDashboard/Testing/QuickHelp",
+              "period": 0.06
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

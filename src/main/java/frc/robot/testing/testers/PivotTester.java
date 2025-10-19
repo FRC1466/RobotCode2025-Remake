@@ -13,155 +13,201 @@ import frc.robot.subsystems.pivot.Pivot;
 import frc.robot.testing.SubsystemTester;
 
 /**
- * Tests the Pivot/Wrist subsystem in isolation.
- * Validates motor function, angle control, and sensor readings.
+ * Tests the Pivot/Wrist subsystem in isolation. Validates motor function, angle control, and sensor
+ * readings.
  */
 public class PivotTester extends SubsystemTester {
   private final Pivot pivot;
-  
+
   private static final double TEST_TIMEOUT = 5.0;
-  
+
   public PivotTester(Pivot pivot) {
     super("Pivot");
     this.pivot = pivot;
   }
-  
+
   @Override
   protected void defineTestSteps() {
     // Step 1: Sensor connectivity check
-    testSteps.add(new TestStep("Sensor Connectivity", true) {
-      @Override
-      protected void onStart() {
-        System.out.println("Checking pivot angle sensor...");
-      }
-      
-      @Override
-      protected void onExecute() {}
-      
-      @Override
-      protected boolean isStepComplete() {
-        return true;
-      }
-      
-      @Override
-      protected boolean validateStep() {
-        Rotation2d angle = pivot.getAngle();
-        
-        if (Double.isNaN(angle.getRadians()) || Double.isInfinite(angle.getRadians())) {
-          setFailureReason("Angle sensor returning invalid data");
-          return false;
-        }
-        
-        System.out.println("✓ Angle sensor connected. Current angle: " + 
-            String.format("%.1f", angle.getDegrees()) + "°");
-        return true;
-      }
-    });
-    
+    testSteps.add(
+        new TestStep("Sensor Connectivity", true) {
+          private Timer stepTimer = new Timer();
+
+          @Override
+          protected void onStart() {
+            stepTimer.restart();
+            System.out.println("Checking pivot angle sensor...");
+          }
+
+          @Override
+          protected void onExecute() {}
+
+          @Override
+          protected boolean isStepComplete() {
+            return stepTimer.hasElapsed(0.5); // Wait 0.5s to observe
+          }
+
+          @Override
+          protected boolean validateStep() {
+            Rotation2d angle = pivot.getAngle();
+
+            if (Double.isNaN(angle.getRadians()) || Double.isInfinite(angle.getRadians())) {
+              setFailureReason("Angle sensor returning invalid data");
+              return false;
+            }
+
+            System.out.println(
+                "✓ Angle sensor connected. Current angle: "
+                    + String.format("%.1f", angle.getDegrees())
+                    + "°");
+            return true;
+          }
+        });
+
     // Step 2: Move to test position 1
-    testSteps.add(new TestStep("Position Control Test 1", false) {
-      private Timer stepTimer = new Timer();
-      private Rotation2d targetAngle;
-      
-      @Override
-      protected void onStart() {
-        stepTimer.restart();
-        targetAngle = Rotation2d.fromDegrees(45.0);
-        pivot.setWantedState(Pivot.WantedState.MOVE_TO_POSITION, targetAngle);
-        System.out.println("Moving to 45°...");
-      }
-      
-      @Override
-      protected void onExecute() {}
-      
-      @Override
-      protected boolean isStepComplete() {
-        return pivot.atGoal() || stepTimer.hasElapsed(TEST_TIMEOUT);
-      }
-      
-      @Override
-      protected boolean validateStep() {
-        boolean atGoal = pivot.atGoal();
-        
-        if (!atGoal) {
-          setFailureReason("Failed to reach 45°. Current: " + 
-              String.format("%.1f", pivot.getAngle().getDegrees()) + "°");
-          return false;
-        }
-        
-        System.out.println("✓ Reached 45° in " + String.format("%.2f", stepTimer.get()) + "s");
-        return true;
-      }
-    });
-    
+    testSteps.add(
+        new TestStep("Position Control Test 1", false) {
+          private Timer stepTimer = new Timer();
+          private Timer settleTimer = new Timer();
+          private Rotation2d targetAngle;
+          private boolean settled = false;
+
+          @Override
+          protected void onStart() {
+            stepTimer.restart();
+            settleTimer.restart();
+            targetAngle = Rotation2d.fromDegrees(45.0);
+            pivot.setWantedState(Pivot.WantedState.MOVE_TO_POSITION, targetAngle);
+            System.out.println("Moving to 45°...");
+          }
+
+          @Override
+          protected void onExecute() {
+            if (!pivot.atGoal()) {
+              settleTimer.restart();
+              settled = false;
+            } else if (!settled && settleTimer.hasElapsed(0.5)) {
+              settled = true;
+            }
+          }
+
+          @Override
+          protected boolean isStepComplete() {
+            return (settled && settleTimer.hasElapsed(0.5))
+                || stepTimer.hasElapsed(TEST_TIMEOUT * 2);
+          }
+
+          @Override
+          protected boolean validateStep() {
+            boolean atGoal = pivot.atGoal();
+
+            if (!atGoal) {
+              setFailureReason(
+                  "Failed to reach 45°. Current: "
+                      + String.format("%.1f", pivot.getAngle().getDegrees())
+                      + "°");
+              return false;
+            }
+
+            System.out.println("✓ Reached 45° in " + String.format("%.2f", stepTimer.get()) + "s");
+            return true;
+          }
+        });
+
     // Step 3: Move to different position
-    testSteps.add(new TestStep("Position Control Test 2", false) {
-      private Timer stepTimer = new Timer();
-      private Rotation2d targetAngle;
-      
-      @Override
-      protected void onStart() {
-        stepTimer.restart();
-        targetAngle = Rotation2d.fromDegrees(90.0);
-        pivot.setWantedState(Pivot.WantedState.MOVE_TO_POSITION, targetAngle);
-        System.out.println("Moving to 90°...");
-      }
-      
-      @Override
-      protected void onExecute() {}
-      
-      @Override
-      protected boolean isStepComplete() {
-        return pivot.atGoal() || stepTimer.hasElapsed(TEST_TIMEOUT);
-      }
-      
-      @Override
-      protected boolean validateStep() {
-        boolean atGoal = pivot.atGoal();
-        
-        if (!atGoal) {
-          setFailureReason("Failed to reach 90°. Current: " + 
-              String.format("%.1f", pivot.getAngle().getDegrees()) + "°");
-          return false;
-        }
-        
-        System.out.println("✓ Reached 90° in " + String.format("%.2f", stepTimer.get()) + "s");
-        return true;
-      }
-    });
-    
+    testSteps.add(
+        new TestStep("Position Control Test 2", false) {
+          private Timer stepTimer = new Timer();
+          private Timer settleTimer = new Timer();
+          private Rotation2d targetAngle;
+          private boolean settled = false;
+
+          @Override
+          protected void onStart() {
+            stepTimer.restart();
+            settleTimer.restart();
+            targetAngle = Rotation2d.fromDegrees(90.0);
+            pivot.setWantedState(Pivot.WantedState.MOVE_TO_POSITION, targetAngle);
+            System.out.println("Moving to 90°...");
+          }
+
+          @Override
+          protected void onExecute() {
+            if (!pivot.atGoal()) {
+              settleTimer.restart();
+              settled = false;
+            } else if (!settled && settleTimer.hasElapsed(0.5)) {
+              settled = true;
+            }
+          }
+
+          @Override
+          protected boolean isStepComplete() {
+            return (settled && settleTimer.hasElapsed(0.5))
+                || stepTimer.hasElapsed(TEST_TIMEOUT * 2);
+          }
+
+          @Override
+          protected boolean validateStep() {
+            boolean atGoal = pivot.atGoal();
+
+            if (!atGoal) {
+              setFailureReason(
+                  "Failed to reach 90°. Current: "
+                      + String.format("%.1f", pivot.getAngle().getDegrees())
+                      + "°");
+              return false;
+            }
+
+            System.out.println("✓ Reached 90° in " + String.format("%.2f", stepTimer.get()) + "s");
+            return true;
+          }
+        });
+
     // Step 4: Return to home
-    testSteps.add(new TestStep("Return to Home", false) {
-      private Timer stepTimer = new Timer();
-      
-      @Override
-      protected void onStart() {
-        stepTimer.restart();
-        pivot.setWantedState(Pivot.WantedState.MOVE_TO_POSITION, pivot.getGoalAngle());
-        System.out.println("Returning to home...");
-      }
-      
-      @Override
-      protected void onExecute() {}
-      
-      @Override
-      protected boolean isStepComplete() {
-        return pivot.atGoal() || stepTimer.hasElapsed(TEST_TIMEOUT);
-      }
-      
-      @Override
-      protected boolean validateStep() {
-        if (!pivot.atGoal()) {
-          setFailureReason("Failed to return home");
-          return false;
-        }
-        
-        System.out.println("✓ Returned to home");
-        return true;
-      }
-    });
+    testSteps.add(
+        new TestStep("Return to Home", false) {
+          private Timer stepTimer = new Timer();
+          private Timer settleTimer = new Timer();
+          private boolean settled = false;
+
+          @Override
+          protected void onStart() {
+            stepTimer.restart();
+            settleTimer.restart();
+            pivot.setWantedState(Pivot.WantedState.MOVE_TO_POSITION, new Rotation2d());
+            System.out.println("Returning to home...");
+          }
+
+          @Override
+          protected void onExecute() {
+            if (!pivot.atGoal()) {
+              settleTimer.restart();
+              settled = false;
+            } else if (!settled && settleTimer.hasElapsed(0.5)) {
+              settled = true;
+            }
+          }
+
+          @Override
+          protected boolean isStepComplete() {
+            return (settled && settleTimer.hasElapsed(0.5))
+                || stepTimer.hasElapsed(TEST_TIMEOUT * 2);
+          }
+
+          @Override
+          protected boolean validateStep() {
+            if (!pivot.atGoal()) {
+              setFailureReason("Failed to return home");
+              return false;
+            }
+
+            System.out.println("✓ Returned to home");
+            return true;
+          }
+        });
   }
-  
+
   @Override
   protected void returnToSafeState() {
     pivot.setWantedState(Pivot.WantedState.IDLE);
