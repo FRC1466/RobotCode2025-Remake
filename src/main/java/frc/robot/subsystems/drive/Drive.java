@@ -8,646 +8,375 @@
 package frc.robot.subsystems.drive;
 
 import static edu.wpi.first.units.Units.*;
-import static frc.robot.constants.SysIDConstants.*;
 
-import choreo.trajectory.SwerveSample;
-import choreo.trajectory.Trajectory;
-import com.ctre.phoenix6.SignalLogger;
-import com.ctre.phoenix6.swerve.SwerveModule;
-import com.ctre.phoenix6.swerve.SwerveRequest;
-import com.ctre.phoenix6.swerve.utility.PhoenixPIDController;
-import edu.wpi.first.math.MathUtil;
+import com.ctre.phoenix6.CANBus;
+import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.config.ModuleConfig;
+import com.pathplanner.lib.config.PIDConstants;
+import com.pathplanner.lib.config.RobotConfig;
+import com.pathplanner.lib.controllers.PPHolonomicDriveController;
+import com.pathplanner.lib.pathfinding.Pathfinding;
+import com.pathplanner.lib.util.PathPlannerLogging;
+import edu.wpi.first.hal.FRCNetComm.tInstances;
+import edu.wpi.first.hal.FRCNetComm.tResourceType;
+import edu.wpi.first.hal.HAL;
 import edu.wpi.first.math.Matrix;
-import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.geometry.Twist2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
+import edu.wpi.first.math.kinematics.SwerveModulePosition;
+import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
+import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj.Alert;
+import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
-import frc.robot.constants.FieldConstants;
-import frc.robot.constants.ReefConstants;
-import frc.robot.util.AllianceUtil;
+import frc.robot.Constants;
+import frc.robot.Constants.Mode;
+import frc.robot.generated.TunerConstants;
+import frc.robot.util.AllianceFlipUtil;
+import frc.robot.util.LocalADStarAK;
 import frc.robot.util.LoggedTracer;
-import frc.robot.util.SysIdMechanism;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import lombok.Getter;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
 public class Drive extends SubsystemBase {
+  // TunerConstants doesn't include these constants, so they are declared locally
+  static final double ODOMETRY_FREQUENCY =
+      new CANBus(TunerConstants.DrivetrainConstants.CANBusName).isNetworkFD() ? 250.0 : 100.0;
+  public static final double DRIVE_BASE_LENGTH =
+      Math.abs(TunerConstants.FrontLeft.LocationX - TunerConstants.BackLeft.LocationX);
+  public static final double DRIVE_BASE_WIDTH =
+      Math.abs(TunerConstants.FrontLeft.LocationY - TunerConstants.FrontRight.LocationY);
+
   /** Includes bumpers! */
   public static final double robotWidth =
       Units.inchesToMeters(28.0) + 2 * Units.inchesToMeters(2.0);
 
-  private static final double controllerDeadband = 0.1;
+  public static final double DRIVE_BASE_RADIUS =
+      Math.max(
+          Math.max(
+              Math.hypot(TunerConstants.FrontLeft.LocationX, TunerConstants.FrontLeft.LocationY),
+              Math.hypot(TunerConstants.FrontRight.LocationX, TunerConstants.FrontRight.LocationY)),
+          Math.max(
+              Math.hypot(TunerConstants.BackLeft.LocationX, TunerConstants.BackLeft.LocationY),
+              Math.hypot(TunerConstants.BackRight.LocationX, TunerConstants.BackRight.LocationY)));
 
-  public static final double releasePieceTranslationErrorMarginMeters = Units.inchesToMeters(0.5);
-  public static final double driveToPointTranslationErrorMarginMeters = Units.inchesToMeters(1.0);
+  // PathPlanner config constants
+  private static final double ROBOT_MASS_KG = 74.088;
+  private static final double ROBOT_MOI = 6.883;
+  private static final double WHEEL_COF = 1.2;
+  private static final RobotConfig PP_CONFIG =
+      new RobotConfig(
+          ROBOT_MASS_KG,
+          ROBOT_MOI,
+          new ModuleConfig(
+              TunerConstants.FrontLeft.WheelRadius,
+              TunerConstants.kSpeedAt12Volts.in(MetersPerSecond),
+              WHEEL_COF,
+              DCMotor.getKrakenX60Foc(1)
+                  .withReduction(TunerConstants.FrontLeft.DriveMotorGearRatio),
+              TunerConstants.FrontLeft.SlipCurrent,
+              1),
+          getModuleTranslations());
 
-  public static final double driveToPointStaticFrictionCompensation = 0.02;
+  static final Lock odometryLock = new ReentrantLock();
+  private final GyroIO gyroIO;
+  private final GyroIOInputsAutoLogged gyroInputs = new GyroIOInputsAutoLogged();
+  private final Module[] modules = new Module[4]; // FL, FR, BL, BR
+  private final SysIdRoutine sysId;
+  private final Alert gyroDisconnectedAlert =
+      new Alert("Disconnected gyro, using kinematics as fallback.", AlertType.kError);
 
-  public static final double rotationLockErrorMarginDegrees = 10.0;
-
-  public double maxVelocityOutputForDriveToPoint = Units.feetToMeters(10.0);
-
-  private final PIDController choreoXController = new PIDController(7, 0, 0);
-  private final PIDController choreoYController = new PIDController(7, 0, 0);
-  private final PIDController choreoThetaController = new PIDController(7, 0, 0);
-
-  private final PIDController autoDriveToPointController = new PIDController(3.0, 0, 0.1);
-  private final PIDController teleopDriveToPointController = new PIDController(3, 0, 0.1);
-
-  private final SwerveRequest.SysIdSwerveTranslation translationCharacterization =
-      new SwerveRequest.SysIdSwerveTranslation();
-  private final SwerveRequest.SysIdSwerveRotation rotationCharacterization =
-      new SwerveRequest.SysIdSwerveRotation();
-  private final SwerveRequest.SysIdSwerveSteerGains steerCharacterization =
-      new SwerveRequest.SysIdSwerveSteerGains();
-
-  private final SwerveRequest.FieldCentricFacingAngle driveAtAngle =
-      new SwerveRequest.FieldCentricFacingAngle()
-          .withDriveRequestType(SwerveModule.DriveRequestType.Velocity);
-
-  private static final double skewCompensationScalar = -0.03;
-
-  public enum WantedState {
-    SYS_ID,
-    TELEOP_DRIVE,
-    CHOREO_PATH,
-    ROTATION_LOCK,
-    DRIVE_TO_POINT,
-    IDLE
-  }
-
-  public enum SystemState {
-    SYS_ID,
-    TELEOP_DRIVE,
-    CHOREO_PATH,
-    ROTATION_LOCK,
-    DRIVE_TO_POINT,
-    IDLE
-  }
-
-  @Getter private SystemState systemState = SystemState.TELEOP_DRIVE;
-  @Getter private WantedState wantedState = WantedState.TELEOP_DRIVE;
-
-  private Rotation2d desiredRotationForRotationLockState;
-
-  private Trajectory<SwerveSample> desiredChoreoTrajectory;
-  private final Timer choreoTimer = new Timer();
-  private Optional<SwerveSample> choreoSampleToBeApplied;
-
-  private Pose2d desiredPoseForDriveToPoint = new Pose2d();
-
-  final DriveIOInputsAutoLogged swerveInputs = new DriveIOInputsAutoLogged();
-  ModuleIOInputsAutoLogged frontLeftInputs = new ModuleIOInputsAutoLogged();
-  ModuleIOInputsAutoLogged frontRightInputs = new ModuleIOInputsAutoLogged();
-  ModuleIOInputsAutoLogged backLeftInputs = new ModuleIOInputsAutoLogged();
-  ModuleIOInputsAutoLogged backRightInputs = new ModuleIOInputsAutoLogged();
-
-  private final Object moduleIOLock = new Object();
-
-  private DriveIO io = new DriveIO() {};
-  private final CommandXboxController controller;
-
-  private final double maxVelocity;
-  private final double maxAngularVelocity;
-
-  private double teleopVelocityCoefficient = 1.0;
-  private double rotationVelocityCoefficient = 1.0;
-  private double maximumAngularVelocityForDriveToPoint = Double.NaN;
-
-  private final SysIdRoutine translationSysIdRoutine =
-      new SysIdRoutine(
-          new SysIdRoutine.Config(
-              translationRampRate,
-              translationStepRate,
-              translationTimeout,
-              state -> SignalLogger.writeString("SysIdTranslation_State", state.toString())),
-          new SysIdRoutine.Mechanism(
-              output -> io.setSwerveState(translationCharacterization.withVolts(output)),
-              null,
-              this));
-
-  /*
-   * SysId routine for characterizing rotation.
-   * This is used to find PID gains for the FieldCentricFacingAngle HeadingController.
-   */
-  private final SysIdRoutine rotationSysIdRoutine =
-      new SysIdRoutine(
-          new SysIdRoutine.Config(
-              rotationRampRate,
-              rotationStepRate,
-              rotationTimeout,
-              state -> SignalLogger.writeString("SysIdRotation_State", state.toString())),
-          new SysIdRoutine.Mechanism(
-              output -> {
-                /* output is actually radians per second, but SysId only supports "volts" */
-                io.setSwerveState(rotationCharacterization.withRotationalRate(output.in(Volts)));
-                /* also log the requested output for SysId */
-                SignalLogger.writeDouble("Rotational_Rate", output.in(Volts));
-              },
-              null,
-              this));
-
-  private final SysIdRoutine steerSysIdRoutine =
-      new SysIdRoutine(
-          new SysIdRoutine.Config(
-              steerRampRate,
-              steerStepRate,
-              steerTimeout,
-              state -> SignalLogger.writeString("SysIdSteer_State", state.toString())),
-          new SysIdRoutine.Mechanism(
-              volts -> io.setSwerveState(steerCharacterization.withVolts(volts)), null, this));
+  private static SwerveDriveKinematics kinematics =
+      new SwerveDriveKinematics(getModuleTranslations());
+  private static Rotation2d rawGyroRotation = new Rotation2d();
+  private static SwerveModulePosition[] lastModulePositions = // For delta tracking
+      new SwerveModulePosition[] {
+        new SwerveModulePosition(),
+        new SwerveModulePosition(),
+        new SwerveModulePosition(),
+        new SwerveModulePosition()
+      };
+  private SwerveDrivePoseEstimator poseEstimator =
+      new SwerveDrivePoseEstimator(kinematics, rawGyroRotation, lastModulePositions, new Pose2d());
 
   public Drive(
-      DriveIO io, CommandXboxController controller, double maxVelocity, double maxAngularVelocity) {
-    this.io = io;
-    this.controller = controller;
-    this.maxVelocity = maxVelocity;
-    this.maxAngularVelocity = maxAngularVelocity;
+      GyroIO gyroIO,
+      ModuleIO flModuleIO,
+      ModuleIO frModuleIO,
+      ModuleIO blModuleIO,
+      ModuleIO brModuleIO) {
+    this.gyroIO = gyroIO;
+    modules[0] = new Module(flModuleIO, 0, TunerConstants.FrontLeft);
+    modules[1] = new Module(frModuleIO, 1, TunerConstants.FrontRight);
+    modules[2] = new Module(blModuleIO, 2, TunerConstants.BackLeft);
+    modules[3] = new Module(brModuleIO, 3, TunerConstants.BackRight);
 
-    // io.registerTelemetryFunction(swerveInputs);
-    driveAtAngle.HeadingController = new PhoenixPIDController(5, 0, 0);
+    // Usage reporting for swerve template
+    HAL.report(tResourceType.kResourceType_RobotDrive, tInstances.kRobotDriveSwerve_AdvantageKit);
 
-    driveAtAngle.HeadingController.enableContinuousInput(-Math.PI, Math.PI);
-  }
+    // Start odometry thread
+    PhoenixOdometryThread.getInstance().start();
 
-  /**
-   * Runs the quasi-static SysId test in the given direction for the given mechanism.
-   *
-   * @param mechanism The mechanism to characterize
-   * @param direction Direction of the quasi-static SysId test
-   * @return Command to run
-   */
-  public Command sysIdQuasistatic(SysIdMechanism mechanism, SysIdRoutine.Direction direction) {
-    final SysIdRoutine routine =
-        switch (mechanism) {
-          case SWERVE_TRANSLATION -> translationSysIdRoutine;
-          case SWERVE_ROTATION -> rotationSysIdRoutine;
-          case SWERVE_STEER -> steerSysIdRoutine;
-          default ->
-              throw new IllegalArgumentException(
-                  String.format("Mechanism %s is not supported.", mechanism));
-        };
+    // Configure AutoBuilder for PathPlanner
+    AutoBuilder.configure(
+        this::getPose,
+        this::setPose,
+        this::getChassisSpeeds,
+        this::runVelocity,
+        new PPHolonomicDriveController(
+            new PIDConstants(5.0, 0.0, 0.0), new PIDConstants(5.0, 0.0, 0.0)),
+        PP_CONFIG,
+        () -> DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red,
+        this);
+    Pathfinding.setPathfinder(new LocalADStarAK());
+    PathPlannerLogging.setLogActivePathCallback(
+        (activePath) -> {
+          Logger.recordOutput(
+              "Odometry/Trajectory", activePath.toArray(new Pose2d[activePath.size()]));
+        });
+    PathPlannerLogging.setLogTargetPoseCallback(
+        (targetPose) -> {
+          Logger.recordOutput("Odometry/TrajectorySetpoint", targetPose);
+        });
 
-    return routine.quasistatic(direction);
-  }
-
-  /**
-   * Runs the dynamic SysId test in the given direction for the given mechanism.
-   *
-   * @param mechanism The mechanism to characterize
-   * @param direction Direction of the dynamic SysId test
-   * @return Command to run
-   */
-  public Command sysIdDynamic(SysIdMechanism mechanism, SysIdRoutine.Direction direction) {
-    final SysIdRoutine routine =
-        switch (mechanism) {
-          case SWERVE_TRANSLATION -> translationSysIdRoutine;
-          case SWERVE_ROTATION -> rotationSysIdRoutine;
-          case SWERVE_STEER -> steerSysIdRoutine;
-          default ->
-              throw new IllegalArgumentException(
-                  String.format("Mechanism %s is not supported.", mechanism));
-        };
-
-    return routine.dynamic(direction);
+    // Configure SysId
+    sysId =
+        new SysIdRoutine(
+            new SysIdRoutine.Config(
+                null,
+                null,
+                null,
+                (state) -> Logger.recordOutput("Drive/SysIdState", state.toString())),
+            new SysIdRoutine.Mechanism(
+                (voltage) -> runCharacterization(voltage.in(Volts)), null, this));
   }
 
   @Override
   public void periodic() {
-    io.updateSwerveInputs(swerveInputs);
-    synchronized (moduleIOLock) {
-      io.updateModuleInputs(frontLeftInputs, frontRightInputs, backLeftInputs, backRightInputs);
-      Logger.processInputs("Subsystems/Drive", swerveInputs);
-      Logger.processInputs("Subsystems/Drive/Module Data/Front Left", frontLeftInputs);
-      Logger.processInputs("Subsystems/Drive/Module Data/Front Right", frontRightInputs);
-      Logger.processInputs("Subsystems/Drive/Module Data/Back Left", backLeftInputs);
-      Logger.processInputs("Subsystems/Drive/Module Data/Back Right", backRightInputs);
+    odometryLock.lock(); // Prevents odometry updates while reading data
+    gyroIO.updateInputs(gyroInputs);
+    Logger.processInputs("Drive/Gyro", gyroInputs);
+    for (var module : modules) {
+      module.periodic();
+    }
+    odometryLock.unlock();
+
+    // Stop moving when disabled
+    if (DriverStation.isDisabled()) {
+      for (var module : modules) {
+        module.stop();
+      }
     }
 
-    systemState = handleStateTransition();
+    // Log empty setpoint states when disabled
+    if (DriverStation.isDisabled()) {
+      Logger.recordOutput("SwerveStates/Setpoints", new SwerveModuleState[] {});
+      Logger.recordOutput("SwerveStates/SetpointsOptimized", new SwerveModuleState[] {});
+    }
 
-    Logger.recordOutput("Subsystems/Drive/SystemState", systemState);
-    Logger.recordOutput("Subsystems/Drive/DesiredState", wantedState);
-    Logger.recordOutput("Subsystems/Drive/Pose", getPose());
-    applyStates();
+    // Update odometry
+    double[] sampleTimestamps =
+        modules[0].getOdometryTimestamps(); // All signals are sampled together
+    int sampleCount = sampleTimestamps.length;
+    for (int i = 0; i < sampleCount; i++) {
+      // Read wheel positions and deltas from each module
+      SwerveModulePosition[] modulePositions = new SwerveModulePosition[4];
+      SwerveModulePosition[] moduleDeltas = new SwerveModulePosition[4];
+      for (int moduleIndex = 0; moduleIndex < 4; moduleIndex++) {
+        modulePositions[moduleIndex] = modules[moduleIndex].getOdometryPositions()[i];
+        moduleDeltas[moduleIndex] =
+            new SwerveModulePosition(
+                modulePositions[moduleIndex].distanceMeters
+                    - lastModulePositions[moduleIndex].distanceMeters,
+                modulePositions[moduleIndex].angle);
+        lastModulePositions[moduleIndex] = modulePositions[moduleIndex];
+      }
 
-    // Record cycle time
+      // Update gyro angle
+      if (gyroInputs.connected) {
+        // Use the real gyro angle
+        rawGyroRotation = gyroInputs.odometryYawPositions[i];
+      } else {
+        // Use the angle delta from the kinematics and module deltas
+        Twist2d twist = kinematics.toTwist2d(moduleDeltas);
+        rawGyroRotation = rawGyroRotation.plus(new Rotation2d(twist.dtheta));
+      }
+
+      // Apply update
+      poseEstimator.updateWithTime(sampleTimestamps[i], rawGyroRotation, modulePositions);
+    }
+
+    // Update gyro alert
+    gyroDisconnectedAlert.set(!gyroInputs.connected && Constants.getMode() != Mode.SIM);
     LoggedTracer.record("Drive");
   }
 
-  private SystemState handleStateTransition() {
-    return switch (wantedState) {
-      case SYS_ID -> SystemState.SYS_ID;
-      case TELEOP_DRIVE -> SystemState.TELEOP_DRIVE;
-      case CHOREO_PATH -> {
-        if (systemState != SystemState.CHOREO_PATH) {
-          choreoTimer.restart();
-          choreoSampleToBeApplied = desiredChoreoTrajectory.sampleAt(choreoTimer.get(), false);
-          yield SystemState.CHOREO_PATH;
-        } else {
-          choreoSampleToBeApplied = desiredChoreoTrajectory.sampleAt(choreoTimer.get(), false);
-          yield SystemState.CHOREO_PATH;
-        }
-      }
-      case ROTATION_LOCK -> SystemState.ROTATION_LOCK;
-      case DRIVE_TO_POINT -> SystemState.DRIVE_TO_POINT;
-      default -> SystemState.IDLE;
-    };
+  /**
+   * Runs the drive at the desired velocity.
+   *
+   * @param speeds Speeds in meters/sec
+   */
+  public void runVelocity(ChassisSpeeds speeds) {
+    // Calculate module setpoints
+    ChassisSpeeds discreteSpeeds = ChassisSpeeds.discretize(speeds, 0.02);
+    SwerveModuleState[] setpointStates = kinematics.toSwerveModuleStates(discreteSpeeds);
+    SwerveDriveKinematics.desaturateWheelSpeeds(setpointStates, TunerConstants.kSpeedAt12Volts);
+
+    // Log unoptimized setpoints and setpoint speeds
+    Logger.recordOutput("SwerveStates/Setpoints", setpointStates);
+    Logger.recordOutput("SwerveChassisSpeeds/Setpoints", discreteSpeeds);
+
+    // Send setpoints to modules
+    for (int i = 0; i < 4; i++) {
+      modules[i].runSetpoint(setpointStates[i]);
+    }
+
+    // Log optimized setpoints (runSetpoint mutates each state)
+    Logger.recordOutput("SwerveStates/SetpointsOptimized", setpointStates);
   }
 
-  private void applyStates() {
-    switch (systemState) {
-      default:
-      case SYS_ID:
-        break;
-      case TELEOP_DRIVE:
-        io.setSwerveState(
-            new SwerveRequest.ApplyFieldSpeeds()
-                .withSpeeds(calculateSpeedsBasedOnJoystickInputs())
-                .withDriveRequestType(SwerveModule.DriveRequestType.OpenLoopVoltage));
-        break;
-      case CHOREO_PATH:
-        {
-          if (choreoSampleToBeApplied.isPresent()) {
-            var sample = choreoSampleToBeApplied.get();
-            Logger.recordOutput("Subsystems/Drive/Choreo/Timer Value", choreoTimer.get());
-            Logger.recordOutput(
-                "Subsystems/Drive/Choreo/Traj Name", desiredChoreoTrajectory.name());
-            Logger.recordOutput(
-                "Subsystems/Drive/Choreo/Total time", desiredChoreoTrajectory.getTotalTime());
-            Logger.recordOutput("Subsystems/Drive/Choreo/sample/Desired Pose", sample.getPose());
-            Logger.recordOutput(
-                "Subsystems/Drive/Choreo/sample/Desired Chassis Speeds", sample.getChassisSpeeds());
-            Logger.recordOutput(
-                "Subsystems/Drive/Choreo/sample/Module Forces X", sample.moduleForcesX());
-            Logger.recordOutput(
-                "Subsystems/Drive/Choreo/sample/Module Forces Y", sample.moduleForcesY());
-            synchronized (swerveInputs) {
-              var pose = getPose();
-
-              var targetSpeeds = sample.getChassisSpeeds();
-              targetSpeeds.vxMetersPerSecond += choreoXController.calculate(pose.getX(), sample.x);
-              targetSpeeds.vyMetersPerSecond += choreoYController.calculate(pose.getY(), sample.y);
-              targetSpeeds.omegaRadiansPerSecond +=
-                  choreoThetaController.calculate(pose.getRotation().getRadians(), sample.heading);
-
-              io.setSwerveState(
-                  new SwerveRequest.ApplyFieldSpeeds()
-                      .withSpeeds(targetSpeeds)
-                      .withWheelForceFeedforwardsX(sample.moduleForcesX())
-                      .withWheelForceFeedforwardsY(sample.moduleForcesY())
-                      .withDriveRequestType(SwerveModule.DriveRequestType.Velocity));
-            }
-          }
-          break;
-        }
-      case ROTATION_LOCK:
-        io.setSwerveState(
-            driveAtAngle
-                .withVelocityX(calculateSpeedsBasedOnJoystickInputs().vxMetersPerSecond)
-                .withVelocityY(calculateSpeedsBasedOnJoystickInputs().vyMetersPerSecond)
-                .withTargetDirection(desiredRotationForRotationLockState));
-        break;
-      case DRIVE_TO_POINT:
-        var translationToDesiredPoint =
-            desiredPoseForDriveToPoint.getTranslation().minus(getPose().getTranslation());
-        var linearDistance = translationToDesiredPoint.getNorm();
-        var frictionConstant = 0.0;
-        if (linearDistance >= Units.inchesToMeters(0.5)) {
-          frictionConstant = driveToPointStaticFrictionCompensation * maxVelocity;
-        }
-        var directionOfTravel = translationToDesiredPoint.getAngle();
-        var velocityOutput = 0.0;
-        if (DriverStation.isAutonomous()) {
-          velocityOutput =
-              Math.min(
-                  Math.abs(autoDriveToPointController.calculate(linearDistance, 0))
-                      + frictionConstant,
-                  maxVelocityOutputForDriveToPoint);
-        } else {
-          velocityOutput =
-              Math.min(
-                  Math.abs(teleopDriveToPointController.calculate(linearDistance, 0))
-                      + frictionConstant,
-                  maxVelocityOutputForDriveToPoint);
-        }
-        var xComponent = velocityOutput * directionOfTravel.getCos();
-        var yComponent = velocityOutput * directionOfTravel.getSin();
-
-        Logger.recordOutput("Subsystems/Drive/DriveToPoint/xVelocitySetpoint", xComponent);
-        Logger.recordOutput("Subsystems/Drive/DriveToPoint/yVelocitySetpoint", yComponent);
-        Logger.recordOutput("Subsystems/Drive/DriveToPoint/velocityOutput", velocityOutput);
-        Logger.recordOutput("Subsystems/Drive/DriveToPoint/linearDistance", linearDistance);
-        Logger.recordOutput("Subsystems/Drive/DriveToPoint/directionOfTravel", directionOfTravel);
-        Logger.recordOutput(
-            "Subsystems/Drive/DriveToPoint/desiredPoint", desiredPoseForDriveToPoint);
-
-        if (Double.isNaN(maximumAngularVelocityForDriveToPoint)) {
-          io.setSwerveState(
-              driveAtAngle
-                  .withVelocityX(xComponent)
-                  .withVelocityY(yComponent)
-                  .withTargetDirection(desiredPoseForDriveToPoint.getRotation()));
-        } else {
-          io.setSwerveState(
-              driveAtAngle
-                  .withVelocityX(xComponent)
-                  .withVelocityY(yComponent)
-                  .withTargetDirection(desiredPoseForDriveToPoint.getRotation())
-                  .withMaxAbsRotationalRate(maximumAngularVelocityForDriveToPoint));
-        }
-        break;
+  /** Runs the drive in a straight line with the specified drive output. */
+  public void runCharacterization(double output) {
+    for (int i = 0; i < 4; i++) {
+      modules[i].runCharacterization(output);
     }
   }
 
-  @Override
-  public void simulationPeriodic() {
-    synchronized (moduleIOLock) {
-      io.updateSimState();
+  /** Stops the drive. */
+  public void stop() {
+    runVelocity(new ChassisSpeeds());
+  }
+
+  /**
+   * Stops the drive and turns the modules to an X arrangement to resist movement. The modules will
+   * return to their normal orientations the next time a nonzero velocity is requested.
+   */
+  public void stopWithX() {
+    Rotation2d[] headings = new Rotation2d[4];
+    for (int i = 0; i < 4; i++) {
+      headings[i] = getModuleTranslations()[i].getAngle();
     }
+    kinematics.resetHeadings(headings);
+    stop();
   }
 
-  public void setState(WantedState state) {
-    this.wantedState = state;
+  /** Returns a command to run a quasistatic test in the specified direction. */
+  public Command sysIdQuasistatic(SysIdRoutine.Direction direction) {
+    return run(() -> runCharacterization(0.0))
+        .withTimeout(1.0)
+        .andThen(sysId.quasistatic(direction));
   }
 
-  public void setDesiredChoreoTrajectory(Trajectory<SwerveSample> trajectory) {
-    this.desiredChoreoTrajectory = trajectory;
-    this.wantedState = WantedState.CHOREO_PATH;
-    choreoTimer.reset();
+  /** Returns a command to run a dynamic test in the specified direction. */
+  public Command sysIdDynamic(SysIdRoutine.Direction direction) {
+    return run(() -> runCharacterization(0.0)).withTimeout(1.0).andThen(sysId.dynamic(direction));
   }
 
-  public void setDesiredPoseForDriveToPoint(Pose2d pose) {
-    this.desiredPoseForDriveToPoint = pose;
-    this.wantedState = WantedState.DRIVE_TO_POINT;
-    this.maxVelocityOutputForDriveToPoint = Units.feetToMeters(10.0);
-    this.maximumAngularVelocityForDriveToPoint = Double.NaN;
-  }
-
-  public void setDesiredPoseForDriveToPointWithMaximumAngularVelocity(
-      Pose2d pose, double maximumAngularVelocityForDriveToPoint) {
-    this.desiredPoseForDriveToPoint = pose;
-    this.wantedState = WantedState.DRIVE_TO_POINT;
-    this.maxVelocityOutputForDriveToPoint = Units.feetToMeters(10.0);
-    this.maximumAngularVelocityForDriveToPoint = maximumAngularVelocityForDriveToPoint;
-  }
-
-  public void setDesiredPoseForDriveToPoint(Pose2d pose, double maxVelocityOutputForDriveToPoint) {
-    this.desiredPoseForDriveToPoint = pose;
-    this.wantedState = WantedState.DRIVE_TO_POINT;
-    this.maxVelocityOutputForDriveToPoint = maxVelocityOutputForDriveToPoint;
-  }
-
-  public void setDesiredPoseForDriveToPointWithConstraints(
-      Pose2d pose,
-      double maxVelocityOutputForDriveToPoint,
-      double maximumAngularVelocityForDriveToPoint) {
-    this.desiredPoseForDriveToPoint = pose;
-    this.wantedState = WantedState.DRIVE_TO_POINT;
-    this.maxVelocityOutputForDriveToPoint = maxVelocityOutputForDriveToPoint;
-    this.maximumAngularVelocityForDriveToPoint = maximumAngularVelocityForDriveToPoint;
-  }
-
-  private ChassisSpeeds calculateSpeedsBasedOnJoystickInputs() {
-    if (DriverStation.getAlliance().isEmpty()) {
-      return new ChassisSpeeds(0, 0, 0);
+  /** Returns the module states (turn angles and drive velocities) for all of the modules. */
+  @AutoLogOutput(key = "SwerveStates/Measured")
+  private SwerveModuleState[] getModuleStates() {
+    SwerveModuleState[] states = new SwerveModuleState[4];
+    for (int i = 0; i < 4; i++) {
+      states[i] = modules[i].getState();
     }
-
-    double xMagnitude = MathUtil.applyDeadband(controller.getLeftY(), controllerDeadband);
-    double yMagnitude = MathUtil.applyDeadband(controller.getLeftX(), controllerDeadband);
-    double angularMagnitude = MathUtil.applyDeadband(controller.getRightX(), controllerDeadband);
-
-    // Commented out, enable for smoother driving
-    // xMagnitude = Math.copySign(xMagnitude * xMagnitude, xMagnitude);
-    // yMagnitude = Math.copySign(yMagnitude * yMagnitude, yMagnitude);
-    angularMagnitude = Math.copySign(angularMagnitude * angularMagnitude, angularMagnitude);
-
-    double xVelocity =
-        (AllianceUtil.isBlueAlliance() ? -xMagnitude * maxVelocity : xMagnitude * maxVelocity)
-            * teleopVelocityCoefficient;
-    double yVelocity =
-        (AllianceUtil.isBlueAlliance() ? -yMagnitude * maxVelocity : yMagnitude * maxVelocity)
-            * teleopVelocityCoefficient;
-    double angularVelocity = angularMagnitude * maxAngularVelocity * rotationVelocityCoefficient;
-
-    Rotation2d skewCompensationFactor =
-        Rotation2d.fromRadians(swerveInputs.Speeds.omegaRadiansPerSecond * skewCompensationScalar);
-
-    return ChassisSpeeds.fromRobotRelativeSpeeds(
-        ChassisSpeeds.fromFieldRelativeSpeeds(
-            new ChassisSpeeds(xVelocity, yVelocity, -angularVelocity), getPose().getRotation()),
-        getPose().getRotation().plus(skewCompensationFactor));
+    return states;
   }
 
-  public void resetTranslationAndRotation(Pose2d pose2d) {
-    resetTranslation(pose2d);
-    resetRotation(pose2d.getRotation());
-  }
-
-  public void resetRotation(Rotation2d rotation2d) {
-    io.resetToParamaterizedRotation(rotation2d);
-  }
-
-  public void resetTranslation(Pose2d pose) {
-    io.resetRobotTranslation(pose.getTranslation());
-  }
-
-  public void resetRotationBasedOnAlliance() {
-    io.resetRotation();
-  }
-
-  public void setWantedState(WantedState state) {
-    this.wantedState = state;
-  }
-
-  public void setTargetRotation(Rotation2d desiredRotation) {
-    setWantedState(WantedState.ROTATION_LOCK);
-    this.desiredRotationForRotationLockState = desiredRotation;
-  }
-
-  public boolean isStopped() {
-    return isStopped(0.01);
-  }
-
-  public boolean isStopped(double tolerance) {
-    return Math.abs(swerveInputs.Speeds.vxMetersPerSecond) < tolerance
-        && Math.abs(swerveInputs.Speeds.vyMetersPerSecond) < tolerance
-        && Math.abs(swerveInputs.Speeds.omegaRadiansPerSecond) < tolerance;
-  }
-
-  public boolean isAtDriveToPointSetpoint(
-      double translationTolerance, Rotation2d rotationTolerance) {
-    var translationDistance =
-        desiredPoseForDriveToPoint.getTranslation().minus(getPose().getTranslation()).getNorm();
-    var rotationError =
-        Math.abs(
-            desiredPoseForDriveToPoint.getRotation().minus(getPose().getRotation()).getRadians());
-
-    Logger.recordOutput("Subsystems/Drive/DriveToPoint/distanceFromEndpoint", translationDistance);
-    Logger.recordOutput("Subsystems/Drive/DriveToPoint/rotationError", rotationError);
-
-    return MathUtil.isNear(0.0, translationDistance, translationTolerance)
-        && rotationError < rotationTolerance.getRadians();
-  }
-
-  public boolean isAtDriveToPointSetpoint() {
-    return isAtDriveToPointSetpoint(
-        driveToPointTranslationErrorMarginMeters,
-        Rotation2d.fromDegrees(rotationLockErrorMarginDegrees));
-  }
-
-  public boolean isAtDesiredRotation() {
-    return isAtDesiredRotation(Units.degreesToRadians(10.0));
-  }
-
-  public boolean isAtDesiredRotation(double tolerance) {
-    return driveAtAngle.HeadingController.getPositionError() < tolerance;
-  }
-
-  public boolean isAtChoreoSetpoint() {
-    if (systemState != SystemState.CHOREO_PATH) {
-      return false;
+  /** Returns the module positions (turn angles and drive positions) for all of the modules. */
+  private SwerveModulePosition[] getModulePositions() {
+    SwerveModulePosition[] states = new SwerveModulePosition[4];
+    for (int i = 0; i < 4; i++) {
+      states[i] = modules[i].getPosition();
     }
-    return MathUtil.isNear(
-            desiredChoreoTrajectory.getFinalPose(false).get().getX(),
-            getPose().getX(),
-            releasePieceTranslationErrorMarginMeters)
-        && MathUtil.isNear(
-            desiredChoreoTrajectory.getFinalPose(false).get().getY(),
-            getPose().getY(),
-            releasePieceTranslationErrorMarginMeters);
+    return states;
   }
 
-  public boolean isAtEndOfChoreoTrajectoryOrDriveToPoint() {
-    if (desiredChoreoTrajectory != null) {
-      return (MathUtil.isNear(
-                  desiredChoreoTrajectory.getFinalPose(false).get().getX(),
-                  getPose().getX(),
-                  releasePieceTranslationErrorMarginMeters)
-              && MathUtil.isNear(
-                  desiredChoreoTrajectory.getFinalPose(false).get().getY(),
-                  getPose().getY(),
-                  releasePieceTranslationErrorMarginMeters))
-          || isAtDriveToPointSetpoint();
-    } else {
-      return isAtDriveToPointSetpoint();
-    }
-  }
-
-  public double getRobotDistanceFromChoreoEndpoint() {
-    Logger.recordOutput("Choreo/FinalPose", desiredChoreoTrajectory.getFinalPose(false).get());
-    var distance =
-        Math.abs(
-            desiredChoreoTrajectory
-                .getFinalPose(false)
-                .get()
-                .minus(getPose())
-                .getTranslation()
-                .getNorm());
-    Logger.recordOutput("Choreo/DistanceFromEndpoint", distance);
-    return distance;
-  }
-
-  public double getDistanceFromDriveToPointSetpoint() {
-    var diff =
-        desiredPoseForDriveToPoint.getTranslation().minus(getPose().getTranslation()).getNorm();
-    Logger.recordOutput("DistanceFromDriveToPointSetpoint", diff);
-    return diff;
-  }
-
-  public void setTeleopVelocityCoefficient(double teleopVelocityCoefficient) {
-    this.teleopVelocityCoefficient = teleopVelocityCoefficient;
-  }
-
-  public void setRotationVelocityCoefficient(double rotationVelocityCoefficient) {
-    this.rotationVelocityCoefficient = rotationVelocityCoefficient;
-  }
-
-  public void addVisionMeasurement(
-      Pose2d visionPose, double timestampSeconds, Matrix<N3, N1> visionStdDevs) {
-    io.addVisionMeasurement(visionPose, timestampSeconds, visionStdDevs);
-  }
-
-  public Pose2d getPose() {
-    return swerveInputs.Pose;
-  }
-
-  public ReefConstants.ScoringCoralMappingRotationToTagID
-      getValidTagIDsFromClosest60DegreeRotation() {
-    return getValidTagIDsFromClosest60DegreeRotation(getClosest60Degrees());
-  }
-
-  public ReefConstants.ScoringCoralMappingRotationToTagID getValidTagIDsFromClosest60DegreeRotation(
-      Rotation2d closest60Degrees) {
-    var ids =
-        FieldConstants.isBlueAlliance()
-            ? ReefConstants.blueAllianceAngleToTagIdsMap.get(closest60Degrees)
-            : ReefConstants.redAllianceAngleToTagIdsMap.get(closest60Degrees);
-    return ids;
-  }
-
-  public Rotation2d getClosest60Degrees() {
-    double[] list = {60, 120, 180, -60, -120, 0};
-    double desiredRotation = 0;
-    for (double e : list) {
-      var rotation = Rotation2d.fromDegrees(e);
-      if (this.getPose().getRotation().minus(rotation).getDegrees() < 30.0
-          && this.getPose().getRotation().minus(rotation).getDegrees() >= -30) {
-        desiredRotation = e;
-      }
-    }
-    Logger.recordOutput("RobotState/Closest60DegreeAngle", desiredRotation);
-    return Rotation2d.fromDegrees(desiredRotation);
-  }
-
-  public Rotation2d getClosestRotationToFaceNearestReefFace() {
-    int correctTagID = getClosestTagId();
-    Logger.recordOutput("ClosestTagId", correctTagID);
-
-    var mapToUse =
-        FieldConstants.isBlueAlliance()
-            ? ReefConstants.blueAllianceAngleToTagIdsMap
-            : ReefConstants.redAllianceAngleToTagIdsMap;
-    Rotation2d frontScoreRotation = new Rotation2d();
-
-    for (Map.Entry<Rotation2d, ReefConstants.ScoringCoralMappingRotationToTagID> entry :
-        mapToUse.entrySet()) {
-      if (entry.getValue().frontId == correctTagID) {
-        frontScoreRotation = entry.getKey();
-      }
-    }
-    return frontScoreRotation;
-  }
-
-  public int getClosestTagId() {
-    var pose = getPose();
-    List<Pose2d> possiblePoses = List.of();
-    int correctTagID = 0;
-
-    if (FieldConstants.isBlueAlliance()) {
-      possiblePoses = ReefConstants.blueAlliancePoseToTagIdsMap.keySet().stream().toList();
-      correctTagID = ReefConstants.blueAlliancePoseToTagIdsMap.get(pose.nearest(possiblePoses));
-
-    } else {
-      possiblePoses = ReefConstants.redAlliancePoseToTagIdsMap.keySet().stream().toList();
-      correctTagID = ReefConstants.redAlliancePoseToTagIdsMap.get(pose.nearest(possiblePoses));
-    }
-
-    return correctTagID;
-  }
-
+  /** Returns the measured chassis speeds of the robot. */
+  @AutoLogOutput(key = "SwerveChassisSpeeds/Measured")
   public ChassisSpeeds getChassisSpeeds() {
-    return swerveInputs.Speeds;
+    return kinematics.toChassisSpeeds(getModuleStates());
+  }
+
+  /** Returns the position of each module in radians. */
+  public double[] getWheelRadiusCharacterizationPositions() {
+    double[] values = new double[4];
+    for (int i = 0; i < 4; i++) {
+      values[i] = modules[i].getWheelRadiusCharacterizationPosition();
+    }
+    return values;
+  }
+
+  /** Returns the average velocity of the modules in rotations/sec (Phoenix native units). */
+  public double getFFCharacterizationVelocity() {
+    double output = 0.0;
+    for (int i = 0; i < 4; i++) {
+      output += modules[i].getFFCharacterizationVelocity() / 4.0;
+    }
+    return output;
+  }
+
+  /** Returns the current odometry pose. */
+  @AutoLogOutput(key = "Odometry/Robot")
+  public Pose2d getPose() {
+    return poseEstimator.getEstimatedPosition();
+  }
+
+  /** Returns the current odometry pose on the blue side. */
+  @AutoLogOutput(key = "Odometry/FlippedRobot")
+  public Pose2d getFlippedPose() {
+    return AllianceFlipUtil.apply(poseEstimator.getEstimatedPosition());
+  }
+
+  /** Returns the current odometry rotation. */
+  public Rotation2d getRotation() {
+    return getPose().getRotation();
+  }
+
+  /** Resets the current odometry pose. */
+  public void setPose(Pose2d pose) {
+    poseEstimator.resetPosition(rawGyroRotation, getModulePositions(), pose);
+  }
+
+  /** Adds a new timestamped vision measurement. */
+  public void addVisionMeasurement(
+      Pose2d visionRobotPoseMeters,
+      double timestampSeconds,
+      Matrix<N3, N1> visionMeasurementStdDevs) {
+    poseEstimator.addVisionMeasurement(
+        visionRobotPoseMeters, timestampSeconds, visionMeasurementStdDevs);
+  }
+
+  /** Returns the maximum linear speed in meters per sec. */
+  public double getMaxLinearSpeedMetersPerSec() {
+    return TunerConstants.kSpeedAt12Volts.in(MetersPerSecond);
+  }
+
+  /** Returns the maximum angular speed in radians per sec. */
+  public double getMaxAngularSpeedRadPerSec() {
+    return getMaxLinearSpeedMetersPerSec() / DRIVE_BASE_RADIUS;
+  }
+
+  /** Returns an array of module translations. */
+  public static Translation2d[] getModuleTranslations() {
+    return new Translation2d[] {
+      new Translation2d(TunerConstants.FrontLeft.LocationX, TunerConstants.FrontLeft.LocationY),
+      new Translation2d(TunerConstants.FrontRight.LocationX, TunerConstants.FrontRight.LocationY),
+      new Translation2d(TunerConstants.BackLeft.LocationX, TunerConstants.BackLeft.LocationY),
+      new Translation2d(TunerConstants.BackRight.LocationX, TunerConstants.BackRight.LocationY)
+    };
   }
 }

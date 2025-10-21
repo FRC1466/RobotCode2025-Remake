@@ -7,6 +7,7 @@
 
 package frc.robot;
 
+import static edu.wpi.first.units.Units.MetersPerSecond;
 import static frc.robot.subsystems.vision.VisionConstants.*;
 
 import com.ctre.phoenix6.configs.CANcoderConfiguration;
@@ -35,8 +36,10 @@ import frc.robot.subsystems.Choreographer;
 import frc.robot.subsystems.Choreographer.WantedChoreography;
 import frc.robot.subsystems.SubsystemVisualizer;
 import frc.robot.subsystems.drive.Drive;
-import frc.robot.subsystems.drive.DriveIO;
-import frc.robot.subsystems.drive.DriveIOCTRE;
+import frc.robot.subsystems.drive.GyroIO;
+import frc.robot.subsystems.drive.GyroIOPigeon2;
+import frc.robot.subsystems.drive.ModuleIO;
+import frc.robot.subsystems.drive.ModuleIOTalonFX;
 import frc.robot.subsystems.elevator.Elevator;
 import frc.robot.subsystems.elevator.ElevatorIO;
 import frc.robot.subsystems.elevator.ElevatorIOSim;
@@ -128,13 +131,14 @@ public class RobotContainer {
     if (Constants.getMode() != Constants.Mode.REPLAY) {
       drive =
           new Drive(
-              new DriveIOCTRE(
-                  TunerConstants.getSwerveDrivetrainConstants(),
-                  TunerConstants.getModuleConstants()),
-              controller,
-              moduleConstants[0].SpeedAt12Volts,
-              moduleConstants[0].SpeedAt12Volts
-                  / Math.hypot(moduleConstants[0].LocationX, moduleConstants[0].LocationY));
+              new GyroIOPigeon2(),
+              new ModuleIOTalonFX(moduleConstants[0]),
+              new ModuleIOTalonFX(moduleConstants[1]),
+              new ModuleIOTalonFX(moduleConstants[2]),
+              new ModuleIOTalonFX(moduleConstants[3]),
+              controller.getHID(),
+              TunerConstants.kSpeedAt12Volts,
+              TunerConstants.kSpeedAt12Volts.in(MetersPerSecond) / Drive.DRIVE_BASE_RADIUS);
 
       overridePublisher = new OverridePublisher(new OverridePublisherIOReal());
 
@@ -169,11 +173,14 @@ public class RobotContainer {
     if (drive == null) {
       drive =
           new Drive(
-              new DriveIO() {},
-              controller,
-              moduleConstants[0].SpeedAt12Volts,
-              moduleConstants[0].SpeedAt12Volts
-                  / Math.hypot(moduleConstants[0].LocationX, moduleConstants[0].LocationY));
+              new GyroIO() {},
+              new ModuleIO() {},
+              new ModuleIO() {},
+              new ModuleIO() {},
+              new ModuleIO() {},
+              controller.getHID(),
+              TunerConstants.kSpeedAt12Volts,
+              TunerConstants.kSpeedAt12Volts.in(MetersPerSecond) / Drive.DRIVE_BASE_RADIUS);
     }
     if (elevator == null) {
       elevator = new Elevator(new ElevatorIO() {}, new HomeSensorIO() {});

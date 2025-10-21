@@ -130,10 +130,7 @@ public class AutoFactory {
                         ChoreographerConstants.ScoringSide.RIGHT,
                         Units.inchesToMeters(30.0)),
                     15.0)
-                .until(
-                    () ->
-                        robotContainer.getDrive().getDistanceFromDriveToPointSetpoint()
-                            < Units.inchesToMeters(80.0)),
+                .until(() -> robotContainer.getDrive().getdistance() < Units.inchesToMeters(80.0)),
             robotContainer.getChoreographer().setScoringSideCommand(ScoringSide.RIGHT),
             followThenScore(
                 ReefConstants.ReefFaces.IJ,

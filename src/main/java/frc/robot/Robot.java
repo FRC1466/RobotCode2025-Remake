@@ -289,8 +289,7 @@ public class Robot extends LoggedRobot {
     autoStart = Timer.getTimestamp();
     robotContainer
         .getDrive()
-        .resetTranslationAndRotation(
-            robotContainer.getAutonomousStartingPose().orElse(new Pose2d()));
+        .setPose(robotContainer.getAutonomousStartingPose().orElse(new Pose2d()));
     robotContainer.getIntake().setHasCoral(true);
     autoCommand = robotContainer.getAutonomousCommand();
     if (autoCommand != null) {

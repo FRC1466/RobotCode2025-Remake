@@ -9,8 +9,8 @@ package frc.robot.testing.testers;
 
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.subsystems.elevator.Elevator;
 import frc.robot.subsystems.pivot.Pivot;
 import frc.robot.testing.SubsystemTester;
@@ -62,8 +62,7 @@ public class ManualTuningTester extends SubsystemTester {
             // Initialize NetworkTables with current positions
             SmartDashboard.putNumber(
                 NT_ELEVATOR_SETPOINT_INCHES, Units.metersToInches(elevator.getPosition()));
-            SmartDashboard.putNumber(
-                NT_PIVOT_SETPOINT_DEGREES, pivot.getAngle().getDegrees());
+            SmartDashboard.putNumber(NT_PIVOT_SETPOINT_DEGREES, pivot.getAngle().getDegrees());
             SmartDashboard.putBoolean(NT_ELEVATOR_ENABLED, true);
             SmartDashboard.putBoolean(NT_PIVOT_ENABLED, true);
 
@@ -80,17 +79,14 @@ public class ManualTuningTester extends SubsystemTester {
           @Override
           protected void onExecute() {
             // Read enable states
-            boolean elevatorEnabled =
-                SmartDashboard.getBoolean(NT_ELEVATOR_ENABLED, true);
-            boolean pivotEnabled =
-                SmartDashboard.getBoolean(NT_PIVOT_ENABLED, true);
+            boolean elevatorEnabled = SmartDashboard.getBoolean(NT_ELEVATOR_ENABLED, true);
+            boolean pivotEnabled = SmartDashboard.getBoolean(NT_PIVOT_ENABLED, true);
 
             // Control elevator if enabled
             if (elevatorEnabled) {
               double targetInches =
                   SmartDashboard.getNumber(
-                      NT_ELEVATOR_SETPOINT_INCHES,
-                      Units.metersToInches(elevator.getPosition()));
+                      NT_ELEVATOR_SETPOINT_INCHES, Units.metersToInches(elevator.getPosition()));
               double targetMeters = Units.inchesToMeters(targetInches);
 
               // Clamp to safe range (0 to 36 inches)
@@ -122,13 +118,11 @@ public class ManualTuningTester extends SubsystemTester {
               pivot.setWantedState(Pivot.WantedState.MOVE_TO_POSITION, targetAngle);
 
               // Publish current state
-              SmartDashboard.putNumber(
-                  NT_PIVOT_CURRENT_DEGREES, pivot.getAngle().getDegrees());
+              SmartDashboard.putNumber(NT_PIVOT_CURRENT_DEGREES, pivot.getAngle().getDegrees());
               SmartDashboard.putBoolean(NT_PIVOT_AT_GOAL, pivot.atGoal());
             } else {
               pivot.setWantedState(Pivot.WantedState.IDLE);
-              SmartDashboard.putNumber(
-                  NT_PIVOT_CURRENT_DEGREES, pivot.getAngle().getDegrees());
+              SmartDashboard.putNumber(NT_PIVOT_CURRENT_DEGREES, pivot.getAngle().getDegrees());
             }
 
             // Log positions periodically
@@ -169,6 +163,7 @@ public class ManualTuningTester extends SubsystemTester {
     System.out.println("Subsystems returned to IDLE state.");
 
     // Clear NetworkTables
-    SmartDashboard.putString(NT_INSTRUCTIONS, "Manual mode stopped. Select and start to re-enable.");
+    SmartDashboard.putString(
+        NT_INSTRUCTIONS, "Manual mode stopped. Select and start to re-enable.");
   }
 }
