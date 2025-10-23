@@ -225,6 +225,6 @@ public class DriveTester extends SubsystemTester {
   @Override
   protected void returnToSafeState() {
     // Drive will handle stopping in its own state machine
-    drive.setWantedState(Drive.WantedState.IDLE);
+    drive.setState(Drive.State.STOP);
   }
 }

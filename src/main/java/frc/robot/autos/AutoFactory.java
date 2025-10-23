@@ -7,23 +7,27 @@
 
 package frc.robot.autos;
 
-import choreo.Choreo;
-import choreo.trajectory.SwerveSample;
-import choreo.trajectory.Trajectory;
+import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.path.PathPlannerPath;
+import com.pathplanner.lib.util.FileVersionException;
 import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.*;
 import frc.robot.RobotContainer;
+import frc.robot.commands.DriveToPose;
 import frc.robot.constants.ChoreographerConstants;
 import frc.robot.constants.ChoreographerConstants.ScoringSide;
 import frc.robot.constants.FieldConstants;
 import frc.robot.constants.ReefConstants;
 import frc.robot.constants.ReefConstants.ReefFaces;
 import frc.robot.subsystems.Choreographer;
+import java.io.IOException;
+import org.json.simple.parser.ParseException;
 
 /** A factory for creating autonomous programs for a given {@link Auto} */
 @SuppressWarnings("unused")
@@ -31,8 +35,6 @@ public class AutoFactory {
   private final DriverStation.Alliance alliance;
 
   private final RobotContainer robotContainer;
-
-  private final Choreo.TrajectoryCache trajectoryCache;
 
   private final double DISTANCE_TO_MOVE_ARM_UP = Units.inchesToMeters(48.0);
 
@@ -44,8 +46,6 @@ public class AutoFactory {
   public AutoFactory(final DriverStation.Alliance alliance, final RobotContainer robotContainer) {
     this.alliance = alliance;
     this.robotContainer = robotContainer;
-
-    trajectoryCache = new Choreo.TrajectoryCache();
   }
 
   /* Autonomous program factories
@@ -64,12 +64,12 @@ public class AutoFactory {
 
   public Pair<Pose2d, Command> createTaxiCommand() {
     Pose2d initialPose = robotContainer.getDrive().getPose();
-    var targetPose =
+    var transform =
         FieldConstants.isBlueAlliance()
-            ? initialPose.minus(new Pose2d(2, 0, new Rotation2d()))
-            : initialPose.minus(new Pose2d(-2, 0, new Rotation2d()));
-    Pose2d finalPose = new Pose2d(targetPose.getTranslation(), targetPose.getRotation());
-    return Pair.of(initialPose, driveToPoint(finalPose, 1.0));
+            ? new Transform2d(2, 0, new Rotation2d())
+            : new Transform2d(-2, 0, new Rotation2d());
+    Pose2d finalPose = initialPose.transformBy(transform);
+    return Pair.of(initialPose, driveToPoint(finalPose));
   }
 
   public Pair<Pose2d, Command> createEDCAuto() {
@@ -79,16 +79,13 @@ public class AutoFactory {
         Commands.sequence(
             robotContainer.getChoreographer().setScoringSideCommand(ScoringSide.LEFT),
             superFollowThenScore(ReefFaces.EF, Choreographer.WantedChoreography.SCORE_L4),
-            followThenIntakeFromStation(
-                FieldConstants.getRightStationPickup(), Units.feetToMeters(10)),
+            followThenIntakeFromStation(FieldConstants.getRightStationPickup(alliance)),
             robotContainer.getChoreographer().setScoringSideCommand(ScoringSide.RIGHT),
             superFollowThenScore(ReefFaces.CD, Choreographer.WantedChoreography.SCORE_L4),
-            followThenIntakeFromStation(
-                FieldConstants.getRightStationPickup(), Units.feetToMeters(10)),
+            followThenIntakeFromStation(FieldConstants.getRightStationPickup(alliance)),
             robotContainer.getChoreographer().setScoringSideCommand(ScoringSide.LEFT),
             superFollowThenScore(ReefFaces.CD, Choreographer.WantedChoreography.SCORE_L4),
-            followThenIntakeFromStation(
-                FieldConstants.getRightStationPickup(), Units.feetToMeters(10))));
+            followThenIntakeFromStation(FieldConstants.getRightStationPickup(alliance))));
   }
 
   public Pair<Pose2d, Command> createIKLJAuto() {
@@ -101,42 +98,21 @@ public class AutoFactory {
         initialPose,
         Commands.sequence(
             robotContainer.getChoreographer().setScoringSideCommand(ScoringSide.LEFT),
-            followThenScore(
-                ReefConstants.ReefFaces.IJ,
-                Choreographer.WantedChoreography.SCORE_L4,
-                Units.inchesToMeters(72.0),
-                Units.feetToMeters(8.0)),
-            followThenIntakeFromStation(
-                FieldConstants.getLeftStationPickup(alliance), Units.feetToMeters(10.0)),
+            followThenScore(ReefFaces.IJ, Choreographer.WantedChoreography.SCORE_L4),
+            followThenIntakeFromStation(FieldConstants.getLeftStationPickup(alliance)),
             robotContainer.getChoreographer().setScoringSideCommand(ScoringSide.LEFT),
-            followThenScore(
-                ReefConstants.ReefFaces.KL,
-                Choreographer.WantedChoreography.SCORE_L4,
-                Units.inchesToMeters(72.0),
-                Units.feetToMeters(10.0)),
-            followThenIntakeFromStation(
-                FieldConstants.getLeftStationPickup(alliance), Units.feetToMeters(12.0)),
+            followThenScore(ReefFaces.KL, Choreographer.WantedChoreography.SCORE_L4),
+            followThenIntakeFromStation(FieldConstants.getLeftStationPickup(alliance)),
             robotContainer.getChoreographer().setScoringSideCommand(ScoringSide.RIGHT),
-            followThenScore(
-                ReefConstants.ReefFaces.KL,
-                Choreographer.WantedChoreography.SCORE_L4,
-                Units.inchesToMeters(72.0),
-                Units.feetToMeters(10.0)),
-            followThenIntakeFromStation(
-                FieldConstants.getLeftStationPickup(alliance), Units.feetToMeters(12.0)),
+            followThenScore(ReefFaces.KL, Choreographer.WantedChoreography.SCORE_L4),
+            followThenIntakeFromStation(FieldConstants.getLeftStationPickup(alliance)),
             driveToPoint(
-                    FieldConstants.getDesiredPointToDriveToForCoralScoring(
-                        offsetID,
-                        ChoreographerConstants.ScoringSide.RIGHT,
-                        Units.inchesToMeters(30.0)),
-                    15.0)
-                .until(() -> robotContainer.getDrive().getdistance() < Units.inchesToMeters(80.0)),
+                FieldConstants.getDesiredPointToDriveToForCoralScoring(
+                    offsetID,
+                    ChoreographerConstants.ScoringSide.RIGHT,
+                    Units.inchesToMeters(30.0))),
             robotContainer.getChoreographer().setScoringSideCommand(ScoringSide.RIGHT),
-            followThenScore(
-                ReefConstants.ReefFaces.IJ,
-                Choreographer.WantedChoreography.SCORE_L4,
-                Units.inchesToMeters(60.0),
-                Units.feetToMeters(10.0)),
+            followThenScore(ReefFaces.IJ, Choreographer.WantedChoreography.SCORE_L4),
             setState(Choreographer.WantedChoreography.DEFAULT_STATE)));
   }
 
@@ -150,45 +126,19 @@ public class AutoFactory {
         initialPose,
         Commands.sequence(
             robotContainer.getChoreographer().setScoringSideCommand(ScoringSide.RIGHT),
-            followThenScore(
-                ReefConstants.ReefFaces.EF,
-                Choreographer.WantedChoreography.SCORE_L4,
-                Units.inchesToMeters(72.0),
-                Units.feetToMeters(8.0)),
-            followThenIntakeFromStation(
-                FieldConstants.getRightStationPickup(alliance), Units.feetToMeters(10.0)),
+            followThenScore(ReefFaces.EF, Choreographer.WantedChoreography.SCORE_L4),
+            followThenIntakeFromStation(FieldConstants.getRightStationPickup(alliance)),
             robotContainer.getChoreographer().setScoringSideCommand(ScoringSide.RIGHT),
-            followThenScore(
-                ReefConstants.ReefFaces.CD,
-                Choreographer.WantedChoreography.SCORE_L4,
-                Units.inchesToMeters(72.0),
-                Units.feetToMeters(10.0)),
-            followThenIntakeFromStation(
-                FieldConstants.getRightStationPickup(alliance), Units.feetToMeters(12.0)),
+            followThenScore(ReefFaces.CD, Choreographer.WantedChoreography.SCORE_L4),
+            followThenIntakeFromStation(FieldConstants.getRightStationPickup(alliance)),
             robotContainer.getChoreographer().setScoringSideCommand(ScoringSide.LEFT),
-            followThenScore(
-                ReefConstants.ReefFaces.CD,
-                Choreographer.WantedChoreography.SCORE_L4,
-                Units.inchesToMeters(72.0),
-                Units.feetToMeters(10.0)),
-            followThenIntakeFromStation(
-                FieldConstants.getRightStationPickup(alliance), Units.feetToMeters(12.0)),
+            followThenScore(ReefFaces.CD, Choreographer.WantedChoreography.SCORE_L4),
+            followThenIntakeFromStation(FieldConstants.getRightStationPickup(alliance)),
             driveToPoint(
-                    FieldConstants.getDesiredPointToDriveToForCoralScoring(
-                        offsetID,
-                        ChoreographerConstants.ScoringSide.LEFT,
-                        Units.inchesToMeters(30.0)),
-                    15.0)
-                .until(
-                    () ->
-                        robotContainer.getDrive().getDistanceFromDriveToPointSetpoint()
-                            < Units.inchesToMeters(80.0)),
+                FieldConstants.getDesiredPointToDriveToForCoralScoring(
+                    offsetID, ChoreographerConstants.ScoringSide.LEFT, Units.inchesToMeters(30.0))),
             robotContainer.getChoreographer().setScoringSideCommand(ScoringSide.LEFT),
-            followThenScore(
-                ReefConstants.ReefFaces.EF,
-                Choreographer.WantedChoreography.SCORE_L4,
-                Units.inchesToMeters(60.0),
-                Units.feetToMeters(10.0)),
+            followThenScore(ReefFaces.EF, Choreographer.WantedChoreography.SCORE_L4),
             setState(Choreographer.WantedChoreography.DEFAULT_STATE)));
   }
 
@@ -196,122 +146,91 @@ public class AutoFactory {
     return robotContainer.getChoreographer().setChoreographyCommand(state);
   }
 
-  Command followTrajectory(Trajectory<SwerveSample> trajectory) {
-    return new InstantCommand(
-        () -> robotContainer.getDrive().setDesiredChoreoTrajectory(trajectory));
+  Command followPath(String pathName) {
+    Command pathCommand = Commands.none();
+    try {
+      pathCommand = AutoBuilder.followPath(PathPlannerPath.fromPathFile(pathName));
+    } catch (FileVersionException | IOException | ParseException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
+    return pathCommand;
   }
 
-  Command driveToPoint(Pose2d point, double maxVelocityOutputForDriveToPoint) {
-    return new InstantCommand(
-            () ->
-                robotContainer
-                    .getDrive()
-                    .setDesiredPoseForDriveToPointWithConstraints(
-                        point, maxVelocityOutputForDriveToPoint, 1.0))
-        .andThen(new WaitUntilCommand(() -> robotContainer.getDrive().isAtDriveToPointSetpoint()));
-  }
-
-  Command driveToPointWithUnconstrainedMaxVelocity(
-      Pose2d point, double maxVelocityOutputForDriveToPoint) {
-    return new InstantCommand(
-            () ->
-                robotContainer
-                    .getDrive()
-                    .setDesiredPoseForDriveToPointWithConstraints(
-                        point, maxVelocityOutputForDriveToPoint, Double.NaN))
-        .andThen(new WaitUntilCommand(() -> robotContainer.getDrive().isAtDriveToPointSetpoint()));
+  Command driveToPoint(Pose2d point) {
+    return new DriveToPose(robotContainer.getDrive(), () -> point);
   }
 
   private Command followThenScore(
       ReefConstants.ReefFaces reefFaces,
       Choreographer.WantedChoreography scoreState,
-      double distanceFromEndOfPathtoMoveArmUp,
-      double maxVelocity) {
+      double distanceFromEndOfPathToMoveArmUp) {
     var desiredPose = getAutoScoringPose(reefFaces, scoreState);
-    return ((driveToPoint(desiredPose, maxVelocity)
-            .alongWith(
-                new WaitUntilCommand(
-                        () ->
-                            robotContainer.getDrive().getDistanceFromDriveToPointSetpoint()
-                                < distanceFromEndOfPathtoMoveArmUp)
-                    .andThen(setState(scoreState)))))
-        .andThen(waitForCoralRelease().deadlineFor(new WaitCommand(1.0)));
-  }
-
-  private Command followThenScore(
-      ReefConstants.ReefFaces reefFaces,
-      Choreographer.WantedChoreography scoreState,
-      double distanceFromEndOfPathtoMoveArmUp) {
-    var desiredPose = getAutoScoringPose(reefFaces, scoreState);
-    return ((driveToPoint(desiredPose, Units.feetToMeters(8.0))
-            .alongWith(
-                new WaitUntilCommand(
-                        () ->
-                            robotContainer.getDrive().getDistanceFromDriveToPointSetpoint()
-                                < distanceFromEndOfPathtoMoveArmUp)
-                    .andThen(setState(scoreState)))))
-        .andThen(waitForCoralRelease().raceWith(new WaitCommand(1.0)));
-  }
-
-  private Command followThenScoreWithNonDefaultMaxVelocity(
-      ReefConstants.ReefFaces reefFaces,
-      Choreographer.WantedChoreography scoreState,
-      double maxVelocity) {
-    var desiredPose = getAutoScoringPose(reefFaces, scoreState);
-    return ((driveToPoint(desiredPose, maxVelocity).alongWith(setState(scoreState))))
-        .andThen(waitForCoralRelease().raceWith(new WaitCommand(1.0)));
-  }
-
-  private Command followThenScoreWithMinimumReleaseTime(
-      ReefConstants.ReefFaces reefFaces, Choreographer.WantedChoreography scoreState) {
-    var desiredPose = getAutoScoringPose(reefFaces, scoreState);
-    return ((driveToPoint(desiredPose, Units.feetToMeters(12.0)).alongWith(setState(scoreState))))
-        .andThen(
-            new WaitCommand(0.5).andThen(waitForCoralRelease()).raceWith(new WaitCommand(1.0)));
+    var driveCommand = driveToPoint(desiredPose);
+    return driveCommand
+        .alongWith(
+            Commands.waitUntil(
+                    () ->
+                        robotContainer
+                                .getDrive()
+                                .getPose()
+                                .getTranslation()
+                                .getDistance(desiredPose.getTranslation())
+                            < distanceFromEndOfPathToMoveArmUp)
+                .andThen(setState(scoreState)))
+        .andThen(waitForCoralRelease().deadlineWith(Commands.waitSeconds(1.0)));
   }
 
   private Command followThenScore(
       ReefConstants.ReefFaces reefFaces, Choreographer.WantedChoreography scoreState) {
     var desiredPose = getAutoScoringPose(reefFaces, scoreState);
-    return ((driveToPoint(desiredPose, Units.feetToMeters(12.0)).alongWith(setState(scoreState))))
-        .andThen(waitForCoralRelease().raceWith(new WaitCommand(1.0)));
+    return driveToPoint(desiredPose)
+        .alongWith(setState(scoreState))
+        .andThen(waitForCoralRelease().raceWith(Commands.waitSeconds(1.0)));
   }
 
   private Command superFollowThenScore(
       ReefConstants.ReefFaces reefFaces, Choreographer.WantedChoreography scoreState) {
     return Commands.sequence(
         Commands.runOnce(() -> robotContainer.getChoreographer().resetDebouncers()),
-        (driveToAutoScoringPose(reefFaces, scoreState)
-                .until(() -> robotContainer.getChoreographer().isReadyToEjectInAutoPeriod())
-                .alongWith(setState(scoreState)))
-            .andThen(waitForCoralRelease().raceWith(new WaitCommand(1.0))));
+        driveToAutoScoringPose(reefFaces, scoreState)
+            .until(() -> robotContainer.getChoreographer().isReadyToEjectInAutoPeriod())
+            .alongWith(setState(scoreState))
+            .andThen(waitForCoralRelease().raceWith(Commands.waitSeconds(1.0))));
   }
 
   private Command followThenScore(
       ReefConstants.ReefFaces reefFaces,
-      Trajectory<SwerveSample> path,
+      String pathName,
       Choreographer.WantedChoreography scoreState) {
-    return (followTrajectory(path)
-            .andThen(
-                new WaitUntilCommand(
-                    robotContainer.getDrive()::isAtEndOfChoreoTrajectoryOrDriveToPoint)))
-        .alongWith(
-            new WaitUntilCommand(
-                    () ->
-                        robotContainer.getDrive().getRobotDistanceFromChoreoEndpoint()
-                            < DISTANCE_TO_MOVE_ARM_UP)
-                .andThen(followThenScore(reefFaces, scoreState)));
+    try {
+      PathPlannerPath path = PathPlannerPath.fromPathFile(pathName);
+      return followPath(pathName)
+          .alongWith(
+              Commands.waitUntil(
+                      () ->
+                          robotContainer
+                                  .getDrive()
+                                  .getPose()
+                                  .getTranslation()
+                                  .getDistance(
+                                      path.getStartingHolonomicPose().get().getTranslation())
+                              < DISTANCE_TO_MOVE_ARM_UP)
+                  .andThen(followThenScore(reefFaces, scoreState)));
+    } catch (FileVersionException | IOException | ParseException e) {
+      e.printStackTrace();
+      return followPath(pathName).andThen(followThenScore(reefFaces, scoreState));
+    }
   }
 
   public Pose2d getIntakePose(Translation2d intakeLocation) {
     var angle =
         intakeLocation.minus(robotContainer.getDrive().getPose().getTranslation()).getAngle();
-    // var translation = intakeLocation.plus(new Translation2d(2.0, angle));
     return new Pose2d(intakeLocation, angle);
   }
 
-  private Command followThenIntakeFromStation(Pose2d intakePose, double intakeVelocity) {
-    return driveToPoint(intakePose, intakeVelocity)
+  private Command followThenIntakeFromStation(Pose2d intakePose) {
+    return driveToPoint(intakePose)
         .alongWith(setState(Choreographer.WantedChoreography.INTAKE_CORAL_FROM_STATION))
         .andThen(
             Commands.waitUntil(() -> robotContainer.getChoreographer().isReadyToIntakeCountdown()))
@@ -319,11 +238,11 @@ public class AutoFactory {
   }
 
   private Command waitForCoralRelease() {
-    return new WaitUntilCommand(() -> !robotContainer.getIntake().hasCoral());
+    return Commands.waitUntil(() -> !robotContainer.getIntake().hasCoral());
   }
 
   private Command waitForCoralPickup() {
-    return new WaitUntilCommand(() -> robotContainer.getIntake().hasCoral());
+    return Commands.waitUntil(() -> robotContainer.getIntake().hasCoral());
   }
 
   public Pose2d getAutoScoringPose(

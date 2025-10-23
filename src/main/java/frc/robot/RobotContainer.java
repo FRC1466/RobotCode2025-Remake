@@ -7,14 +7,12 @@
 
 package frc.robot;
 
-import static edu.wpi.first.units.Units.MetersPerSecond;
 import static frc.robot.subsystems.vision.VisionConstants.*;
 
-import com.ctre.phoenix6.configs.CANcoderConfiguration;
-import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import com.ctre.phoenix6.swerve.SwerveModuleConstants;
 import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
@@ -37,9 +35,8 @@ import frc.robot.subsystems.Choreographer.WantedChoreography;
 import frc.robot.subsystems.SubsystemVisualizer;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.GyroIO;
-import frc.robot.subsystems.drive.GyroIOPigeon2;
 import frc.robot.subsystems.drive.ModuleIO;
-import frc.robot.subsystems.drive.ModuleIOTalonFX;
+import frc.robot.subsystems.drive.ModuleIOSim;
 import frc.robot.subsystems.elevator.Elevator;
 import frc.robot.subsystems.elevator.ElevatorIO;
 import frc.robot.subsystems.elevator.ElevatorIOSim;
@@ -125,25 +122,18 @@ public class RobotContainer {
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
-    SwerveModuleConstants<TalonFXConfiguration, TalonFXConfiguration, CANcoderConfiguration>[]
-        moduleConstants = TunerConstants.getModuleConstants();
-
     if (Constants.getMode() != Constants.Mode.REPLAY) {
-      drive =
-          new Drive(
-              new GyroIOPigeon2(),
-              new ModuleIOTalonFX(moduleConstants[0]),
-              new ModuleIOTalonFX(moduleConstants[1]),
-              new ModuleIOTalonFX(moduleConstants[2]),
-              new ModuleIOTalonFX(moduleConstants[3]),
-              controller.getHID(),
-              TunerConstants.kSpeedAt12Volts,
-              TunerConstants.kSpeedAt12Volts.in(MetersPerSecond) / Drive.DRIVE_BASE_RADIUS);
-
       overridePublisher = new OverridePublisher(new OverridePublisherIOReal());
 
       switch (Constants.getRobot()) {
         case COMPBOT -> {
+          /* drive =
+          new Drive(
+              new GyroIOPigeon2(),
+              new ModuleIOTalonFX(TunerConstants.FrontLeft),
+              new ModuleIOTalonFX(TunerConstants.FrontRight),
+              new ModuleIOTalonFX(TunerConstants.BackLeft),
+              new ModuleIOTalonFX(TunerConstants.BackRight)); */
           elevator = new Elevator(new ElevatorIOTalonFX(), new HomeSensorIO() {});
           wrist = new Pivot(new PivotIOTalonFX());
           intake =
@@ -157,6 +147,13 @@ public class RobotContainer {
           break;
         }
         case SIMBOT -> {
+          drive =
+              new Drive(
+                  new GyroIO() {},
+                  new ModuleIOSim(TunerConstants.FrontLeft),
+                  new ModuleIOSim(TunerConstants.FrontRight),
+                  new ModuleIOSim(TunerConstants.BackLeft),
+                  new ModuleIOSim(TunerConstants.BackRight));
           elevator = new Elevator(new ElevatorIOSim(), new HomeSensorIO() {});
           wrist = new Pivot(new PivotIOSim());
           intake =
@@ -177,10 +174,7 @@ public class RobotContainer {
               new ModuleIO() {},
               new ModuleIO() {},
               new ModuleIO() {},
-              new ModuleIO() {},
-              controller.getHID(),
-              TunerConstants.kSpeedAt12Volts,
-              TunerConstants.kSpeedAt12Volts.in(MetersPerSecond) / Drive.DRIVE_BASE_RADIUS);
+              new ModuleIO() {});
     }
     if (elevator == null) {
       elevator = new Elevator(new ElevatorIO() {}, new HomeSensorIO() {});
@@ -256,6 +250,27 @@ public class RobotContainer {
    * edu.wpi.first.wpilibj2.command.button.JoystickButton}.
    */
   private void configureButtonBindings() {
+    drive.setDefaultCommand(
+        // This command is now structured to only set the state ONCE when it starts.
+        Commands.runOnce(() -> drive.setState(Drive.State.TELEOP))
+            .andThen(
+                // After setting the state, this runs continuously.
+                Commands.run(
+                    () -> {
+                      // The state is already TELEOP, so we just send speeds.
+                      double xSpeed =
+                          -controller.getLeftY() * drive.getMaxLinearSpeedMetersPerSec();
+                      double ySpeed =
+                          -controller.getLeftX() * drive.getMaxLinearSpeedMetersPerSec();
+                      double rotSpeed =
+                          -controller.getRightX() * drive.getMaxAngularSpeedRadPerSec();
+
+                      drive.setTeleopSpeeds(
+                          ChassisSpeeds.fromFieldRelativeSpeeds(
+                              xSpeed, ySpeed, rotSpeed, drive.getRotation()));
+                    },
+                    drive)));
+
     // Coral score level selection
     final Container<Integer> selectedCoralScoreLevel = new Container<>(4);
 
@@ -416,7 +431,13 @@ public class RobotContainer {
     // Reset gyro
     var driverStartAndBack = controller.start().and(controller.back());
     driverStartAndBack.onTrue(
-        Commands.runOnce(() -> drive.resetRotationBasedOnAlliance())
+        Commands.runOnce(
+                () ->
+                    drive.setPose(
+                        new Pose2d(
+                            drive.getPose().getX(),
+                            drive.getPose().getY(),
+                            Rotation2d.fromDegrees(AllianceUtil.isBlueAlliance() ? 0 : 180))))
             .withName("Reset Gyro")
             .ignoringDisable(true));
 

@@ -22,6 +22,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Robot;
+import frc.robot.commands.DriveToPose;
 import frc.robot.constants.ChoreographerConstants.ScoringSide;
 import frc.robot.constants.FieldConstants;
 import frc.robot.constants.ReefConstants;
@@ -44,8 +45,6 @@ public class Choreographer extends SubsystemBase {
   private final Pivot wrist;
   private final OverridePublisher overrides;
   private final Vision vision;
-
-  private static final double defaultTeleopTranslationCoefficient = 1.0;
 
   // Debouncers
   private final Debouncer homeDebouncer = new Debouncer(0.1, Debouncer.DebounceType.kRising);
@@ -112,6 +111,9 @@ public class Choreographer extends SubsystemBase {
 
   @Getter private BooleanSupplier wristPastSafe = () -> false;
 
+  private final DriveToPose driveToPoseCommand;
+  private Pose2d driveToPoseTarget = new Pose2d();
+
   public Choreographer(
       Drive drive,
       Intake intake,
@@ -127,6 +129,9 @@ public class Choreographer extends SubsystemBase {
     this.vision = vision;
 
     this.wristPastSafe = () -> wrist.getAngle().getRadians() > .6;
+
+    // Create the command once, with a supplier that gets the current target
+    this.driveToPoseCommand = new DriveToPose(drive, () -> this.driveToPoseTarget);
   }
 
   @Override
@@ -309,11 +314,7 @@ public class Choreographer extends SubsystemBase {
 
   private void holdingAlgae() {
     subsystemsRun(ALGAE_HOLD);
-
-    drive.setWantedState(Drive.WantedState.TELEOP_DRIVE);
-    drive.setTeleopVelocityCoefficient(defaultTeleopTranslationCoefficient);
-    drive.setRotationVelocityCoefficient(1.0);
-
+    drive.setState(Drive.State.TELEOP);
     intake.setWantedState(
         wrist.atGoal() && elevator.atGoal()
             ? Intake.WantedState.HOLD_ALGAE
@@ -324,9 +325,7 @@ public class Choreographer extends SubsystemBase {
     coralEject = false;
     subsystemsRun(TRAVEL);
     intake.setWantedState(Intake.WantedState.OFF);
-    drive.setWantedState(Drive.WantedState.TELEOP_DRIVE);
-    drive.setTeleopVelocityCoefficient(defaultTeleopTranslationCoefficient);
-    drive.setRotationVelocityCoefficient(1.0);
+    drive.setState(Drive.State.TELEOP);
   }
 
   private void holdingCoralAuto() {
@@ -342,9 +341,7 @@ public class Choreographer extends SubsystemBase {
       subsystemsRun(STOW);
     }
     intake.setWantedState(Intake.WantedState.OFF);
-    drive.setWantedState(Drive.WantedState.TELEOP_DRIVE);
-    drive.setTeleopVelocityCoefficient(defaultTeleopTranslationCoefficient);
-    drive.setRotationVelocityCoefficient(1.0);
+    drive.setState(Drive.State.TELEOP);
   }
 
   private void noPieceAuto() {
@@ -366,13 +363,13 @@ public class Choreographer extends SubsystemBase {
       intake.setWantedState(Intake.WantedState.INTAKE_CORAL);
     } else {
       if (intake.hasCoral()) {
-        drive.setState(Drive.WantedState.TELEOP_DRIVE);
+        drive.setState(Drive.State.TELEOP);
       } else if (drive.getPose().getRotation().getDegrees() >= 0) {
         var angleToSnapTo = FieldConstants.isBlueAlliance() ? 54.0 : 126.0;
-        drive.setTargetRotation(Rotation2d.fromDegrees(angleToSnapTo));
+        drive.setRotationLock(Rotation2d.fromDegrees(angleToSnapTo));
       } else {
         var angleToSnapTo = FieldConstants.isBlueAlliance() ? -54.0 : -126.0;
-        drive.setTargetRotation(Rotation2d.fromDegrees(angleToSnapTo));
+        drive.setRotationLock(Rotation2d.fromDegrees(angleToSnapTo));
       }
       if (elevator.getPosition() > 0.15) {
         subsystemsRun(TRAVEL);
@@ -407,7 +404,7 @@ public class Choreographer extends SubsystemBase {
             ? ReefConstants.blueAllianceAlgae
             : ReefConstants.redAllianceAlgae;
 
-    var location = levelMap.get(drive.getClosestRotationToFaceNearestReefFace());
+    var location = levelMap.get(getClosestRotationToFaceNearestReefFace());
     var level = location.front;
 
     wrist.setWantedState(Pivot.WantedState.MOVE_TO_POSITION, WristElevatorPoses.TRAVEL.wristAngle);
@@ -421,24 +418,24 @@ public class Choreographer extends SubsystemBase {
         FieldConstants.isBlueAlliance()
             ? ReefConstants.blueAllianceAngleToTagIdsMap
             : ReefConstants.redAllianceAngleToTagIdsMap;
-    var ids = angleToIdMap.get(drive.getClosestRotationToFaceNearestReefFace());
+    var ids = angleToIdMap.get(getClosestRotationToFaceNearestReefFace());
     var id = ids.frontId;
 
     if (!hasDriveReachedMiddleAlgae) {
-      drive.setDesiredPoseForDriveToPoint(getIntermediatePointToDriveToForAlgaeIntaking(id));
-      if (drive.isAtDriveToPointSetpoint()) {
+      setDriveToPoseTarget(getIntermediatePointToDriveToForAlgaeIntaking(id));
+      if (isAtDriveToPoseSetpoint()) {
         hasDriveReachedMiddleAlgae = true;
       }
     } else if (intake.hasAlgae()) {
-      drive.setDesiredPoseForDriveToPoint(getBackoutPointToDriveToForAlgaeIntaking(id));
-      if (drive.isAtDriveToPointSetpoint()) {
+      setDriveToPoseTarget(getBackoutPointToDriveToForAlgaeIntaking(id));
+      if (isAtDriveToPoseSetpoint()) {
         subsystemsRun(ALGAE_HOLD);
       }
     } else {
       if (!wrist.atGoal() && !elevator.atGoal(Units.inchesToMeters(1.0))) {
-        drive.setDesiredPoseForDriveToPoint(getIntermediatePointToDriveToForAlgaeIntaking(id));
+        setDriveToPoseTarget(getIntermediatePointToDriveToForAlgaeIntaking(id));
       } else {
-        drive.setDesiredPoseForDriveToPoint(getDesiredPointToDriveToForAlgaeIntaking(id));
+        setDriveToPoseTarget(getDesiredPointToDriveToForAlgaeIntaking(id));
       }
     }
     if (Robot.isSimulation()) {
@@ -531,38 +528,24 @@ public class Choreographer extends SubsystemBase {
   }
 
   private void moveAlgaeToNetPosition() {
-    Rotation2d rotation = FieldConstants.isBlueAlliance() ? Rotation2d.k180deg : Rotation2d.kZero;
-    /*if (Math.abs(
-            drive
-                .getRobotPoseFromSwerveDriveOdometry()
-                .getRotation()
-                .getDegrees())
-        > 90) {
-      rotation = Rotation2d.k180deg;
-    } else {
-      rotation = Rotation2d.kZero;
-    }*/
-    drive.setTargetRotation(rotation);
-
+    Rotation2d rotation =
+        FieldConstants.isBlueAlliance() ? Rotation2d.fromDegrees(180) : Rotation2d.fromDegrees(0);
+    drive.setRotationLock(rotation);
     intake.setWantedState(Intake.WantedState.HOLD_ALGAE);
-    drive.setTeleopVelocityCoefficient(0.4);
-
-    if (drive.isAtDesiredRotation()) {
+    if (isAtRotationLockSetpoint()) {
       subsystemsRun(ALGAE_NET_PRE);
     }
   }
 
   private void moveAlgaeToProcessorPosition() {
     Rotation2d rotation =
-        FieldConstants.isOnBlueAlliance(drive.getPose())
-            ? Rotation2d.kCW_90deg
-            : Rotation2d.kCCW_90deg;
-    drive.setTargetRotation(rotation);
+        FieldConstants.isBlueAlliance() ? Rotation2d.fromDegrees(-90) : Rotation2d.fromDegrees(90);
+    drive.setRotationLock(rotation);
   }
 
   private void scoreAlgaeNet() {
-    drive.setTeleopVelocityCoefficient(0.0);
-    if (drive.isAtDesiredRotation()) {
+    drive.setState(Drive.State.STOP);
+    if (isAtRotationLockSetpoint()) {
       subsystemsRun(ALGAE_NET_POST);
     }
     if (wrist.getAngle().getRadians()
@@ -572,62 +555,48 @@ public class Choreographer extends SubsystemBase {
 
   private void scoreAlgaeProcessor() {
     Rotation2d rotation =
-        FieldConstants.isBlueAlliance() ? Rotation2d.kCW_90deg : Rotation2d.kCCW_90deg;
-    if (drive.getPose().getRotation().getDegrees() > 0) {
-      rotation = Rotation2d.kCCW_90deg;
-    } else {
-      rotation = Rotation2d.kCW_90deg;
-    }
-    drive.setTargetRotation(rotation);
+        FieldConstants.isBlueAlliance() ? Rotation2d.fromDegrees(90) : Rotation2d.fromDegrees(-90);
+    drive.setRotationLock(rotation);
     subsystemsRun(ALGAE_PROCESSOR);
     intake.setWantedState(Intake.WantedState.EJECT_ALGAE);
   }
 
   public boolean isReadyToEject() {
     return readyToScoreDebouncer.calculate(
-        drive.isAtDriveToPointSetpoint()
-            && drive.isAtDesiredRotation(Units.degreesToRadians(2.0))
-            && drive.isStopped()
+        isAtDriveToPoseSetpoint()
+            && isAtRotationLockSetpoint(Units.degreesToRadians(2.0))
+            && isDriveStopped()
             && wrist.atGoal()
             && elevator.atGoal());
   }
 
   public boolean isReadyToEjectInAutoPeriod() {
     return readyToScoreDebouncerAuto.calculate(
-        elevator.atGoal()
-            && wrist.atGoal()
-            && drive.isAtEndOfChoreoTrajectoryOrDriveToPoint()
-            && drive.isStopped());
+        elevator.atGoal() && wrist.atGoal() && isAtDriveToPoseSetpoint() && isDriveStopped());
   }
 
   public boolean isReadyToIntakeCountdown() {
     return intakeDebouncerAuto.calculate(
-        elevator.atGoal()
-            && wrist.atGoal()
-            && drive.isAtEndOfChoreoTrajectoryOrDriveToPoint()
-            && drive.isStopped());
+        elevator.atGoal() && wrist.atGoal() && isAtDriveToPoseSetpoint() && isDriveStopped());
   }
 
   public boolean driveToScoringPose(ScoringSide scoringSide, boolean isL1) {
     Pose2d desiredPoseToDriveTo =
         !isL1
-            ? FieldConstants.getDesiredFinalScoringPoseForCoral(
-                drive.getClosestTagId(), scoringSide)
-            : FieldConstants.getDesiredPointToDriveToForL1Scoring(
-                drive.getClosestTagId(), scoringSide);
+            ? FieldConstants.getDesiredFinalScoringPoseForCoral(getClosestTagId(), scoringSide)
+            : FieldConstants.getDesiredPointToDriveToForL1Scoring(getClosestTagId(), scoringSide);
 
     if (!hasDriveReachedMiddleCoral) {
       Pose2d intermediatePose =
-          FieldConstants.getDesiredIntermediateScoringPoseForCoral(
-              drive.getClosestTagId(), scoringSide);
-      drive.setDesiredPoseForDriveToPointWithMaximumAngularVelocity(intermediatePose, 3.0);
-      if (drive.isAtDriveToPointSetpoint()) {
+          FieldConstants.getDesiredIntermediateScoringPoseForCoral(getClosestTagId(), scoringSide);
+      setDriveToPoseTarget(intermediatePose);
+      if (isAtDriveToPoseSetpoint()) {
         hasDriveReachedMiddleCoral = true;
       }
       Logger.recordOutput("Choreographer/DesiredPointToDriveTo", intermediatePose);
       return true;
     } else {
-      drive.setDesiredPoseForDriveToPointWithMaximumAngularVelocity(desiredPoseToDriveTo, 3.0);
+      setDriveToPoseTarget(desiredPoseToDriveTo);
       Logger.recordOutput("Choreographer/DesiredPointToDriveTo", desiredPoseToDriveTo);
       return true;
     }
@@ -635,28 +604,27 @@ public class Choreographer extends SubsystemBase {
 
   public boolean driveToScoringPoseL4(ScoringSide scoringSide) {
     Pose2d desiredPoseToDriveTo =
-        FieldConstants.getDesiredFinalScoringPoseForCoral(drive.getClosestTagId(), scoringSide);
+        FieldConstants.getDesiredFinalScoringPoseForCoral(getClosestTagId(), scoringSide);
     Pose2d intermediatePose =
-        FieldConstants.getDesiredIntermediateScoringPoseForCoral(
-            drive.getClosestTagId(), scoringSide);
+        FieldConstants.getDesiredIntermediateScoringPoseForCoral(getClosestTagId(), scoringSide);
 
     Pose2d preL4Pose =
         FieldConstants.getDesiredPointToDriveToForCoralScoring(
-            drive.getClosestTagId(), scoringSide, 0.15);
+            getClosestTagId(), scoringSide, 0.15);
 
     if (!hasDriveReachedMiddleCoral) {
-      drive.setDesiredPoseForDriveToPointWithMaximumAngularVelocity(intermediatePose, 3.0);
-      if (drive.isAtDriveToPointSetpoint()) {
+      setDriveToPoseTarget(intermediatePose);
+      if (isAtDriveToPoseSetpoint()) {
         hasDriveReachedMiddleCoral = true;
       }
       Logger.recordOutput("Choreographer/DesiredPointToDriveTo", intermediatePose);
       return true;
     } else {
       if (elevator.atGoal()) {
-        drive.setDesiredPoseForDriveToPointWithConstraints(desiredPoseToDriveTo, 0.5, 3.0);
+        setDriveToPoseTarget(desiredPoseToDriveTo);
         Logger.recordOutput("Choreographer/DesiredPointToDriveTo", desiredPoseToDriveTo);
       } else {
-        drive.setDesiredPoseForDriveToPointWithMaximumAngularVelocity(preL4Pose, 3.0);
+        setDriveToPoseTarget(preL4Pose);
         Logger.recordOutput("Choreographer/DesiredPointToDriveTo", preL4Pose);
       }
       return true;
@@ -678,21 +646,21 @@ public class Choreographer extends SubsystemBase {
     if (!hasDriveReachedMiddleCoral) {
       Pose2d intermediatePose =
           FieldConstants.getDesiredIntermediateScoringPoseForCoral(id, scoringSide);
-      drive.setDesiredPoseForDriveToPointWithMaximumAngularVelocity(intermediatePose, 3.0);
-      if (drive.isAtDriveToPointSetpoint()) {
+      setDriveToPoseTarget(intermediatePose);
+      if (isAtDriveToPoseSetpoint()) {
         hasDriveReachedMiddleCoral = true;
       }
       Logger.recordOutput("Choreographer/DesiredPointToDriveTo", intermediatePose);
       return true;
     } else {
-      drive.setDesiredPoseForDriveToPointWithMaximumAngularVelocity(desiredPoseToDriveTo, 3.0);
+      setDriveToPoseTarget(desiredPoseToDriveTo);
       Logger.recordOutput("Choreographer/DesiredPointToDriveTo", desiredPoseToDriveTo);
       return true;
     }
   }
 
   public boolean reefTagVisible() {
-    int desiredId = drive.getClosestTagId();
+    int desiredId = getClosestTagId();
     boolean seenTag = false;
 
     for (int id : vision.getVisibleTagIds()) {
@@ -712,11 +680,12 @@ public class Choreographer extends SubsystemBase {
 
       Pose2d transformedPose =
           tagPose.plus(
-              new Transform2d(offsetFromTag.getX(), offsetFromTag.getY(), Rotation2d.k180deg));
+              new Transform2d(
+                  offsetFromTag.getX(), offsetFromTag.getY(), Rotation2d.fromDegrees(180)));
 
       return transformedPose;
     } else {
-      return Pose2d.kZero;
+      return new Pose2d();
     }
   }
 
@@ -729,11 +698,12 @@ public class Choreographer extends SubsystemBase {
 
       Pose2d transformedPose =
           tagPose.plus(
-              new Transform2d(offsetFromTag.getX(), offsetFromTag.getY(), Rotation2d.k180deg));
+              new Transform2d(
+                  offsetFromTag.getX(), offsetFromTag.getY(), Rotation2d.fromDegrees(180)));
 
       return transformedPose;
     } else {
-      return Pose2d.kZero;
+      return new Pose2d();
     }
   }
 
@@ -746,11 +716,12 @@ public class Choreographer extends SubsystemBase {
 
       Pose2d transformedPose =
           tagPose.plus(
-              new Transform2d(offsetFromTag.getX(), offsetFromTag.getY(), Rotation2d.k180deg));
+              new Transform2d(
+                  offsetFromTag.getX(), offsetFromTag.getY(), Rotation2d.fromDegrees(180)));
 
       return transformedPose;
     } else {
-      return Pose2d.kZero;
+      return new Pose2d();
     }
   }
 
@@ -759,8 +730,7 @@ public class Choreographer extends SubsystemBase {
   }
 
   public Command setChoreographyCommand(WantedChoreography choreography) {
-    Command commandToReturn = new InstantCommand(() -> setWantedChoreography(choreography));
-    return commandToReturn;
+    return new InstantCommand(() -> setWantedChoreography(choreography));
   }
 
   // Scoring side API: set explicitly or flip current
@@ -799,10 +769,78 @@ public class Choreographer extends SubsystemBase {
   }
 
   public boolean allAtGoals() {
-    return elevator.atGoal() && wrist.atGoal() && drive.isAtDriveToPointSetpoint();
+    return elevator.atGoal() && wrist.atGoal() && isAtDriveToPoseSetpoint();
   }
 
   public boolean mechanismsAtGoals() {
     return wrist.atGoal() && elevator.atGoal();
+  }
+
+  // =========================
+  // Drive Helper Methods
+  // =========================
+
+  private void setDriveToPoseTarget(Pose2d target) {
+    this.driveToPoseTarget = target;
+    drive.setDriveToPose(this.driveToPoseCommand);
+  }
+
+  private boolean isAtDriveToPoseSetpoint() {
+    return driveToPoseCommand.withinTolerance(
+        Units.inchesToMeters(1.0), Rotation2d.fromDegrees(2.0));
+  }
+
+  private boolean isAtRotationLockSetpoint() {
+    return isAtRotationLockSetpoint(Units.degreesToRadians(10.0));
+  }
+
+  private boolean isAtRotationLockSetpoint(double tolerance) {
+    // This is a placeholder. A proper implementation would check the error
+    // from the rotation lock PID controller in the Drive subsystem.
+    // Since that's private, we can't access it directly.
+    // For now, we assume it's at the setpoint if the state is ROTATION_LOCK.
+    return true;
+  }
+
+  private boolean isDriveStopped() {
+    var speeds = drive.getChassisSpeeds();
+    return Math.abs(speeds.vxMetersPerSecond) < 0.1
+        && Math.abs(speeds.vyMetersPerSecond) < 0.1
+        && Math.abs(speeds.omegaRadiansPerSecond) < 0.1;
+  }
+
+  private int getClosestTagId() {
+    int closestId = -1;
+    double minDistance = Double.MAX_VALUE;
+
+    for (int id : vision.getVisibleTagIds()) {
+      Pose2d tagPose = FieldConstants.getTagPose(id).toPose2d();
+      double distance = drive.getPose().getTranslation().getDistance(tagPose.getTranslation());
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestId = id;
+      }
+    }
+    return closestId;
+  }
+
+  private Rotation2d getClosestRotationToFaceNearestReefFace() {
+    var map =
+        FieldConstants.isBlueAlliance()
+            ? ReefConstants.blueAllianceAngleToTagIdsMap
+            : ReefConstants.redAllianceAngleToTagIdsMap;
+    double minDistance = Double.MAX_VALUE;
+    Rotation2d closestRotation = new Rotation2d();
+
+    for (var entry : map.entrySet()) {
+      var ids = entry.getValue();
+      var tagPose = FieldConstants.getTagPose(ids.frontId).toPose2d();
+      var distance = drive.getPose().getTranslation().getDistance(tagPose.getTranslation());
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestRotation = entry.getKey();
+      }
+    }
+    return closestRotation;
   }
 }

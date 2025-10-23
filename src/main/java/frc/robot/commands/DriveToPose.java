@@ -182,6 +182,9 @@ public class DriveToPose extends Command {
 
   @Override
   public void initialize() {
+    if (drive != null) {
+      drive.setDriveToPose(this);
+    }
     resetProfile();
   }
 
@@ -381,7 +384,10 @@ public class DriveToPose extends Command {
 
   @Override
   public void end(boolean interrupted) {
-    if (drive != null) drive.stop();
+    if (drive != null) {
+      drive.stop();
+      drive.setState(Drive.State.TELEOP);
+    }
     running = false;
     // Clear logs
     Logger.recordOutput("DriveToPose/Setpoint", new Pose2d[] {});
