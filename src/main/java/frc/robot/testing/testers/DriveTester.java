@@ -200,7 +200,7 @@ public class DriveTester extends SubsystemTester {
 
           @Override
           protected boolean validateStep() {
-            ChassisSpeeds speeds = drive.getChassisSpeeds();
+            ChassisSpeeds speeds = drive.getChassisSpeeds(true);
 
             if (Double.isNaN(speeds.vxMetersPerSecond)
                 || Double.isNaN(speeds.vyMetersPerSecond)
@@ -225,6 +225,6 @@ public class DriveTester extends SubsystemTester {
   @Override
   protected void returnToSafeState() {
     // Drive will handle stopping in its own state machine
-    drive.setState(Drive.State.STOP);
+    drive.stop();
   }
 }

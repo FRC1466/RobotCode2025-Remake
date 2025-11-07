@@ -66,8 +66,6 @@ public class DriveToPose extends Command {
       new LoggedTunableNumber("DriveToPose/ThetaMaxAccelerationAuto");
   private static final LoggedTunableNumber thetaMaxAccelerationAutoTop =
       new LoggedTunableNumber("DriveToPose/ThetaMaxAccelerationAutoTop");
-  private static final LoggedTunableNumber elevatorMinExtension =
-      new LoggedTunableNumber("DriveToPose/ElevatorMinExtension", 0.4);
   private static final LoggedTunableNumber driveTolerance =
       new LoggedTunableNumber("DriveToPose/DriveTolerance");
   private static final LoggedTunableNumber thetaTolerance =
@@ -99,23 +97,23 @@ public class DriveToPose extends Command {
     thetakP.initDefault(5.0);
     thetakD.initDefault(0.5);
 
-    driveMaxVelocity.initDefault(3.6);
-    driveMaxVelocityTop.initDefault(3.6);
-    driveMaxAcceleration.initDefault(3.15);
-    driveMaxAccelerationTop.initDefault(1.35);
-    driveMaxVelocityAuto.initDefault(3.6);
-    driveMaxVelocityAutoTop.initDefault(1.8);
-    driveMaxAccelerationAuto.initDefault(3.15);
-    driveMaxAccelerationAutoTop.initDefault(1.35);
+    driveMaxVelocity.initDefault(4.0);
+    driveMaxVelocityTop.initDefault(4.0);
+    driveMaxAcceleration.initDefault(3.5);
+    driveMaxAccelerationTop.initDefault(1.5);
+    driveMaxVelocityAuto.initDefault(4.0);
+    driveMaxVelocityAutoTop.initDefault(3.0);
+    driveMaxAccelerationAuto.initDefault(6.0);
+    driveMaxAccelerationAutoTop.initDefault(1.5);
 
-    thetaMaxVelocity.initDefault(Units.degreesToRadians(450.0));
-    thetaMaxVelocityTop.initDefault(Units.degreesToRadians(108.0));
-    thetaMaxAcceleration.initDefault(7.2);
-    thetaMaxAccelerationTop.initDefault(5.4);
-    thetaMaxVelocityAuto.initDefault(Units.degreesToRadians(450.0));
-    thetaMaxVelocityAutoTop.initDefault(Units.degreesToRadians(108.0));
-    thetaMaxAccelerationAuto.initDefault(7.2);
-    thetaMaxAccelerationAutoTop.initDefault(5.4);
+    thetaMaxVelocity.initDefault(Units.degreesToRadians(500.0));
+    thetaMaxVelocityTop.initDefault(Units.degreesToRadians(120.0));
+    thetaMaxAcceleration.initDefault(8.0);
+    thetaMaxAccelerationTop.initDefault(6.0);
+    thetaMaxVelocityAuto.initDefault(Units.degreesToRadians(500.0));
+    thetaMaxVelocityAutoTop.initDefault(Units.degreesToRadians(120.0));
+    thetaMaxAccelerationAuto.initDefault(8.0);
+    thetaMaxAccelerationAutoTop.initDefault(6.0);
 
     driveTolerance.initDefault(0.01);
     thetaTolerance.initDefault(Units.degreesToRadians(1.0));
@@ -126,7 +124,7 @@ public class DriveToPose extends Command {
 
     setpointMinVelocity.initDefault(-0.5);
     minDistanceVelocityCorrection.initDefault(0.01);
-    minLinearErrorReset.initDefault(0.7);
+    minLinearErrorReset.initDefault(0.3);
     minThetaErrorReset.initDefault(Units.degreesToRadians(15.0));
     minLinearFFSReset.initDefault(0.2);
     minThetaFFSReset.initDefault(0.1);
@@ -150,18 +148,19 @@ public class DriveToPose extends Command {
   private double thetaErrorAbs = 0.0;
   @Getter private boolean running = false;
   private Supplier<Pose2d> robot;
+
   private Supplier<Translation2d> linearFF = () -> Translation2d.kZero;
   private DoubleSupplier omegaFF = () -> 0.0;
 
   public DriveToPose(Drive drive, Supplier<Pose2d> target) {
     this.drive = drive;
     this.target = target;
-    this.robot = drive::getPose;
 
     // Enable continuous input for theta controller
     thetaController.enableContinuousInput(-Math.PI, Math.PI);
 
     if (drive != null) addRequirements(drive);
+    this.robot = drive::getPose;
   }
 
   public DriveToPose(Drive drive, Supplier<Pose2d> target, Supplier<Pose2d> robot) {
@@ -182,9 +181,6 @@ public class DriveToPose extends Command {
 
   @Override
   public void initialize() {
-    if (drive != null) {
-      drive.setDriveToPose(this);
-    }
     resetProfile();
   }
 
@@ -208,34 +204,19 @@ public class DriveToPose extends Command {
     }
 
     // Update constraints
-    double extensionS = MathUtil.clamp(0.0, 0.0, 1.0);
     driveProfile =
         new TrapezoidProfile(
             DriverStation.isAutonomous()
                 ? new TrapezoidProfile.Constraints(
-                    MathUtil.interpolate(
-                        driveMaxVelocityAuto.get(), driveMaxVelocityAutoTop.get(), extensionS),
-                    MathUtil.interpolate(
-                        driveMaxAccelerationAuto.get(),
-                        driveMaxAccelerationAutoTop.get(),
-                        extensionS))
+                    driveMaxVelocityAuto.get(), driveMaxAccelerationAuto.get())
                 : new TrapezoidProfile.Constraints(
-                    MathUtil.interpolate(
-                        driveMaxVelocity.get(), driveMaxVelocityTop.get(), extensionS),
-                    MathUtil.interpolate(
-                        driveMaxAcceleration.get(), driveMaxAccelerationTop.get(), extensionS)));
+                    driveMaxVelocity.get(), driveMaxAcceleration.get()));
     thetaController.setConstraints(
         new TrapezoidProfile.Constraints(
+            DriverStation.isAutonomous() ? thetaMaxVelocityAuto.get() : thetaMaxVelocity.get(),
             DriverStation.isAutonomous()
-                ? MathUtil.interpolate(
-                    thetaMaxVelocityAuto.get(), thetaMaxVelocityAutoTop.get(), extensionS)
-                : MathUtil.interpolate(
-                    thetaMaxVelocity.get(), thetaMaxVelocityTop.get(), extensionS),
-            DriverStation.isAutonomous()
-                ? MathUtil.interpolate(
-                    thetaMaxAccelerationAuto.get(), thetaMaxAccelerationAutoTop.get(), extensionS)
-                : MathUtil.interpolate(
-                    thetaMaxAcceleration.get(), thetaMaxAccelerationTop.get(), extensionS)));
+                ? thetaMaxAccelerationAuto.get()
+                : thetaMaxAcceleration.get()));
 
     // Get current pose and target pose
     Pose2d currentPose = robot.get();
@@ -310,7 +291,7 @@ public class DriveToPose extends Command {
     thetaVelocity =
         MathUtil.interpolate(
             thetaVelocity, omegaFF.getAsDouble() * drive.getMaxAngularSpeedRadPerSec(), thetaS);
-    ChassisSpeeds fieldVelocity = drive.getChassisSpeeds();
+    ChassisSpeeds fieldVelocity = drive.getChassisSpeeds(true);
     Translation2d linearFieldVelocity =
         new Translation2d(fieldVelocity.vxMetersPerSecond, fieldVelocity.vyMetersPerSecond);
     // Reset profiles if enough input or far enough away from setpoint
@@ -361,7 +342,7 @@ public class DriveToPose extends Command {
   private void resetProfile() {
     Pose2d currentPose = robot.get();
     Pose2d targetPose = target.get();
-    ChassisSpeeds fieldVelocity = drive.getChassisSpeeds();
+    ChassisSpeeds fieldVelocity = drive.getChassisSpeeds(true);
     Translation2d linearFieldVelocity =
         new Translation2d(fieldVelocity.vxMetersPerSecond, fieldVelocity.vyMetersPerSecond);
 
@@ -384,10 +365,7 @@ public class DriveToPose extends Command {
 
   @Override
   public void end(boolean interrupted) {
-    if (drive != null) {
-      drive.stop();
-      drive.setState(Drive.State.TELEOP);
-    }
+    if (drive != null) drive.stop();
     running = false;
     // Clear logs
     Logger.recordOutput("DriveToPose/Setpoint", new Pose2d[] {});

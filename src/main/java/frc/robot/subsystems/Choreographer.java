@@ -21,7 +21,9 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.Robot;
+import frc.robot.commands.DriveCommands;
 import frc.robot.commands.DriveToPose;
 import frc.robot.constants.ChoreographerConstants.ScoringSide;
 import frc.robot.constants.FieldConstants;
@@ -120,7 +122,8 @@ public class Choreographer extends SubsystemBase {
       Elevator elevator,
       Pivot wrist,
       OverridePublisher overrides,
-      Vision vision) {
+      Vision vision,
+      CommandXboxController driverController) {
     this.drive = drive;
     this.intake = intake;
     this.elevator = elevator;
@@ -131,7 +134,15 @@ public class Choreographer extends SubsystemBase {
     this.wristPastSafe = () -> wrist.getAngle().getRadians() > .6;
 
     // Create the command once, with a supplier that gets the current target
-    this.driveToPoseCommand = new DriveToPose(drive, () -> this.driveToPoseTarget);
+    this.driveToPoseCommand =
+        new DriveToPose(
+            drive,
+            () -> this.driveToPoseTarget,
+            drive::getPose,
+            () ->
+                DriveCommands.getLinearVelocityFromJoysticks(
+                    -driverController.getLeftX(), -driverController.getLeftY()),
+            () -> -driverController.getRightX());
   }
 
   @Override
@@ -161,9 +172,9 @@ public class Choreographer extends SubsystemBase {
   public void setDisabled(boolean disabled) {
     this.disabled = disabled;
     if (disabled) {
-      System.out.println("⚠️ CHOREOGRAPHER DISABLED - Subsystems can be controlled directly");
+      System.out.println("CHOREOGRAPHER DISABLED - Subsystems can be controlled directly");
     } else {
-      System.out.println("✅ CHOREOGRAPHER ENABLED - Normal operation resumed");
+      System.out.println("CHOREOGRAPHER ENABLED - Normal operation resumed");
     }
   }
 
@@ -314,7 +325,6 @@ public class Choreographer extends SubsystemBase {
 
   private void holdingAlgae() {
     subsystemsRun(ALGAE_HOLD);
-    drive.setState(Drive.State.TELEOP);
     intake.setWantedState(
         wrist.atGoal() && elevator.atGoal()
             ? Intake.WantedState.HOLD_ALGAE
@@ -325,7 +335,6 @@ public class Choreographer extends SubsystemBase {
     coralEject = false;
     subsystemsRun(TRAVEL);
     intake.setWantedState(Intake.WantedState.OFF);
-    drive.setState(Drive.State.TELEOP);
   }
 
   private void holdingCoralAuto() {
@@ -341,7 +350,6 @@ public class Choreographer extends SubsystemBase {
       subsystemsRun(STOW);
     }
     intake.setWantedState(Intake.WantedState.OFF);
-    drive.setState(Drive.State.TELEOP);
   }
 
   private void noPieceAuto() {
@@ -363,13 +371,16 @@ public class Choreographer extends SubsystemBase {
       intake.setWantedState(Intake.WantedState.INTAKE_CORAL);
     } else {
       if (intake.hasCoral()) {
-        drive.setState(Drive.State.TELEOP);
       } else if (drive.getPose().getRotation().getDegrees() >= 0) {
         var angleToSnapTo = FieldConstants.isBlueAlliance() ? 54.0 : 126.0;
-        drive.setRotationLock(Rotation2d.fromDegrees(angleToSnapTo));
+        driveToPoseTarget =
+            new Pose2d(drive.getPose().getTranslation(), Rotation2d.fromDegrees(angleToSnapTo));
+        driveToPoseCommand.schedule();
       } else {
         var angleToSnapTo = FieldConstants.isBlueAlliance() ? -54.0 : -126.0;
-        drive.setRotationLock(Rotation2d.fromDegrees(angleToSnapTo));
+        driveToPoseTarget =
+            new Pose2d(drive.getPose().getTranslation(), Rotation2d.fromDegrees(angleToSnapTo));
+        driveToPoseCommand.schedule();
       }
       if (elevator.getPosition() > 0.15) {
         subsystemsRun(TRAVEL);
@@ -422,20 +433,22 @@ public class Choreographer extends SubsystemBase {
     var id = ids.frontId;
 
     if (!hasDriveReachedMiddleAlgae) {
-      setDriveToPoseTarget(getIntermediatePointToDriveToForAlgaeIntaking(id));
+      driveToPoseTarget = getIntermediatePointToDriveToForAlgaeIntaking(id);
+      driveToPoseCommand.schedule();
       if (isAtDriveToPoseSetpoint()) {
         hasDriveReachedMiddleAlgae = true;
       }
     } else if (intake.hasAlgae()) {
-      setDriveToPoseTarget(getBackoutPointToDriveToForAlgaeIntaking(id));
+      driveToPoseTarget = getBackoutPointToDriveToForAlgaeIntaking(id);
+      driveToPoseCommand.schedule();
       if (isAtDriveToPoseSetpoint()) {
         subsystemsRun(ALGAE_HOLD);
       }
     } else {
       if (!wrist.atGoal() && !elevator.atGoal(Units.inchesToMeters(1.0))) {
-        setDriveToPoseTarget(getIntermediatePointToDriveToForAlgaeIntaking(id));
+        driveToPoseTarget = getIntermediatePointToDriveToForAlgaeIntaking(id);
       } else {
-        setDriveToPoseTarget(getDesiredPointToDriveToForAlgaeIntaking(id));
+        driveToPoseTarget = getDesiredPointToDriveToForAlgaeIntaking(id);
       }
     }
     if (Robot.isSimulation()) {
@@ -530,7 +543,8 @@ public class Choreographer extends SubsystemBase {
   private void moveAlgaeToNetPosition() {
     Rotation2d rotation =
         FieldConstants.isBlueAlliance() ? Rotation2d.fromDegrees(180) : Rotation2d.fromDegrees(0);
-    drive.setRotationLock(rotation);
+    driveToPoseTarget = new Pose2d(drive.getPose().getTranslation(), rotation);
+    driveToPoseCommand.schedule();
     intake.setWantedState(Intake.WantedState.HOLD_ALGAE);
     if (isAtRotationLockSetpoint()) {
       subsystemsRun(ALGAE_NET_PRE);
@@ -540,11 +554,12 @@ public class Choreographer extends SubsystemBase {
   private void moveAlgaeToProcessorPosition() {
     Rotation2d rotation =
         FieldConstants.isBlueAlliance() ? Rotation2d.fromDegrees(-90) : Rotation2d.fromDegrees(90);
-    drive.setRotationLock(rotation);
+    driveToPoseTarget = new Pose2d(drive.getPose().getTranslation(), rotation);
+    driveToPoseCommand.schedule();
   }
 
   private void scoreAlgaeNet() {
-    drive.setState(Drive.State.STOP);
+    drive.stop();
     if (isAtRotationLockSetpoint()) {
       subsystemsRun(ALGAE_NET_POST);
     }
@@ -556,7 +571,8 @@ public class Choreographer extends SubsystemBase {
   private void scoreAlgaeProcessor() {
     Rotation2d rotation =
         FieldConstants.isBlueAlliance() ? Rotation2d.fromDegrees(90) : Rotation2d.fromDegrees(-90);
-    drive.setRotationLock(rotation);
+    driveToPoseTarget = new Pose2d(drive.getPose().getTranslation(), rotation);
+    driveToPoseCommand.schedule();
     subsystemsRun(ALGAE_PROCESSOR);
     intake.setWantedState(Intake.WantedState.EJECT_ALGAE);
   }
@@ -589,14 +605,16 @@ public class Choreographer extends SubsystemBase {
     if (!hasDriveReachedMiddleCoral) {
       Pose2d intermediatePose =
           FieldConstants.getDesiredIntermediateScoringPoseForCoral(getClosestTagId(), scoringSide);
-      setDriveToPoseTarget(intermediatePose);
+      driveToPoseTarget = intermediatePose;
+      driveToPoseCommand.schedule();
       if (isAtDriveToPoseSetpoint()) {
         hasDriveReachedMiddleCoral = true;
       }
       Logger.recordOutput("Choreographer/DesiredPointToDriveTo", intermediatePose);
       return true;
     } else {
-      setDriveToPoseTarget(desiredPoseToDriveTo);
+      driveToPoseTarget = desiredPoseToDriveTo;
+      driveToPoseCommand.schedule();
       Logger.recordOutput("Choreographer/DesiredPointToDriveTo", desiredPoseToDriveTo);
       return true;
     }
@@ -613,7 +631,8 @@ public class Choreographer extends SubsystemBase {
             getClosestTagId(), scoringSide, 0.15);
 
     if (!hasDriveReachedMiddleCoral) {
-      setDriveToPoseTarget(intermediatePose);
+      driveToPoseTarget = intermediatePose;
+      driveToPoseCommand.schedule();
       if (isAtDriveToPoseSetpoint()) {
         hasDriveReachedMiddleCoral = true;
       }
@@ -621,10 +640,12 @@ public class Choreographer extends SubsystemBase {
       return true;
     } else {
       if (elevator.atGoal()) {
-        setDriveToPoseTarget(desiredPoseToDriveTo);
+        driveToPoseTarget = desiredPoseToDriveTo;
+        driveToPoseCommand.schedule();
         Logger.recordOutput("Choreographer/DesiredPointToDriveTo", desiredPoseToDriveTo);
       } else {
-        setDriveToPoseTarget(preL4Pose);
+        driveToPoseTarget = preL4Pose;
+        driveToPoseCommand.schedule();
         Logger.recordOutput("Choreographer/DesiredPointToDriveTo", preL4Pose);
       }
       return true;
@@ -646,14 +667,16 @@ public class Choreographer extends SubsystemBase {
     if (!hasDriveReachedMiddleCoral) {
       Pose2d intermediatePose =
           FieldConstants.getDesiredIntermediateScoringPoseForCoral(id, scoringSide);
-      setDriveToPoseTarget(intermediatePose);
+      driveToPoseTarget = intermediatePose;
+      driveToPoseCommand.schedule();
       if (isAtDriveToPoseSetpoint()) {
         hasDriveReachedMiddleCoral = true;
       }
       Logger.recordOutput("Choreographer/DesiredPointToDriveTo", intermediatePose);
       return true;
     } else {
-      setDriveToPoseTarget(desiredPoseToDriveTo);
+      driveToPoseTarget = desiredPoseToDriveTo;
+      driveToPoseCommand.schedule();
       Logger.recordOutput("Choreographer/DesiredPointToDriveTo", desiredPoseToDriveTo);
       return true;
     }
@@ -776,15 +799,6 @@ public class Choreographer extends SubsystemBase {
     return wrist.atGoal() && elevator.atGoal();
   }
 
-  // =========================
-  // Drive Helper Methods
-  // =========================
-
-  private void setDriveToPoseTarget(Pose2d target) {
-    this.driveToPoseTarget = target;
-    drive.setDriveToPose(this.driveToPoseCommand);
-  }
-
   private boolean isAtDriveToPoseSetpoint() {
     return driveToPoseCommand.withinTolerance(
         Units.inchesToMeters(1.0), Rotation2d.fromDegrees(2.0));
@@ -803,7 +817,7 @@ public class Choreographer extends SubsystemBase {
   }
 
   private boolean isDriveStopped() {
-    var speeds = drive.getChassisSpeeds();
+    var speeds = drive.getChassisSpeeds(true);
     return Math.abs(speeds.vxMetersPerSecond) < 0.1
         && Math.abs(speeds.vyMetersPerSecond) < 0.1
         && Math.abs(speeds.omegaRadiansPerSecond) < 0.1;

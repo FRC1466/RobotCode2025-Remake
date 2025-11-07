@@ -12,8 +12,8 @@ import static frc.robot.subsystems.vision.VisionConstants.*;
 import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.system.plant.DCMotor;
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -27,6 +27,7 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.autos.AutoFactory;
+import frc.robot.commands.DriveCommands;
 import frc.robot.constants.Constants;
 import frc.robot.constants.FieldConstants;
 import frc.robot.generated.TunerConstants;
@@ -35,8 +36,10 @@ import frc.robot.subsystems.Choreographer.WantedChoreography;
 import frc.robot.subsystems.SubsystemVisualizer;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.GyroIO;
+import frc.robot.subsystems.drive.GyroIOPigeon2;
 import frc.robot.subsystems.drive.ModuleIO;
 import frc.robot.subsystems.drive.ModuleIOSim;
+import frc.robot.subsystems.drive.ModuleIOTalonFX;
 import frc.robot.subsystems.elevator.Elevator;
 import frc.robot.subsystems.elevator.ElevatorIO;
 import frc.robot.subsystems.elevator.ElevatorIOSim;
@@ -127,13 +130,13 @@ public class RobotContainer {
 
       switch (Constants.getRobot()) {
         case COMPBOT -> {
-          /* drive =
-          new Drive(
-              new GyroIOPigeon2(),
-              new ModuleIOTalonFX(TunerConstants.FrontLeft),
-              new ModuleIOTalonFX(TunerConstants.FrontRight),
-              new ModuleIOTalonFX(TunerConstants.BackLeft),
-              new ModuleIOTalonFX(TunerConstants.BackRight)); */
+          drive =
+              new Drive(
+                  new GyroIOPigeon2(),
+                  new ModuleIOTalonFX(TunerConstants.FrontLeft),
+                  new ModuleIOTalonFX(TunerConstants.FrontRight),
+                  new ModuleIOTalonFX(TunerConstants.BackLeft),
+                  new ModuleIOTalonFX(TunerConstants.BackRight));
           elevator = new Elevator(new ElevatorIOTalonFX(), new HomeSensorIO() {});
           wrist = new Pivot(new PivotIOTalonFX());
           intake =
@@ -214,7 +217,8 @@ public class RobotContainer {
 
     autoFactory = new AutoFactory(AllianceUtil.getAlliance(), this);
 
-    choreographer = new Choreographer(drive, intake, elevator, wrist, overridePublisher, vision);
+    choreographer =
+        new Choreographer(drive, intake, elevator, wrist, overridePublisher, vision, controller);
 
     // Initialize testing system
     testManager = new TestManager();
@@ -250,26 +254,13 @@ public class RobotContainer {
    * edu.wpi.first.wpilibj2.command.button.JoystickButton}.
    */
   private void configureButtonBindings() {
+    // Default command, normal field-relative drive
     drive.setDefaultCommand(
-        // This command is now structured to only set the state ONCE when it starts.
-        Commands.runOnce(() -> drive.setState(Drive.State.TELEOP))
-            .andThen(
-                // After setting the state, this runs continuously.
-                Commands.run(
-                    () -> {
-                      // The state is already TELEOP, so we just send speeds.
-                      double xSpeed =
-                          -controller.getLeftY() * drive.getMaxLinearSpeedMetersPerSec();
-                      double ySpeed =
-                          -controller.getLeftX() * drive.getMaxLinearSpeedMetersPerSec();
-                      double rotSpeed =
-                          -controller.getRightX() * drive.getMaxAngularSpeedRadPerSec();
-
-                      drive.setTeleopSpeeds(
-                          ChassisSpeeds.fromFieldRelativeSpeeds(
-                              xSpeed, ySpeed, rotSpeed, drive.getRotation()));
-                    },
-                    drive)));
+        DriveCommands.joystickDrive(
+            drive,
+            () -> -controller.getLeftY(),
+            () -> -controller.getLeftX(),
+            () -> -controller.getRightX()));
 
     // Coral score level selection
     final Container<Integer> selectedCoralScoreLevel = new Container<>(4);
@@ -352,9 +343,9 @@ public class RobotContainer {
         new Trigger(
             () ->
                 AllianceFlipUtil.apply(
-                                drive.getPose().exp(drive.getChassisSpeeds().toTwist2d(0.75)))
+                                drive.getPose().exp(drive.getChassisSpeeds(true).toTwist2d(0.75)))
                             .getY()
-                        < FieldConstants.FIELD_HEIGHT / 2 - Drive.robotWidth
+                        < FieldConstants.FIELD_HEIGHT / 2 - Units.inchesToMeters(28)
                     || onOpposingSide.getAsBoolean());
 
     Container<Boolean> hasAlgae = new Container<>(false);
