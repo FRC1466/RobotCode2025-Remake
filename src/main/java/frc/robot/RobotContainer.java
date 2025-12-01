@@ -17,7 +17,6 @@ import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.GenericHID.RumbleType;
-import edu.wpi.first.wpilibj.I2C;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -43,7 +42,7 @@ import frc.robot.subsystems.rollers.RollerSystemIOSim;
 import frc.robot.subsystems.rollers.RollerSystemIOSpark;
 import frc.robot.subsystems.rollers.RollerSystemIOTalonFX;
 import frc.robot.subsystems.sensors.CoralSensorIO;
-import frc.robot.subsystems.sensors.CoralSensorIOColorSensor;
+import frc.robot.subsystems.sensors.CoralSensorIOLaserCan;
 import frc.robot.subsystems.superstructure.Superstructure;
 import frc.robot.subsystems.superstructure.SuperstructureState;
 import frc.robot.subsystems.superstructure.elevator.Elevator;
@@ -146,7 +145,7 @@ public class RobotContainer {
                   new PivotIOTalonFX(),
                   new RollerSystemIOTalonFX(15, "", 40, false, true, 5),
                   new RollerSystemIOSpark(19, false),
-                  new CoralSensorIOColorSensor(I2C.Port.kOnboard) {},
+                  new CoralSensorIOLaserCan(67),
                   drive);
         }
         case DEVBOT -> {

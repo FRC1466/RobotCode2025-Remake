@@ -28,7 +28,6 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.Constants.RobotType;
 import frc.robot.generated.TunerConstants;
-import frc.robot.util.DummyLogReceiver;
 import frc.robot.util.LoggedTracer;
 import frc.robot.util.NTClientLogger;
 import frc.robot.util.PhoenixUtil;
@@ -120,9 +119,6 @@ public class Robot extends LoggedRobot {
         Logger.addDataReceiver(new WPILOGWriter(LogFileUtil.addPathSuffix(logPath, "_sim")));
         break;
     }
-
-    // Add dummy log receiver to adjust thread priority
-    Logger.addDataReceiver(new DummyLogReceiver());
 
     // Start AdvantageKit logger
     Logger.start();
@@ -217,10 +213,6 @@ public class Robot extends LoggedRobot {
     // Instantiate our RobotContainer. This will perform all our button bindings,
     // and put our autonomous chooser on the dashboard.
     robotContainer = new RobotContainer();
-
-    // DO NOT COPY UNLESS YOU UNDERSTAND THE CONSEQUENCES
-    // https://docs.advantagekit.org/getting-started/template-projects/spark-swerve-template#real-time-thread-priority
-    Threads.setCurrentThreadPriority(true, 1);
   }
 
   /** This function is called periodically during all modes. */
