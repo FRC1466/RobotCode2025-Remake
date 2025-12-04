@@ -14,16 +14,15 @@ import frc.robot.subsystems.superstructure.Superstructure;
 import frc.robot.subsystems.superstructure.SuperstructureState;
 
 public class IntakeCommands {
+
   public static Command intake(Superstructure superstructure) {
     return superstructure
-        .runGoal(
-            () -> {
-              if (superstructure.hasCoral()) {
-                return SuperstructureState.STOWREST;
-              } else {
-                return SuperstructureState.CORAL_INTAKE;
-              }
-            })
+        .runGoal(() -> SuperstructureState.CORAL_INTAKE)
+        .until(superstructure::hasCoral)
+        .andThen(superstructure.intakeCoralSlow().until(() -> !superstructure.hasCoral()))
+        .andThen(superstructure.backupCoralFast().until(superstructure::hasCoral))
+        .andThen(Commands.waitSeconds(0.1))
+        .andThen(superstructure.runGoal(() -> SuperstructureState.STOWREST))
         .alongWith(
             Commands.waitUntil(superstructure::hasCoral)
                 .andThen(

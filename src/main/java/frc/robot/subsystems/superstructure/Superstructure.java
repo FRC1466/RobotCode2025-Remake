@@ -564,6 +564,18 @@ public class Superstructure extends SubsystemBase {
         () -> manipulator.setMailboxGoal(MailboxGoal.IDLE));
   }
 
+  public Command backupCoralFast() {
+    return startEnd(
+        () -> manipulator.setMailboxGoal(MailboxGoal.CORALBACKUPFAST),
+        () -> manipulator.setMailboxGoal(MailboxGoal.IDLE));
+  }
+
+  public Command intakeCoralSlow() {
+    return startEnd(
+        () -> manipulator.setMailboxGoal(MailboxGoal.CORALINTAKE),
+        () -> manipulator.setMailboxGoal(MailboxGoal.IDLE));
+  }
+
   private void setGoal(SuperstructureState goal) {
     // Don't do anything if goal is the same
     if (this.goal == goal) return;

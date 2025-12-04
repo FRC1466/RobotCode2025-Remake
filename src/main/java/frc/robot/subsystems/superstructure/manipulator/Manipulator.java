@@ -156,9 +156,11 @@ public class Manipulator {
     ALGAEHOLD,
     ALGAENET,
     CORALINTAKE,
+    CORALINTAKESLOW,
     CORALL4GRIP,
     CORALOUTTAKE,
     CORALBACKUP,
+    CORALBACKUPFAST,
     CORALEJECT,
     CORALL1
   }
@@ -371,6 +373,10 @@ public class Manipulator {
           mailboxIO.runVolts(CORALINTAKE[0].get());
           funnelRollerIO.runVolts(CORALINTAKE[1].get());
         }
+        case CORALINTAKESLOW -> {
+          mailboxIO.runVolts(CORALINTAKE[0].get() * 0.5);
+          funnelRollerIO.runVolts(CORALINTAKE[1].get());
+        }
         case CORALL4GRIP -> {
           mailboxIO.runVolts(CORALL4GRIP[0].get());
           funnelRollerIO.runVolts(CORALL4GRIP[1].get());
@@ -381,6 +387,10 @@ public class Manipulator {
         }
         case CORALBACKUP -> {
           mailboxIO.runVolts(CORALBACKUP[0].get());
+          funnelRollerIO.runVolts(CORALBACKUP[1].get());
+        }
+        case CORALBACKUPFAST -> {
+          mailboxIO.runVolts(CORALBACKUP[0].get() * 3);
           funnelRollerIO.runVolts(CORALBACKUP[1].get());
         }
         case CORALEJECT -> {
