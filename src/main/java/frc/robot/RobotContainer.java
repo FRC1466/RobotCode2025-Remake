@@ -7,6 +7,7 @@
 
 package frc.robot;
 
+import static edu.wpi.first.units.Units.Meters;
 import static frc.robot.subsystems.vision.VisionConstants.*;
 
 import com.ctre.phoenix6.configs.CANcoderConfiguration;
@@ -37,10 +38,7 @@ import frc.robot.subsystems.SubsystemVisualizer;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.DriveIO;
 import frc.robot.subsystems.drive.DriveIOCTRE;
-import frc.robot.subsystems.elevator.Elevator;
-import frc.robot.subsystems.elevator.ElevatorIO;
-import frc.robot.subsystems.elevator.ElevatorIOSim;
-import frc.robot.subsystems.elevator.ElevatorIOTalonFX;
+import frc.robot.subsystems.elevator.ElevatorSubsystem;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.intake.Intake.WantedState;
 import frc.robot.subsystems.overridePublisher.OverridePublisher;
@@ -56,7 +54,6 @@ import frc.robot.subsystems.rollers.RollerSystemIOSpark;
 import frc.robot.subsystems.rollers.RollerSystemIOTalonFX;
 import frc.robot.subsystems.sensors.CoralSensorIO;
 import frc.robot.subsystems.sensors.CoralSensorIOColorSensor;
-import frc.robot.subsystems.sensors.HomeSensorIO;
 import frc.robot.subsystems.vision.Vision;
 import frc.robot.subsystems.vision.VisionIO;
 import frc.robot.util.AllianceFlipUtil;
@@ -81,7 +78,7 @@ import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
 public class RobotContainer {
   // Subsystems
   @Getter private Drive drive;
-  @Getter private Elevator elevator;
+  @Getter private ElevatorSubsystem elevator = new ElevatorSubsystem();
   @Getter private Pivot wrist;
   @Getter private Intake intake;
 
@@ -128,7 +125,6 @@ public class RobotContainer {
 
       switch (Constants.getRobot()) {
         case COMPBOT -> {
-          elevator = new Elevator(new ElevatorIOTalonFX(), new HomeSensorIO() {});
           wrist = new Pivot(new PivotIOTalonFX());
           intake =
               new Intake(
@@ -141,7 +137,6 @@ public class RobotContainer {
           break;
         }
         case SIMBOT -> {
-          elevator = new Elevator(new ElevatorIOSim(), new HomeSensorIO() {});
           wrist = new Pivot(new PivotIOSim());
           intake =
               new Intake(
@@ -163,9 +158,6 @@ public class RobotContainer {
               moduleConstants[0].SpeedAt12Volts
                   / Math.hypot(moduleConstants[0].LocationX, moduleConstants[0].LocationY));
     }
-    if (elevator == null) {
-      elevator = new Elevator(new ElevatorIO() {}, new HomeSensorIO() {});
-    }
     if (wrist == null) {
       wrist = new Pivot(new PivotIO() {});
     }
@@ -184,7 +176,7 @@ public class RobotContainer {
     subsystemVisualizerMeasured =
         new SubsystemVisualizer(
             "Measured",
-            elevator::getPosition,
+            () -> elevator.getHeight().in(Meters),
             () -> wrist.getAngle().getRadians(),
             intake::hasCoral,
             intake::hasAlgae,
@@ -193,7 +185,7 @@ public class RobotContainer {
     subsystemVisualizerGoal =
         new SubsystemVisualizer(
             "Goal",
-            elevator::getGoalPosition,
+            () -> elevator.getSetpointHeight(),
             wrist.getGoalAngle()::getRadians,
             intake::hasCoral,
             intake::hasAlgae,
@@ -201,7 +193,7 @@ public class RobotContainer {
 
     autoFactory = new AutoFactory(AllianceUtil.getAlliance(), this);
 
-    choreographer = new Choreographer(drive, intake, elevator, wrist, overridePublisher, vision);
+    // choreographer = new Choreographer(drive, intake, elevator, wrist, overridePublisher, vision);
 
     // Configure the button bindings
     configureButtonBindings();

@@ -4,7 +4,7 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file at
 // the root directory of this project.
-
+/*
 package frc.robot.subsystems;
 
 import static frc.robot.constants.ChoreographerConstants.*;
@@ -518,7 +518,7 @@ public class Choreographer extends SubsystemBase {
       rotation = Rotation2d.k180deg;
     } else {
       rotation = Rotation2d.kZero;
-    }*/
+    }*/ /* 
     drive.setTargetRotation(rotation);
 
     intake.setWantedState(Intake.WantedState.HOLD_ALGAE);
@@ -783,3 +783,4 @@ public class Choreographer extends SubsystemBase {
     return wrist.atGoal() && elevator.atGoal();
   }
 }
+*/
